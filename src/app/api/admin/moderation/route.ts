@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   try {
     // Weryfikacja tokena i uprawnień admina
     const session = await requireAdmin();
-    const { itemId, itemType, action } = await request.json();
+    const { itemId, itemType, action, editPayload } = await request.json();
 
     if (!itemId || !itemType || !action) {
       return NextResponse.json(
@@ -73,6 +73,16 @@ export async function POST(request: NextRequest) {
       }
     } else if (newStatus === 'rejected') {
       itemUpdatePayload.rejectedAt = new Date().toISOString();
+    }
+
+    // If editPayload provided (from QuickEditDialog), merge safe fields
+    const ALLOWED_EDIT_FIELDS = ['title', 'titlePl', 'description', 'descriptionPl', 'price', 'mainCategorySlug'];
+    if (editPayload && typeof editPayload === 'object' && action === 'approve') {
+      for (const key of ALLOWED_EDIT_FIELDS) {
+        if (key in editPayload && (editPayload as Record<string, unknown>)[key] !== undefined) {
+          itemUpdatePayload[key] = (editPayload as Record<string, unknown>)[key];
+        }
+      }
     }
 
     let productIdToRecalculate: string | null = null;

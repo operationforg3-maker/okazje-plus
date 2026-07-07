@@ -1,42 +1,45 @@
-// @ts-nocheck
 'use client';
 
 export const dynamic = 'force-dynamic';
 
-const DEBUG_MODERATION_LOGS = process.env.NEXT_PUBLIC_DEBUG === 'true';
-
 import { withAuth } from '@/components/auth/withAuth';
-import { auth } from '@/lib/firebase';
-import { useTranslations } from 'next-intl';
+import { useAuth } from '@/lib/auth';
 import { useEffect, useState, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { withImageProxy } from '@/lib/image-proxy';
 import { ModerationDetailView } from '@/components/admin/moderation-detail-view';
-import { 
-  CheckSquare, 
+import { BulkModerationBar } from '@/components/admin/moderation/bulk-moderation-bar';
+import { ModerationFilters } from '@/components/admin/moderation/moderation-filters';
+import { ModerationHistory } from '@/components/admin/moderation/moderation-history';
+import { ForumModerationPanel } from '@/components/admin/moderation/forum-moderation-panel';
+import { QuickEditDialog } from '@/components/admin/moderation/quick-edit-dialog';
+import { getCategories } from '@/lib/data';
+import {
+  CheckSquare,
   Clock,
   CheckCircle,
   XCircle,
   Eye,
   RefreshCw,
-  Sparkles
+  Sparkles,
+  Pencil,
+  MessageSquare,
+  History,
+  ListChecks,
+  AlertTriangle,
+  Loader2,
 } from 'lucide-react';
-
-import { BulkModerationBar } from '@/components/admin/moderation/bulk-moderation-bar';
-import { ModerationFilters } from '@/components/admin/moderation/moderation-filters';
-
-import { getCategories } from '@/lib/data';
-import { Deal, Product, Category } from '@/lib/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import DealCard from '@/components/deal-card';
 import ProductListCard from '@/components/product-list-card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { Deal, Product, Category } from '@/lib/types';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface ReportedComment {
   id: string;
@@ -50,557 +53,603 @@ interface ReportedComment {
   status?: string;
 }
 
-interface Report {
-  id: string;
-  reportedBy: string;
-  targetType: string;
-  targetId: string;
-  reportType: string;
-  description?: string;
-  status: string;
-  createdAt: string;
-  target?: any;
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function getLocalizedTitle(value: unknown): string {
+  if (!value) return 'Bez tytułu';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    const v = value as Record<string, string>;
+    return v.pl || v.en || v.de || Object.values(v)[0] || 'Bez tytułu';
+  }
+  return 'Bez tytułu';
 }
 
-function ModerationPage() {
-  const t = useTranslations('admin.common');
+function formatDate(dateString: string) {
+  if (!dateString) return '—';
+  return new Date(dateString).toLocaleDateString('pl-PL', {
+    year: 'numeric', month: 'short', day: 'numeric',
+  });
+}
+
+function statusVariant(status: string): 'default' | 'secondary' | 'outline' | 'destructive' {
+  if (status === 'approved') return 'default';
+  if (status === 'pending' || status === 'pending_approval') return 'secondary';
+  if (status === 'draft' || status === 'poczekalnia') return 'outline';
+  return 'destructive';
+}
+
+function getPrice(product: Product): string {
+  const p = product.price as unknown;
+  if (!p) return '—';
+  if (typeof p === 'number') return `${p.toFixed(2)} zł`;
+  if (typeof p === 'object') {
+    const po = p as { amount?: number; current?: number };
+    const amount = po.amount ?? po.current;
+    if (amount !== undefined) return `${Number(amount).toFixed(2)} zł`;
+  }
+  return '—';
+}
+
+// ─── Discarded Tab (extracted to keep JSX readable) ──────────────────────────
+
+function DiscardedTab({
+  items,
+  loading,
+  onReload,
+  getToken,
+}: {
+  items: unknown[];
+  loading: boolean;
+  onReload: () => void;
+  getToken: () => Promise<string | null>;
+}) {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [pendingDeals, setPendingDeals] = useState<Deal[]>([]);
-  const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
-  const [approvedItems, setApprovedItems] = useState<any[]>([]);
-  const [rejectedItems, setRejectedItems] = useState<any[]>([]);
-  const [discardedItems, setDiscardedItems] = useState<any[]>([]);
-  const [discardedSelection, setDiscardedSelection] = useState<Record<string, boolean>>({});
-  const [discardedProcessing, setDiscardedProcessing] = useState(false);
-  const [discardedProgress, setDiscardedProgress] = useState(0);
-  const [discardedLastResult, setDiscardedLastResult] = useState<any>(null);
-  const [processingId, setProcessingId] = useState<string | null>(null);
-  const [checkingClaims, setCheckingClaims] = useState(false);
-  const [isBackfilling, setIsBackfilling] = useState(false);
-  
-  // Filtry statusów - domyślnie pending (spójność SSR/client, naprawia hydration)
-  const [dealStatusFilter, setDealStatusFilter] = useState<string>('pending');
-  const [productStatusFilter, setProductStatusFilter] = useState<string>('pending');
-  
-  // Filtry kategorii
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(false);
-  const [selectedMainCategory, setSelectedMainCategory] = useState<string>('');
-  const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
-  const [selectedSubSubCategory, setSelectedSubSubCategory] = useState<string>('');
-  
-  // New states for comments, reports, users
-  const [reportedComments, setReportedComments] = useState<ReportedComment[]>([]);
-  const [loadingComments, setLoadingComments] = useState(false);
-  const [reports, setReports] = useState<Report[]>([]);
-  const [loadingReports, setLoadingReports] = useState(false);
+  const [selection, setSelection] = useState<Record<string, boolean>>({});
+  const [processing, setProcessing] = useState(false);
 
-  const getLocalizedTitle = (value: any): string => {
-    if (!value) return 'Bez tytułu';
-    if (typeof value === 'string') return value;
-    if (typeof value === 'object') {
-      return value.pl || value.en || value.de || 'Bez tytułu';
-    }
-    return 'Bez tytułu';
-  };
+  const selectedIds = Object.entries(selection)
+    .filter(([, v]) => v)
+    .map(([id]) => id);
 
-  const handleFixAdminClaims = async () => {
-    setCheckingClaims(true);
+  const doAction = async (endpoint: string, body: unknown) => {
+    const token = await getToken();
+    if (!token) return;
+    setProcessing(true);
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        toast({ title: 'Błąd', description: 'Nie jesteś zalogowany', variant: 'destructive' });
-        return;
-      }
-
-      // Sprawdź i napraw claims
-      const token = await currentUser.getIdToken();
-      const res = await fetch('/api/admin/refresh-claims', {
+      const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
       });
-      
-      const data = await res.json();
-      
-      if (data.wasSynced) {
-        toast({ 
-          title: 'Zsynchronizowano uprawnienia', 
-          description: 'Odświeżam token...'
-        });
-        
-        // Force refresh tokena po naprawieniu claims
-        await currentUser.getIdToken(true);
-        
-        toast({ 
-          title: 'Gotowe!', 
-          description: 'Uprawnienia admina zostały zaktualizowane. Odśwież stronę.'
-        });
-        
-        // Auto-refresh po 2 sekundach
-        setTimeout(() => window.location.reload(), 2000);
+      const data = await res.json() as { success?: boolean; message?: string; processed?: number; total?: number };
+      if (res.ok && data.success) {
+        toast({ title: 'Sukces', description: `Przetworzono ${data.processed ?? 0}/${data.total ?? 0}` });
+        setSelection({});
+        onReload();
       } else {
-        toast({ 
-          title: 'Wszystko OK', 
-          description: data.isAdmin 
-            ? 'Masz prawidłowe uprawnienia admina' 
-            : 'Brak uprawnień admina w systemie'
-        });
+        toast({ title: 'Błąd', description: data.message || 'Nie udało się', variant: 'destructive' });
       }
-    } catch (error: any) {
-      toast({ 
-        title: 'Błąd', 
-        description: error.message || 'Nie udało się sprawdzić uprawnień', 
-        variant: 'destructive' 
-      });
+    } catch (err: unknown) {
+      toast({ title: 'Błąd sieciowy', description: (err as Error).message, variant: 'destructive' });
     } finally {
-      setCheckingClaims(false);
+      setProcessing(false);
     }
   };
 
-  const handleTriggerBackfill = async () => {
-    setIsBackfilling(true);
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 w-full" />)}
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <CheckSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+        <p>Brak odfiltrowanych importów</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Toolbar */}
+      <div className="border rounded-md p-3 bg-muted/30 space-y-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-semibold">
+            {selectedIds.length} / {items.length} zaznaczonych
+          </span>
+          <div className="ml-auto flex gap-2">
+            <Button size="sm" variant="outline" disabled={processing}
+              onClick={() => {
+                const all: Record<string, boolean> = {};
+                (items as Array<{ id: string }>).forEach(item => { all[item.id] = true; });
+                setSelection(all);
+              }}>
+              Zaznacz wszystkie
+            </Button>
+            <Button size="sm" variant="outline" disabled={processing || selectedIds.length === 0}
+              onClick={() => setSelection({})}>
+              Wyczyść
+            </Button>
+          </div>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Button size="sm" className="bg-green-600 hover:bg-green-700"
+            disabled={processing || selectedIds.length === 0}
+            onClick={() => doAction('/api/admin/moderation/restore-discarded', {
+              items: selectedIds.map(id => ({ id, type: 'product' })),
+              targetStatus: 'pending',
+            })}>
+            {processing ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+            ↩️ Przywróć zaznaczone
+          </Button>
+          <Button size="sm" variant="destructive"
+            disabled={processing || selectedIds.length === 0}
+            onClick={() => {
+              if (window.confirm(`Trwale usunąć ${selectedIds.length} elementów?`))
+                doAction('/api/admin/moderation/delete-discarded', { ids: selectedIds });
+            }}>
+            🗑️ Usuń zaznaczone
+          </Button>
+        </div>
+      </div>
+
+      {/* List */}
+      {(items as Array<Record<string, unknown>>).map(item => {
+        const id = String(item.id || '');
+        const title = getLocalizedTitle(item.title || item.name);
+        const imageUrl = typeof item.imageUrl === 'string' ? item.imageUrl : '';
+        return (
+          <div key={id} className="flex flex-col sm:flex-row items-start gap-3 p-3 border rounded-lg hover:bg-accent transition-colors">
+            <input
+              type="checkbox"
+              checked={selection[id] || false}
+              onChange={e => setSelection(prev => ({ ...prev, [id]: e.target.checked }))}
+              className="w-5 h-5 cursor-pointer mt-1 shrink-0"
+            />
+            {imageUrl && (
+              <div className="w-16 h-16 bg-muted rounded overflow-hidden border shrink-0">
+                <img src={withImageProxy(imageUrl)} className="w-full h-full object-cover" alt="" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm truncate" title={title}>{title || 'Bez tytułu'}</h3>
+              <p className="text-xs text-muted-foreground">{String(item.reason || item.type || '—')}</p>
+              {item.createdAt && (
+                <p className="text-xs text-muted-foreground">{new Date(String(item.createdAt)).toLocaleString('pl-PL')}</p>
+              )}
+            </div>
+            <div className="flex gap-1.5 shrink-0">
+              <Button size="sm" variant="outline" className="h-7 text-xs text-green-700"
+                onClick={() => doAction('/api/admin/moderation/restore-discarded', {
+                  items: [{ id, type: 'product' }], targetStatus: 'pending',
+                })}>
+                ↩️
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs text-red-700"
+                onClick={() => {
+                  if (window.confirm('Usunąć?'))
+                    doAction('/api/admin/moderation/delete-discarded', { ids: [id] });
+                }}>
+                🗑️
+              </Button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Comments Tab ─────────────────────────────────────────────────────────────
+
+function CommentsTab({
+  getToken,
+}: { getToken: () => Promise<string | null> }) {
+  const { toast } = useToast();
+  const [comments, setComments] = useState<ReportedComment[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchComments = useCallback(async () => {
+    const token = await getToken();
+    if (!token) return;
+    setLoading(true);
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        toast({ title: 'Błąd', description: 'Nie jesteś zalogowany', variant: 'destructive' });
-        return;
-      }
-
-      const token = await currentUser.getIdToken();
-      const res = await fetch('/api/admin/moderation/backfill', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          dryRun: false,
-          approvedOnly: true,
-          maxScanPerCollection: 10000,
-          maxProcessPerType: 400,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data?.success) {
-        throw new Error(data?.error || data?.message || 'Nie udało się uruchomić backfillu');
-      }
-
-      const dealsProcessed = Number(data?.processed?.deals || 0);
-      const productsProcessed = Number(data?.processed?.products || 0);
-      const dealsMissing = Number(data?.missing?.deals || 0);
-      const productsMissing = Number(data?.missing?.products || 0);
-      const hasMoreDeals = Boolean(data?.hasMore?.deals);
-      const hasMoreProducts = Boolean(data?.hasMore?.products);
-
-      const hasMoreText = hasMoreDeals || hasMoreProducts
-        ? ' Wykryto więcej braków w zatwierdzonych rekordach — uruchom przycisk ponownie, aby dokończyć kolejną paczkę.'
-        : '';
-
-      toast({
-        title: 'Backfill uruchomiony',
-        description: `Przetworzono: deale ${dealsProcessed}/${dealsMissing}, produkty ${productsProcessed}/${productsMissing}.${hasMoreText}`,
-        duration: 9000,
-      });
-
-      await fetchModerationData();
-    } catch (error: any) {
-      toast({
-        title: 'Błąd backfillu',
-        description: error?.message || 'Nie udało się uruchomić backfillu',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsBackfilling(false);
-    }
-  };
-
-  const fetchReportedComments = useCallback(async () => {
-    setLoadingComments(true);
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
-      const token = await currentUser.getIdToken();
       const res = await fetch('/api/admin/comments/moderate?limit=50', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) {
-        const data = await res.json();
-        setReportedComments(data.comments || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch reported comments:', error);
+      const data = await res.json() as { comments?: ReportedComment[] };
+      if (res.ok) setComments(data.comments || []);
     } finally {
-      setLoadingComments(false);
+      setLoading(false);
     }
-  }, []);
+  }, [getToken]);
 
-  const fetchReports = useCallback(async () => {
-    setLoadingReports(true);
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
-      const token = await currentUser.getIdToken();
-      const res = await fetch('/api/admin/reports?status=pending&limit=100', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setReports(data.reports || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch reports:', error);
-    } finally {
-      setLoadingReports(false);
-    }
-  }, []);
+  useEffect(() => { fetchComments(); }, [fetchComments]);
 
-  const fetchCategories = useCallback(async () => {
-    setLoadingCategories(true);
-    try {
-      const cats = await getCategories();
-      setCategories(cats || []);
-    } catch (error) {
-      console.error('Failed to fetch categories:', error);
-    } finally {
-      setLoadingCategories(false);
-    }
-  }, []);
-
-  const handleCommentModeration = async (
+  const moderateComment = async (
     commentId: string,
     parentType: 'deal' | 'product',
     parentId: string,
-    action: 'approve' | 'reject' | 'delete' | 'mark-spam'
+    action: 'approve' | 'reject' | 'delete' | 'mark-spam',
   ) => {
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
-      const token = await currentUser.getIdToken();
-      const res = await fetch('/api/admin/comments/moderate', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ commentId, parentType, parentId, action }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast({ title: 'Sukces', description: data.message || 'Komentarz zmoderowany' });
-        await fetchReportedComments();
-      } else {
-        toast({ title: 'Błąd', description: data.error || 'Nie udało się', variant: 'destructive' });
-      }
-    } catch (error: any) {
-      toast({ title: 'Błąd', description: error.message, variant: 'destructive' });
+    const token = await getToken();
+    if (!token) return;
+    const res = await fetch('/api/admin/comments/moderate', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ commentId, parentType, parentId, action }),
+    });
+    const data = await res.json() as { success?: boolean; message?: string; error?: string };
+    if (res.ok && data.success) {
+      toast({ title: 'Sukces', description: data.message || 'Wykonano' });
+      fetchComments();
+    } else {
+      toast({ title: 'Błąd', description: data.error || 'Nie udało się', variant: 'destructive' });
     }
   };
 
-  const handleReportAction = async (reportId: string, action: 'approve' | 'reject' | 'delete-target' | 'ignore', notes?: string) => {
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
-      const token = await currentUser.getIdToken();
-      const res = await fetch('/api/admin/reports', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ reportId, action, moderatorNotes: notes }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast({ title: 'Sukces', description: data.message || 'Zgłoszenie obsłużone' });
-        await fetchReports();
-      } else {
-        toast({ title: 'Błąd', description: data.error || 'Nie udało się', variant: 'destructive' });
-      }
-    } catch (error: any) {
-      toast({ title: 'Błąd', description: error.message, variant: 'destructive' });
-    }
-  };
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-base">Zgłoszone komentarze</CardTitle>
+            <CardDescription>Komentarze oznaczone jako spam lub zgłoszone przez użytkowników</CardDescription>
+          </div>
+          <Button variant="outline" size="sm" onClick={fetchComments} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="space-y-3">{[1, 2, 3].map(i => <Skeleton key={i} className="h-28 w-full" />)}</div>
+        ) : comments.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-40" />
+            <p>Brak zgłoszonych komentarzy</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {comments.map(comment => (
+              <div key={comment.id} className="border rounded-lg p-3 space-y-2">
+                <div className="flex flex-wrap gap-1.5">
+                  <Badge variant="destructive" className="text-xs">{comment.reportCount} zgłoszeń</Badge>
+                  <Badge variant="outline" className="text-xs">{comment.parentType === 'deal' ? 'Okazja' : 'Produkt'}</Badge>
+                  {comment.status && <Badge variant="secondary" className="text-xs">{comment.status}</Badge>}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Pod: <span className="font-medium">{getLocalizedTitle(comment.parentTitle)}</span>
+                  {' · '}{formatDate(comment.createdAt)}
+                </p>
+                <div className="bg-muted rounded px-2 py-1.5">
+                  <p className="text-sm">{comment.content}</p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <Button size="sm" variant="default" className="h-7 text-xs"
+                    onClick={() => moderateComment(comment.id, comment.parentType, comment.parentId, 'approve')}>
+                    <CheckCircle className="h-3.5 w-3.5 mr-1" />Zatwierdź
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs"
+                    onClick={() => moderateComment(comment.id, comment.parentType, comment.parentId, 'reject')}>
+                    Odrzuć
+                  </Button>
+                  <Button size="sm" variant="destructive" className="h-7 text-xs"
+                    onClick={() => {
+                      if (window.confirm('Usunąć komentarz?'))
+                        moderateComment(comment.id, comment.parentType, comment.parentId, 'delete');
+                    }}>
+                    <XCircle className="h-3.5 w-3.5 mr-1" />Usuń
+                  </Button>
+                  <Button size="sm" variant="secondary" className="h-7 text-xs bg-red-950 text-red-50"
+                    onClick={() => {
+                      if (window.confirm('Oznaczyć jako spam?'))
+                        moderateComment(comment.id, comment.parentType, comment.parentId, 'mark-spam');
+                    }}>
+                    🚫 Spam
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+function ModerationPage() {
+  const { getIdToken } = useAuth();
+  const { toast } = useToast();
+
+  const [loading, setLoading] = useState(true);
+  const [pendingDeals, setPendingDeals] = useState<Deal[]>([]);
+  const [pendingProducts, setPendingProducts] = useState<Product[]>([]);
+  const [approvedItems, setApprovedItems] = useState<unknown[]>([]);
+  const [rejectedItems, setRejectedItems] = useState<unknown[]>([]);
+  const [discardedItems, setDiscardedItems] = useState<unknown[]>([]);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [isBackfilling, setIsBackfilling] = useState(false);
+
+  // Filters
+  const [dealStatusFilter, setDealStatusFilter] = useState('pending');
+  const [productStatusFilter, setProductStatusFilter] = useState('pending');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedMainCategory, setSelectedMainCategory] = useState('');
+  const [selectedSubCategory, setSelectedSubCategory] = useState('');
+  const [selectedSubSubCategory, setSelectedSubSubCategory] = useState('');
+
+  // Quick edit dialog
+  const [quickEditItem, setQuickEditItem] = useState<Deal | Product | null>(null);
+  const [quickEditType, setQuickEditType] = useState<'deal' | 'product'>('deal');
+
+  // ── Data fetching ───────────────────────────────────────────────────────────
 
   const fetchModerationData = useCallback(async () => {
     setLoading(true);
     try {
-      if (DEBUG_MODERATION_LOGS) {
-        console.log('[Moderation] Fetching data...')
-      }
-      
-      // Pobierz z filtrami statusów - jeśli 'all', przekazujemy undefined aby pobrać wszystko
-      const dealStatuses = dealStatusFilter === 'all' 
-        ? undefined 
-        : dealStatusFilter === 'pending' 
-        ? ['pending', 'poczekalnia', 'draft'] 
-        : [dealStatusFilter];
-      
+      const token = await getIdToken();
+      if (!token) { setLoading(false); return; }
+
+      const dealStatuses = dealStatusFilter === 'all'
+        ? undefined
+        : dealStatusFilter === 'pending'
+          ? ['pending', 'poczekalnia', 'draft']
+          : [dealStatusFilter];
+
       const productStatuses = productStatusFilter === 'all'
         ? undefined
         : productStatusFilter === 'pending'
-        ? ['pending_approval', 'draft']
-        : [productStatusFilter];
-      
-      if (DEBUG_MODERATION_LOGS) {
-        console.log('[Moderation] Deal statuses:', dealStatuses, 'Product statuses:', productStatuses)
-      }
-      
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        setLoading(false);
-        return;
-      }
+          ? ['pending_approval', 'draft']
+          : [productStatusFilter];
 
-      const token = await currentUser.getIdToken();
       const qs = new URLSearchParams();
       if (dealStatuses) qs.set('dealStatuses', dealStatuses.join(','));
       if (productStatuses) qs.set('productStatuses', productStatuses.join(','));
       qs.set('limit', '200');
       qs.set('includeRecent', '1');
 
-      const res = await fetch(`/api/admin/moderation/data?${qs.toString()}`, {
+      const res = await fetch(`/api/admin/moderation/data?${qs}`, {
+        cache: 'no-store',
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (res.status === 401 || res.status === 403) {
-        setLoading(false);
-        return;
-      }
+      if (!res.ok) { setLoading(false); return; }
 
-      const payload = await res.json();
+      const payload = await res.json() as {
+        deals?: Deal[]; products?: Product[];
+        approved?: unknown[]; rejected?: unknown[]; discarded?: unknown[];
+      };
+
       let deals = payload.deals || [];
       let products = payload.products || [];
-      let approved = payload.approved || [];
-      let rejected = payload.rejected || [];
-      let discarded = payload.discarded || [];
-      
-      if (DEBUG_MODERATION_LOGS) {
-        console.log('[Moderation] Got deals:', deals.length, 'products:', products.length, 'approved:', approved.length, 'rejected:', rejected.length)
-      }
-      
-      // Filtruj po kategoriach jeśli wybrana
+
       if (selectedMainCategory) {
-        deals = deals.filter(d => d.mainCategorySlug === selectedMainCategory);
-        products = products.filter(p => p.mainCategorySlug === selectedMainCategory);
+        deals = deals.filter(d => (d as unknown as Record<string, string>).mainCategorySlug === selectedMainCategory);
+        products = products.filter(p => (p as unknown as Record<string, string>).mainCategorySlug === selectedMainCategory);
       }
-      
       if (selectedSubCategory) {
-        deals = deals.filter(d => d.subCategorySlug === selectedSubCategory);
-        products = products.filter(p => p.subCategorySlug === selectedSubCategory);
+        deals = deals.filter(d => (d as unknown as Record<string, string>).subCategorySlug === selectedSubCategory);
+        products = products.filter(p => (p as unknown as Record<string, string>).subCategorySlug === selectedSubCategory);
       }
-      
       if (selectedSubSubCategory) {
-        deals = deals.filter(d => d.subSubCategorySlug === selectedSubSubCategory);
-        products = products.filter(p => p.subSubCategorySlug === selectedSubSubCategory);
+        deals = deals.filter(d => (d as unknown as Record<string, string>).subSubCategorySlug === selectedSubSubCategory);
+        products = products.filter(p => (p as unknown as Record<string, string>).subSubCategorySlug === selectedSubSubCategory);
       }
-      
+
       setPendingDeals(deals);
       setPendingProducts(products);
-      setApprovedItems(approved);
-      setRejectedItems(rejected);
-      setDiscardedItems(discarded);
-    } catch (error) {
-      console.error('Błąd podczas pobierania danych moderacji:', error);
-      toast({
-        title: 'Błąd',
-        description: 'Nie udało się pobrać danych do moderacji',
-        variant: 'destructive',
-      });
+      setApprovedItems(payload.approved || []);
+      setRejectedItems(payload.rejected || []);
+      setDiscardedItems(payload.discarded || []);
+    } catch (err) {
+      console.error('[Moderation] fetch error:', err);
+      toast({ title: 'Błąd', description: 'Nie udało się pobrać danych', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
-  }, [toast, dealStatusFilter, productStatusFilter, selectedMainCategory, selectedSubCategory, selectedSubSubCategory]);
+  }, [getIdToken, toast, dealStatusFilter, productStatusFilter, selectedMainCategory, selectedSubCategory, selectedSubSubCategory]);
 
-  useEffect(() => {
-    fetchModerationData();
-  }, [fetchModerationData]);
+  useEffect(() => { fetchModerationData(); }, [fetchModerationData]);
+  useEffect(() => { getCategories().then(setCategories).catch(() => {}); }, []);
 
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+  // ── Actions ─────────────────────────────────────────────────────────────────
 
-  const handleModeration = async (itemId: string, itemType: 'deal' | 'product', action: 'approve' | 'reject') => {
+  const handleModeration = async (
+    itemId: string,
+    itemType: 'deal' | 'product',
+    action: 'approve' | 'reject',
+  ) => {
     setProcessingId(itemId);
     try {
-      // Pobierz token użytkownika z Firebase auth
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        toast({ title: 'Błąd', description: 'Brak zalogowanego użytkownika', variant: 'destructive' });
-        setProcessingId(null);
-        return;
-      }
-
-      const token = await currentUser.getIdToken();
-
-      const response = await fetch('/api/admin/moderation', {
+      const token = await getIdToken();
+      if (!token) return;
+      const res = await fetch('/api/admin/moderation', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ itemId, itemType, action }),
       });
-
-      const data = await response.json();
-
+      const data = await res.json() as { success?: boolean; message?: string };
       if (data.success) {
-        toast({
-          title: 'Sukces',
-          description: data.message,
-        });
-        // Odśwież dane
+        toast({ title: 'Sukces', description: data.message });
         await fetchModerationData();
       } else {
-        throw new Error(data.message);
+        throw new Error(data.message || 'Błąd');
       }
-    } catch (error) {
-      console.error('Błąd moderacji:', error);
-      toast({
-        title: 'Błąd',
-        description: 'Nie udało się przetworzyć akcji moderacji',
-        variant: 'destructive',
-      });
+    } catch (err: unknown) {
+      toast({ title: 'Błąd', description: (err as Error).message, variant: 'destructive' });
     } finally {
       setProcessingId(null);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pl-PL', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
+  const handleBackfill = async () => {
+    const token = await getIdToken();
+    if (!token) return;
+    setIsBackfilling(true);
+    try {
+      const res = await fetch('/api/admin/moderation/backfill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ dryRun: false, approvedOnly: true, maxScanPerCollection: 10000, maxProcessPerType: 400 }),
+      });
+      const data = await res.json() as { success?: boolean; error?: string; message?: string; processed?: { deals?: number; products?: number }; missing?: { deals?: number; products?: number }; hasMore?: { deals?: boolean; products?: boolean } };
+      if (!res.ok || !data.success) throw new Error(data.error || data.message || 'Błąd');
+      const hasMore = data.hasMore?.deals || data.hasMore?.products;
+      toast({
+        title: 'Backfill uruchomiony',
+        description: `Deale: ${data.processed?.deals ?? 0}/${data.missing?.deals ?? 0}, Produkty: ${data.processed?.products ?? 0}/${data.missing?.products ?? 0}${hasMore ? ' — uruchom ponownie' : ''}`,
+        duration: 9000,
+      });
+      await fetchModerationData();
+    } catch (err: unknown) {
+      toast({ title: 'Błąd backfillu', description: (err as Error).message, variant: 'destructive' });
+    } finally {
+      setIsBackfilling(false);
+    }
   };
+
+  // ── Common action buttons component ─────────────────────────────────────────
+
+  const ModerationActions = ({
+    item, type,
+  }: { item: Deal | Product; type: 'deal' | 'product' }) => (
+    <div className="flex flex-wrap items-center gap-2">
+      {/* Full preview dialog */}
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" disabled={processingId === item.id}>
+            <Eye className="h-4 w-4 mr-1" />Podgląd
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="truncate">
+              {type === 'deal' ? 'Deal' : 'Produkt'}: {getLocalizedTitle((item as Deal).title || (item as Product).name)}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto">
+            <ModerationDetailView item={item} itemType={type} />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick edit + approve */}
+      <Button
+        variant="outline" size="sm"
+        disabled={processingId === item.id}
+        onClick={() => {
+          setQuickEditItem(item);
+          setQuickEditType(type);
+        }}
+      >
+        <Pencil className="h-4 w-4 mr-1" />Edytuj
+      </Button>
+
+      <Button variant="destructive" size="sm"
+        disabled={processingId === item.id}
+        onClick={() => handleModeration(item.id, type, 'reject')}>
+        <XCircle className="h-4 w-4 mr-1" />Odrzuć
+      </Button>
+      <Button variant="default" size="sm"
+        disabled={processingId === item.id}
+        onClick={() => handleModeration(item.id, type, 'approve')}>
+        {processingId === item.id
+          ? <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+          : <CheckCircle className="h-4 w-4 mr-1" />}
+        Zatwierdź
+      </Button>
+    </div>
+  );
+
+  // ── Stats ────────────────────────────────────────────────────────────────────
+
+  const totalPending = pendingDeals.length + pendingProducts.length;
+
+  // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Panel moderacji</h2>
-          <p className="text-muted-foreground">
-            Zatwierdzaj i odrzucaj nowe treści
-          </p>
+          <p className="text-muted-foreground">Zatwierdzaj, odrzucaj i zarządzaj treściami</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleTriggerBackfill}
-            disabled={isBackfilling}
-          >
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={handleBackfill} disabled={isBackfilling}>
             <Sparkles className={`h-4 w-4 mr-2 ${isBackfilling ? 'animate-pulse' : ''}`} />
-            {isBackfilling ? 'Backfill w toku...' : 'Uruchom backfill braków'}
+            {isBackfilling ? 'Backfill...' : 'Backfill braków'}
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleFixAdminClaims}
-            disabled={checkingClaims}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${checkingClaims ? 'animate-spin' : ''}`} />
-            {checkingClaims ? 'Sprawdzam...' : 'Napraw uprawnienia'}
+          <Button variant="outline" size="sm" onClick={fetchModerationData} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Odśwież
           </Button>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Do moderacji</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{pendingDeals.length + pendingProducts.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Oczekuje na akcję
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Zatwierdzone (7 dni)</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {loading ? <Skeleton className="h-8 w-16" /> : approvedItems.length}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Ostatnie 7 dni
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Odrzucone (7 dni)</CardTitle>
-            <XCircle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {loading ? <Skeleton className="h-8 w-16" /> : rejectedItems.length}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Ostatnie 7 dni
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Średni czas reakcji</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {loading ? <Skeleton className="h-8 w-16" /> : '—'}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Ostatnie 7 dni
-            </p>
-          </CardContent>
-        </Card>
+        {[
+          { label: 'Do moderacji', value: totalPending, icon: <Clock className="h-4 w-4 text-muted-foreground" />, sub: 'Oczekuje na akcję' },
+          { label: 'Okazje', value: pendingDeals.length, icon: <AlertTriangle className="h-4 w-4 text-amber-500" />, sub: 'Do zatwierdzenia' },
+          { label: 'Produkty', value: pendingProducts.length, icon: <ListChecks className="h-4 w-4 text-blue-500" />, sub: 'Do zatwierdzenia' },
+          { label: 'Odfiltrowane', value: discardedItems.length, icon: <XCircle className="h-4 w-4 text-red-400" />, sub: 'Import discarded' },
+        ].map(({ label, value, icon, sub }) => (
+          <Card key={label}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">{label}</CardTitle>
+              {icon}
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {loading ? <Skeleton className="h-8 w-16" /> : value}
+              </div>
+              <p className="text-xs text-muted-foreground">{sub}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Moderation Queue */}
+      {/* Tabs */}
       <Tabs defaultValue="deals" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="deals">
-            Okazje ({pendingDeals.length})
+            Okazje
+            {pendingDeals.length > 0 && (
+              <Badge variant="secondary" className="ml-1.5 text-[10px] py-0 h-4">{pendingDeals.length}</Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="products">
-            Produkty ({pendingProducts.length})
+            Produkty
+            {pendingProducts.length > 0 && (
+              <Badge variant="secondary" className="ml-1.5 text-[10px] py-0 h-4">{pendingProducts.length}</Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="comments">
-            Komentarze
+            <MessageSquare className="h-3.5 w-3.5 mr-1.5" />Komentarze
           </TabsTrigger>
-          <TabsTrigger value="reports">
-            Zgłoszenia
-          </TabsTrigger>
-          <TabsTrigger value="users">
-            Użytkownicy
-          </TabsTrigger>
-          <TabsTrigger value="approved">
-            Zatwierdzone
-          </TabsTrigger>
-          <TabsTrigger value="rejected">
-            Odrzucone
-          </TabsTrigger>
+          <TabsTrigger value="forum">Forum</TabsTrigger>
           <TabsTrigger value="discarded">
-            Odfiltrowane importy ({discardedItems.length})
+            Odfiltrowane
+            {discardedItems.length > 0 && (
+              <Badge variant="secondary" className="ml-1.5 text-[10px] py-0 h-4">{discardedItems.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="history">
+            <History className="h-3.5 w-3.5 mr-1.5" />Historia
           </TabsTrigger>
         </TabsList>
 
+        {/* ── Tab: Deals ─────────────────────────────────────────────────────── */}
         <TabsContent value="deals" className="space-y-4">
-          {/* Filtry statusów i kategorii */}
           <ModerationFilters
             type="deals"
             statusFilter={dealStatusFilter}
@@ -614,23 +663,16 @@ function ModerationPage() {
             setSelectedSubSubCategory={setSelectedSubSubCategory}
             itemsCount={pendingDeals.length}
           />
-          
-          {/* Bulk actions bar (deals) */}
-          <BulkModerationBar type="deal" items={pendingDeals} onAction={async () => fetchModerationData()} />
+          <BulkModerationBar type="deal" items={pendingDeals} onAction={fetchModerationData} />
+
           <Card>
             <CardHeader>
-              <CardTitle>Okazje - wszystkie statusy</CardTitle>
-              <CardDescription>
-                Moderacja okazji - wszystkie statusy (zatwierdzone, poczekalnia, szkic, odrzucone)
-              </CardDescription>
+              <CardTitle>Okazje do moderacji</CardTitle>
+              <CardDescription>Deale ze statusem: {dealStatusFilter}</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Skeleton key={i} className="h-24 w-full" />
-                  ))}
-                </div>
+                <div className="space-y-3">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>
               ) : pendingDeals.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <CheckSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -638,83 +680,30 @@ function ModerationPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {pendingDeals.map((deal) => (
+                  {pendingDeals.map(deal => (
                     <div key={deal.id} className="flex flex-col lg:flex-row items-start gap-4 p-4 border rounded-lg hover:bg-accent transition-colors">
-                      {/* Podgląd karty - responsive width */}
                       <div className="w-full lg:w-[300px] lg:shrink-0">
-                        <DealCard deal={deal} locale="pl" />
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        <DealCard deal={deal as any} />
                       </div>
-                      
-                      {/* Metadane i akcje po prawej */}
-                      <div className="flex-1 min-w-0 space-y-3 w-full">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold truncate">{getLocalizedTitle(deal.title)}</h3>
-                          <Badge variant={
-                            deal.status === 'approved' ? 'default' :
-                            deal.status === 'pending' ? 'secondary' :
-                            deal.status === 'draft' ? 'outline' :
-                            'destructive'
-                          }>{deal.status}</Badge>
-                          {deal.source && (
-                            <Badge variant="outline" className={
-                              deal.source === 'api' || deal.source === 'ai' 
-                                ? 'bg-blue-50 text-blue-700 border-blue-300' 
-                                : 'bg-gray-50'
-                            }>
-                              {deal.source === 'api' ? '🤖 API' : deal.source === 'ai' ? '✨ AI' : '👤 Manual'}
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold truncate">{getLocalizedTitle((deal as Deal).title)}</h3>
+                          <Badge variant={statusVariant(deal.status || '')}>{deal.status}</Badge>
+                          {(deal as unknown as Record<string, unknown>).source && (
+                            <Badge variant="outline" className="text-xs">
+                              {String((deal as unknown as Record<string, unknown>).source) === 'api' ? '🤖 API' : '👤 Manual'}
                             </Badge>
                           )}
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                          <span>{getLocalizedTitle(deal.category)}</span>
-                          <span className="hidden sm:inline">•</span>
-                          <span>Dodane przez {deal.postedBy || deal.createdBy || 'Użytkownik'}</span>
-                          <span className="hidden sm:inline">•</span>
-                          <span>{formatDate(deal.postedAt)}</span>
-                        </div>
-                        
-                        {/* Akcje moderacji */}
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                disabled={processingId === deal.id}
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                Podgląd pełny
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="w-full max-w-4xl h-screen md:h-auto max-h-[90vh] overflow-hidden flex flex-col">
-                              <DialogHeader className="flex-shrink-0 overflow-hidden">
-                                <DialogTitle className="truncate">Moderacja Deal: {getLocalizedTitle(deal.title)}</DialogTitle>
-                              </DialogHeader>
-                              <div className="flex-1 overflow-y-auto">
-                                <ModerationDetailView item={deal} itemType="deal" />
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                          
-                          <Button 
-                            variant="destructive" 
-                            size="sm"
-                            onClick={() => handleModeration(deal.id, 'deal', 'reject')}
-                            disabled={processingId === deal.id}
-                          >
-                            <XCircle className="h-4 w-4 mr-1" />
-                            Odrzuć
-                          </Button>
-                          <Button 
-                            variant="default" 
-                            size="sm"
-                            onClick={() => handleModeration(deal.id, 'deal', 'approve')}
-                            disabled={processingId === deal.id}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Zatwierdź
-                          </Button>
-                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {getLocalizedTitle((deal as unknown as Record<string, unknown>).category)}
+                          {' · '}
+                          {String((deal as unknown as Record<string, unknown>).postedBy || (deal as unknown as Record<string, unknown>).createdBy || 'Użytkownik')}
+                          {' · '}
+                          {formatDate(String((deal as unknown as Record<string, unknown>).postedAt || ''))}
+                        </p>
+                        <ModerationActions item={deal} type="deal" />
                       </div>
                     </div>
                   ))}
@@ -724,8 +713,8 @@ function ModerationPage() {
           </Card>
         </TabsContent>
 
+        {/* ── Tab: Products ────────────────────────────────────────────────── */}
         <TabsContent value="products" className="space-y-4">
-          {/* Filtry statusów i kategorii produktów */}
           <ModerationFilters
             type="products"
             statusFilter={productStatusFilter}
@@ -739,22 +728,16 @@ function ModerationPage() {
             setSelectedSubSubCategory={setSelectedSubSubCategory}
             itemsCount={pendingProducts.length}
           />
-          
-          <BulkModerationBar type="product" items={pendingProducts} onAction={async () => fetchModerationData()} />
+          <BulkModerationBar type="product" items={pendingProducts} onAction={fetchModerationData} />
+
           <Card>
             <CardHeader>
-              <CardTitle>Produkty (ProductCores) - wszystkie statusy</CardTitle>
-              <CardDescription>
-                Moderacja produktów M6 - wszystkie statusy (approved, pending_approval, draft, rejected)
-              </CardDescription>
+              <CardTitle>Produkty do moderacji</CardTitle>
+              <CardDescription>ProductCores ze statusem: {productStatusFilter}</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <Skeleton key={i} className="h-24 w-full" />
-                  ))}
-                </div>
+                <div className="space-y-3">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>
               ) : pendingProducts.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <CheckSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -762,848 +745,80 @@ function ModerationPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {pendingProducts.map((product) => {
-                    const productTitle = getLocalizedTitle(product.title || product.name);
-                    const productCategory = getLocalizedTitle(product.category);
+                  {pendingProducts.map(product => {
+                    const title = getLocalizedTitle((product as unknown as Record<string, unknown>).title || (product as unknown as Record<string, unknown>).name);
                     return (
-                    <div key={product.id} className="flex flex-col lg:flex-row items-start gap-4 p-4 border rounded-lg hover:bg-accent transition-colors">
-                      {/* Podgląd karty ProductCore - responsive width */}
-                      <div className="w-full lg:w-[300px] lg:shrink-0">
-                        <ProductListCard product={product} locale="pl" />
-                      </div>
-                      
-                      {/* Metadane i akcje po prawej */}
-                      <div className="flex-1 min-w-0 space-y-3 w-full">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold truncate max-w-[300px]" title={productTitle}>
-                              {productTitle}
-                          </h3>
-                          <Badge variant={
-                            product.status === 'approved' ? 'default' :
-                            product.status === 'pending_approval' ? 'secondary' :
-                            product.status === 'draft' ? 'outline' :
-                            'destructive'
-                          }>{product.status}</Badge>
+                      <div key={product.id} className="flex flex-col lg:flex-row items-start gap-4 p-4 border rounded-lg hover:bg-accent transition-colors">
+                        <div className="w-full lg:w-[300px] lg:shrink-0">
+                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                          <ProductListCard product={product as any} />
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                          <span>{productCategory}</span>
-                          <span className="hidden sm:inline">•</span>
-                          <span className="font-semibold">
-                            {Number.isFinite(product.price) 
-                              ? `${parseFloat(product.price).toFixed(2)} zł`
-                              : product.price?.amount 
-                              ? `${product.price.amount.toFixed(2)} zł` 
-                              : '—'}
-                          </span>
-                          {product.metadata?.importedAt && (
-                            <>
-                              <span className="hidden sm:inline">•</span>
-                              <span>Import: {new Date(product.metadata.importedAt).toLocaleDateString('pl-PL')}</span>
-                            </>
-                          )}
-                        </div>
-                        
-                        {/* Akcje moderacji */}
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                disabled={processingId === product.id}
-                              >
-                                <Eye className="h-4 w-4 mr-1" />
-                                Podgląd pełny
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="w-full max-w-4xl h-screen md:h-auto max-h-[90vh] overflow-hidden flex flex-col">
-                              <DialogHeader className="flex-shrink-0 overflow-hidden">
-                                <DialogTitle className="truncate">Moderacja ProductCore: {productTitle || 'Unknown'}</DialogTitle>
-                              </DialogHeader>
-                              <div className="flex-1 overflow-y-auto">
-                                <ModerationDetailView item={product} itemType="product" />
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                          
-                          <Button 
-                            variant="destructive" 
-                            size="sm"
-                            onClick={() => handleModeration(product.id, 'product', 'reject')}
-                            disabled={processingId === product.id}
-                          >
-                            <XCircle className="h-4 w-4 mr-1" />
-                            Odrzuć
-                          </Button>
-                          <Button 
-                            variant="default" 
-                            size="sm"
-                            onClick={() => handleModeration(product.id, 'product', 'approve')}
-                            disabled={processingId === product.id}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Zatwierdź
-                          </Button>
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold truncate" title={title}>{title}</h3>
+                            <Badge variant={statusVariant(product.status || '')}>{product.status}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {getLocalizedTitle((product as unknown as Record<string, unknown>).category)}
+                            {' · '}{getPrice(product)}
+                          </p>
+                          <ModerationActions item={product} type="product" />
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* ── Tab: Comments ─────────────────────────────────────────────────── */}
+        <TabsContent value="comments">
+          <CommentsTab getToken={getIdToken} />
+        </TabsContent>
+
+        {/* ── Tab: Forum ────────────────────────────────────────────────────── */}
+        <TabsContent value="forum">
+          <ForumModerationPanel />
+        </TabsContent>
+
+        {/* ── Tab: Discarded ────────────────────────────────────────────────── */}
         <TabsContent value="discarded" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Odfiltrowane importy</CardTitle>
               <CardDescription>
-                Pozycje znalezione przez import, ale odrzucone przez filtr jakości lub brak danych.
+                Pozycje odrzucone przez filtr jakości — możesz je przywrócić lub trwale usunąć.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Toolbar for discarded items - restore/delete actions */}
-              {discardedItems.length > 0 && (
-                <div className="mb-4 space-y-2 border rounded-md p-3 bg-muted/30">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold">
-                      Akcje: {Object.values(discardedSelection).filter(Boolean).length} zaznaczonych
-                    </span>
-                    <div className="ml-auto flex gap-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => {
-                          const all: Record<string, boolean> = {};
-                          discardedItems.forEach(item => all[item.id] = true);
-                          setDiscardedSelection(all);
-                        }}
-                        disabled={discardedProcessing}
-                      >
-                        Zaznacz wszystkie ({discardedItems.length})
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => setDiscardedSelection({})}
-                        disabled={discardedProcessing || Object.values(discardedSelection).every(v => !v)}
-                      >
-                        Wyczyść
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="default"
-                      className="bg-green-600 hover:bg-green-700"
-                      onClick={async () => {
-                        const selectedIds = Object.entries(discardedSelection).filter(([, v]) => v).map(([id]) => id);
-                        if (selectedIds.length === 0) {
-                          toast({ title: 'Błąd', description: 'Nie zaznaczono żadnych elementów', variant: 'destructive' });
-                          return;
-                        }
-                        setDiscardedProcessing(true);
-                        setDiscardedProgress(0);
-                        setDiscardedLastResult(null);
-                        try {
-                          const currentUser = auth.currentUser;
-                          if (!currentUser) {
-                            toast({ title: 'Błąd', description: 'Brak zalogowanego użytkownika', variant: 'destructive' });
-                            return;
-                          }
-
-                          const token = await currentUser.getIdToken();
-                          const progressInterval = setInterval(() => {
-                            setDiscardedProgress(prev => Math.min(prev + 1, selectedIds.length - 1));
-                          }, 100);
-
-                          const res = await fetch('/api/admin/moderation/restore-discarded', {
-                            method: 'POST',
-                            headers: { 
-                              'Content-Type': 'application/json',
-                              'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify({ 
-                              items: selectedIds.map(id => ({ id, type: 'product' })),
-                              targetStatus: 'pending'
-                            })
-                          });
-                          
-                          clearInterval(progressInterval);
-                          setDiscardedProgress(selectedIds.length);
-
-                          const data = await res.json();
-                          setDiscardedLastResult(data);
-
-                          if (res.ok && data.success) {
-                            toast({ 
-                              title: 'Sukces', 
-                              description: `Przywrócono ${data.processed}/${data.total} elementów`
-                            });
-                            setDiscardedSelection({});
-                            await new Promise(r => setTimeout(r, 500));
-                            await loadData();
-                          } else {
-                            toast({ 
-                              title: 'Błąd', 
-                              description: data.message || 'Nie udało się przywrócić',
-                              variant: 'destructive'
-                            });
-                          }
-                        } catch (error: any) {
-                          toast({ 
-                            title: 'Błąd sieciowy', 
-                            description: error.message || 'Nie udało się przywrócić',
-                            variant: 'destructive' 
-                          });
-                        } finally {
-                          setDiscardedProcessing(false);
-                          setDiscardedProgress(0);
-                        }
-                      }}
-                      disabled={discardedProcessing || Object.values(discardedSelection).every(v => !v)}
-                    >
-                      ↩️ Przywróć
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={async () => {
-                        const selectedIds = Object.entries(discardedSelection).filter(([, v]) => v).map(([id]) => id);
-                        if (selectedIds.length === 0) {
-                          toast({ title: 'Błąd', description: 'Nie zaznaczono żadnych elementów', variant: 'destructive' });
-                          return;
-                        }
-                        if (!window.confirm(`Czy na pewno chcesz trwale usunąć ${selectedIds.length} elementów?`)) return;
-                        
-                        setDiscardedProcessing(true);
-                        setDiscardedProgress(0);
-                        setDiscardedLastResult(null);
-                        try {
-                          const currentUser = auth.currentUser;
-                          if (!currentUser) {
-                            toast({ title: 'Błąd', description: 'Brak zalogowanego użytkownika', variant: 'destructive' });
-                            return;
-                          }
-
-                          const token = await currentUser.getIdToken();
-                          const progressInterval = setInterval(() => {
-                            setDiscardedProgress(prev => Math.min(prev + 1, selectedIds.length - 1));
-                          }, 100);
-
-                          const res = await fetch('/api/admin/moderation/delete-discarded', {
-                            method: 'POST',
-                            headers: { 
-                              'Content-Type': 'application/json',
-                              'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify({ ids: selectedIds })
-                          });
-                          
-                          clearInterval(progressInterval);
-                          setDiscardedProgress(selectedIds.length);
-
-                          const data = await res.json();
-                          setDiscardedLastResult(data);
-
-                          if (res.ok && data.success) {
-                            toast({ 
-                              title: 'Sukces', 
-                              description: `Usunięto ${data.processed}/${data.total} elementów`
-                            });
-                            setDiscardedSelection({});
-                            await new Promise(r => setTimeout(r, 500));
-                            await loadData();
-                          } else {
-                            toast({ 
-                              title: 'Błąd', 
-                              description: data.message || 'Nie udało się usunąć',
-                              variant: 'destructive'
-                            });
-                          }
-                        } catch (error: any) {
-                          toast({ 
-                            title: 'Błąd sieciowy', 
-                            description: error.message || 'Nie udało się usunąć',
-                            variant: 'destructive' 
-                          });
-                        } finally {
-                          setDiscardedProcessing(false);
-                          setDiscardedProgress(0);
-                        }
-                      }}
-                      disabled={discardedProcessing || Object.values(discardedSelection).every(v => !v)}
-                    >
-                      🗑️ Usuń
-                    </Button>
-                  </div>
-
-                  {/* Progress bar */}
-                  {discardedProcessing && (
-                    <div className="space-y-1">
-                      <div className="flex justify-between items-center text-xs">
-                        <span>Przetwarzanie...</span>
-                        <span className="text-slate-600">{discardedProgress}/{Object.values(discardedSelection).filter(Boolean).length}</span>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                        <div 
-                          className="bg-blue-600 h-full transition-all duration-200"
-                          style={{ width: `${Object.values(discardedSelection).filter(Boolean).length > 0 ? Math.round((discardedProgress / Object.values(discardedSelection).filter(Boolean).length) * 100) : 0}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Error details */}
-                  {discardedLastResult?.failures && discardedLastResult.failures.length > 0 && !discardedProcessing && (
-                    <div className="border border-red-300 bg-red-50 rounded-md p-2 text-sm">
-                      <div className="font-semibold text-red-800 mb-1">
-                        🚨 {discardedLastResult.failures.length} błędów:
-                      </div>
-                      <details className="cursor-pointer">
-                        <summary className="text-red-700 hover:text-red-900 font-medium">Pokaż szczegóły</summary>
-                        <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
-                          {discardedLastResult.failures.map((fail: any, idx: number) => (
-                            <div key={idx} className="text-xs text-red-800 font-mono bg-white/50 p-1 rounded">
-                              <strong>{fail.id}</strong>: {fail.error || 'Nieznany błąd'}
-                            </div>
-                          ))}
-                        </div>
-                      </details>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <Skeleton key={i} className="h-20 w-full" />
-                  ))}
-                </div>
-              ) : discardedItems.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <CheckSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Brak odfiltrowanych importów</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {discardedItems.map((item: any) => (
-                    <div key={item.id} className="flex flex-col lg:flex-row items-start gap-4 p-4 border rounded-lg hover:bg-accent transition-colors">
-                      {(() => {
-                        const normalizeText = (value: unknown, fallback = ''): string => {
-                          if (typeof value === 'string') return value;
-                          if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-                          if (value == null) return fallback;
-                          try {
-                            return JSON.stringify(value);
-                          } catch {
-                            return fallback;
-                          }
-                        };
-
-                        const safeTitle = normalizeText(item.title, 'Bez tytułu');
-                        const safeQuery = normalizeText(item.query, '');
-
-                        return (
-                          <>
-                      <div className="w-full lg:w-[160px] lg:shrink-0">
-                        <div className="w-full h-[120px] bg-muted rounded-md overflow-hidden border">
-                          {item.imageUrl ? (
-                            <img src={withImageProxy(item.imageUrl)} className="w-full h-full object-cover" alt="" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                              Brak zdjęcia
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0 space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-semibold truncate" title={safeTitle || 'Bez tytułu'}>
-                            {safeTitle || 'Bez tytułu'}
-                          </h3>
-                          <Badge variant="outline">{item.source || 'źródło'}</Badge>
-                          {item.type && <Badge variant="secondary">{item.type}</Badge>}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {item.reason || 'Brak powodu odrzucenia'}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                          {item.price ? (
-                            <span className="font-semibold">
-                              {Number(item.price).toFixed(2)} {item.currency || 'PLN'}
-                            </span>
-                          ) : (
-                            <span className="font-semibold">—</span>
-                          )}
-                          {safeQuery && (
-                            <>
-                              <span className="hidden sm:inline">•</span>
-                              <span>Query: {safeQuery}</span>
-                            </>
-                          )}
-                          {item.createdAt && (
-                            <>
-                              <span className="hidden sm:inline">•</span>
-                              <span>{new Date(item.createdAt).toLocaleString('pl-PL')}</span>
-                            </>
-                          )}
-                        </div>
-                        {item.sourceUrl && (
-                          <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline">
-                            Podgląd źródła
-                          </a>
-                        )}
-                      </div>
-
-                      {/* Actions column for single item */}
-                      <div className="flex flex-col gap-2 shrink-0">
-                        <input
-                          type="checkbox"
-                          checked={discardedSelection[item.id] || false}
-                          onChange={(e) => {
-                            setDiscardedSelection(prev => ({
-                              ...prev,
-                              [item.id]: e.target.checked
-                            }));
-                          }}
-                          className="w-5 h-5 cursor-pointer"
-                        />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 text-green-700 hover:bg-green-50"
-                          onClick={async () => {
-                            try {
-                              const currentUser = auth.currentUser;
-                              if (!currentUser) {
-                                toast({ title: 'Błąd', description: 'Brak zalogowanego użytkownika', variant: 'destructive' });
-                                return;
-                              }
-                              const token = await currentUser.getIdToken();
-                              const res = await fetch('/api/admin/moderation/restore-discarded', {
-                                method: 'POST',
-                                headers: { 
-                                  'Content-Type': 'application/json',
-                                  'Authorization': `Bearer ${token}`
-                                },
-                                body: JSON.stringify({ 
-                                  items: [{ id: item.id, type: 'product' }],
-                                  targetStatus: 'pending'
-                                })
-                              });
-                              const data = await res.json();
-                              if (res.ok && data.success) {
-                                toast({ title: 'Sukces', description: 'Przywrócono' });
-                                await loadData();
-                              } else {
-                                toast({ title: 'Błąd', description: data.message, variant: 'destructive' });
-                              }
-                            } catch (error: any) {
-                              toast({ title: 'Błąd', description: error.message, variant: 'destructive' });
-                            }
-                          }}
-                        >
-                          ↩️
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 text-red-700 hover:bg-red-50"
-                          onClick={async () => {
-                            if (!window.confirm('Czy na pewno chcesz trwale usunąć ten element?')) return;
-                            try {
-                              const currentUser = auth.currentUser;
-                              if (!currentUser) {
-                                toast({ title: 'Błąd', description: 'Brak zalogowanego użytkownika', variant: 'destructive' });
-                                return;
-                              }
-                              const token = await currentUser.getIdToken();
-                              const res = await fetch('/api/admin/moderation/delete-discarded', {
-                                method: 'POST',
-                                headers: { 
-                                  'Content-Type': 'application/json',
-                                  'Authorization': `Bearer ${token}`
-                                },
-                                body: JSON.stringify({ ids: [item.id] })
-                              });
-                              const data = await res.json();
-                              if (res.ok && data.success) {
-                                toast({ title: 'Sukces', description: 'Usunięto' });
-                                await loadData();
-                              } else {
-                                toast({ title: 'Błąd', description: data.message, variant: 'destructive' });
-                              }
-                            } catch (error: any) {
-                              toast({ title: 'Błąd', description: error.message, variant: 'destructive' });
-                            }
-                          }}
-                        >
-                          🗑️
-                        </Button>
-                      </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <DiscardedTab
+                items={discardedItems}
+                loading={loading}
+                onReload={fetchModerationData}
+                getToken={getIdToken}
+              />
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="comments" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Komentarze zgłoszone do moderacji</CardTitle>
-              <CardDescription>
-                Komentarze oznaczone jako spam lub zgłoszone przez użytkowników
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4">
-                <Button onClick={fetchReportedComments} disabled={loadingComments}>
-                  {loadingComments ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                  Odśwież listę
-                </Button>
-              </div>
-
-              {loadingComments ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-32 w-full" />
-                  ))}
-                </div>
-              ) : reportedComments.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <CheckSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Brak zgłoszonych komentarzy</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {reportedComments.map((comment) => (
-                    <div key={comment.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="destructive">{comment.reportCount} zgłoszeń</Badge>
-                            <Badge variant="outline">{comment.parentType === 'deal' ? 'Okazja' : 'Produkt'}</Badge>
-                            {comment.status && <Badge variant="secondary">{comment.status}</Badge>}
-                          </div>
-                          <p className="text-sm font-medium mb-1">
-                            Pod: {getLocalizedTitle(comment.parentTitle) || 'Nieznany tytuł'}
-                          </p>
-                          <p className="text-sm text-muted-foreground mb-2">
-                            {formatDate(comment.createdAt)}
-                          </p>
-                          <div className="bg-muted p-3 rounded">
-                            <p className="text-sm">{comment.content}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleCommentModeration(comment.id, comment.parentType, comment.parentId, 'approve')}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Zatwierdź
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleCommentModeration(comment.id, comment.parentType, comment.parentId, 'reject')}
-                        >
-                          Odrzuć
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => {
-                            if (window.confirm('Czy na pewno chcesz usunąć ten komentarz?')) {
-                              handleCommentModeration(comment.id, comment.parentType, comment.parentId, 'delete');
-                            }
-                          }}
-                        >
-                          <XCircle className="h-4 w-4 mr-1" />
-                          Usuń
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="bg-red-950 text-red-50"
-                          onClick={() => {
-                            if (window.confirm('Oznacz jako spam? Autor straci 10 punktów reputacji.')) {
-                              handleCommentModeration(comment.id, comment.parentType, comment.parentId, 'mark-spam');
-                            }
-                          }}
-                        >
-                          🚫 Spam
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="reports" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Zgłoszenia użytkowników</CardTitle>
-              <CardDescription>
-                Treści zgłoszone przez użytkowników jako spam, duplikaty lub nieprawidłowe
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4">
-                <Button onClick={fetchReports} disabled={loadingReports}>
-                  {loadingReports ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                  Odśwież listę
-                </Button>
-              </div>
-
-              {loadingReports ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-32 w-full" />
-                  ))}
-                </div>
-              ) : reports.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <CheckSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Brak oczekujących zgłoszeń</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {reports.map((report) => (
-                    <div key={report.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline">{report.reportType}</Badge>
-                            <Badge variant="secondary">{report.targetType}</Badge>
-                            <Badge>{report.status}</Badge>
-                          </div>
-                          {report.target && (
-                            <p className="text-sm font-medium mb-1">
-                              Zgłoszono: {report.target.title || report.target.name || report.targetId}
-                            </p>
-                          )}
-                          {report.description && (
-                            <p className="text-sm text-muted-foreground mb-2">{report.description}</p>
-                          )}
-                          <p className="text-xs text-muted-foreground">
-                            Zgłoszone: {formatDate(report.createdAt)} przez {report.reportedBy}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleReportAction(report.id, 'approve')}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Zaakceptuj
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => {
-                            if (window.confirm('Czy na pewno chcesz usunąć zgłoszoną treść?')) {
-                              handleReportAction(report.id, 'delete-target', 'Confirmed by moderator');
-                            }
-                          }}
-                        >
-                          <XCircle className="h-4 w-4 mr-1" />
-                          Usuń treść
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleReportAction(report.id, 'reject', 'False report')}
-                        >
-                          Odrzuć zgłoszenie
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleReportAction(report.id, 'ignore', 'Ignored by moderator')}
-                        >
-                          Ignoruj
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="users" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Zarządzanie użytkownikami</CardTitle>
-              <CardDescription>
-                Banowanie, zawieszanie i zarządzanie rolami użytkowników
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded p-4">
-                  <h4 className="font-semibold text-blue-900 mb-2">Dostępne akcje przez API:</h4>
-                  <ul className="text-sm text-blue-800 space-y-1">
-                    <li>• <code>POST /api/admin/users/[userId]/moderate</code> - Ban/suspend/change role</li>
-                    <li>• <code>GET /api/admin/users/[userId]/moderate</code> - Historia moderacji</li>
-                  </ul>
-                </div>
-
-                <div className="border rounded p-4 space-y-3">
-                  <h4 className="font-semibold">Przykład: Ban użytkownika</h4>
-                  <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
-{`POST /api/admin/users/{userId}/moderate
-{
-  "action": "ban",
-  "reason": "Spam and offensive content"
-}`}
-                  </pre>
-                </div>
-
-                <div className="border rounded p-4 space-y-3">
-                  <h4 className="font-semibold">Przykład: Zawieś na 7 dni</h4>
-                  <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
-{`POST /api/admin/users/{userId}/moderate
-{
-  "action": "suspend",
-  "duration": 7,
-  "reason": "Repeated violations"
-}`}
-                  </pre>
-                </div>
-
-                <div className="border rounded p-4 space-y-3">
-                  <h4 className="font-semibold">Przykład: Zmień rolę na moderatora</h4>
-                  <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
-{`POST /api/admin/users/{userId}/moderate
-{
-  "action": "change-role",
-  "role": "moderator"
-}`}
-                  </pre>
-                </div>
-
-                <div className="bg-amber-50 border border-amber-200 rounded p-4">
-                  <p className="text-sm text-amber-800">
-                    <strong>Uwaga:</strong> Pełny UI do zarządzania użytkownikami będzie dodany w następnej iteracji.
-                    Obecnie wszystkie funkcje są dostępne przez API endpointy.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="approved" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Ostatnio zatwierdzone (7 dni)</CardTitle>
-              <CardDescription>
-                Historia zatwierdzonych treści
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-20 w-full" />
-                  ))}
-                </div>
-              ) : approvedItems.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Brak ostatnio zatwierdzonych treści</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {approvedItems.map((item: any) => (
-                    <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold truncate">
-                            {item.type === 'deal' ? item.title : item.name}
-                          </h3>
-                          <Badge variant="outline" className="text-green-600 border-green-600">
-                            {item.type === 'deal' ? 'Okazja' : 'Produkt'}
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {item.category}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="rejected" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Ostatnio odrzucone (7 dni)</CardTitle>
-              <CardDescription>
-                Historia odrzuconych treści
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-20 w-full" />
-                  ))}
-                </div>
-              ) : rejectedItems.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <XCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Brak ostatnio odrzuconych treści</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {rejectedItems.map((item: any) => (
-                    <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold truncate">
-                            {item.type === 'deal' ? item.title : item.name}
-                          </h3>
-                          <Badge variant="outline" className="text-red-600 border-red-600">
-                            {item.type === 'deal' ? 'Okazja' : 'Produkt'}
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {item.category}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        {/* ── Tab: History ──────────────────────────────────────────────────── */}
+        <TabsContent value="history">
+          <ModerationHistory />
         </TabsContent>
       </Tabs>
+
+      {/* Quick Edit Dialog */}
+      {quickEditItem && (
+        <QuickEditDialog
+          open={!!quickEditItem}
+          onClose={() => setQuickEditItem(null)}
+          item={quickEditItem as Parameters<typeof QuickEditDialog>[0]['item']}
+          itemType={quickEditType}
+          onSuccess={fetchModerationData}
+        />
+      )}
     </div>
   );
 }

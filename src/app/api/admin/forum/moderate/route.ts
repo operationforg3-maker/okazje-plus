@@ -2,6 +2,143 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 
 /**
+ * GET /api/admin/forum/moderate
+ * Lists forum threads and posts requiring moderation.
+ * Query: filter=pending|reported|all, limit=30
+ * Uses Admin SDK — no client Firestore needed.
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const token = authHeader.split(" ")[1];
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    if (!decodedToken.admin && !decodedToken.moderator) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const filter = searchParams.get("filter") || "pending";
+    const limit = Math.min(100, parseInt(searchParams.get("limit") || "30", 10));
+
+    const toISO = (val: unknown): string => {
+      if (!val) return "";
+      if (typeof val === "string") return val;
+      if (typeof (val as Record<string, unknown>)._seconds === "number")
+        return new Date((val as { _seconds: number })._seconds * 1000).toISOString();
+      if (typeof (val as { toDate?: () => Date }).toDate === "function")
+        return (val as { toDate: () => Date }).toDate().toISOString();
+      return String(val);
+    };
+
+    // ── Threads ──────────────────────────────────────────────────────────────
+    const threadsRef = adminDb.collection("forum_threads");
+    let threadsSnap;
+
+    if (filter === "pending") {
+      threadsSnap = await threadsRef
+        .where("status", "in", ["draft", "pending"])
+        .orderBy("createdAt", "desc")
+        .limit(limit)
+        .get();
+    } else if (filter === "reported") {
+      threadsSnap = await threadsRef
+        .where("reportCount", ">", 0)
+        .orderBy("reportCount", "desc")
+        .limit(limit)
+        .get();
+    } else {
+      threadsSnap = await threadsRef
+        .orderBy("createdAt", "desc")
+        .limit(limit)
+        .get();
+    }
+
+    const threads = threadsSnap.docs.map(doc => {
+      const d = doc.data();
+      return {
+        type: "thread" as const,
+        id: doc.id,
+        title: d.title || "",
+        content: d.content || "",
+        authorDisplayName: d.authorDisplayName || "Anonim",
+        authorId: d.authorId || null,
+        status: d.status || "approved",
+        createdAt: toISO(d.createdAt),
+        isPinned: d.isPinned ?? false,
+        isLocked: d.isLocked ?? false,
+        reportCount: d.reportCount || 0,
+        postCount: d.postCount || 0,
+        categorySlug: d.categorySlug || null,
+      };
+    });
+
+    // ── Posts ─────────────────────────────────────────────────────────────────
+    const postsRef = adminDb.collection("forum_posts");
+    let postsSnap;
+
+    if (filter === "pending") {
+      postsSnap = await postsRef
+        .where("status", "in", ["draft", "pending"])
+        .orderBy("createdAt", "desc")
+        .limit(limit)
+        .get();
+    } else if (filter === "reported") {
+      postsSnap = await postsRef
+        .where("reportCount", ">", 0)
+        .orderBy("reportCount", "desc")
+        .limit(limit)
+        .get();
+    } else {
+      postsSnap = await postsRef
+        .orderBy("createdAt", "desc")
+        .limit(limit)
+        .get();
+    }
+
+    const posts = postsSnap.docs.map(doc => {
+      const d = doc.data();
+      return {
+        type: "post" as const,
+        id: doc.id,
+        title: undefined,
+        content: d.content || d.body || "",
+        authorDisplayName: d.authorDisplayName || "Anonim",
+        authorId: d.authorId || null,
+        status: d.status || "approved",
+        createdAt: toISO(d.createdAt),
+        isPinned: false,
+        isLocked: false,
+        reportCount: d.reportCount || 0,
+        threadId: d.threadId || null,
+      };
+    });
+
+    // Merge + sort by createdAt desc
+    const items = [...threads, ...posts].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    const counts = {
+      total: items.length,
+      threads: threads.length,
+      posts: posts.length,
+      pending: items.filter(i => ["draft", "pending"].includes(i.status)).length,
+      reported: items.filter(i => i.reportCount > 0).length,
+    };
+
+    return NextResponse.json({ ok: true, items, counts });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Internal server error";
+    console.error("Forum moderation GET error:", error);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+
+/**
  * POST /api/admin/forum/moderate
  * Moderuj wątki i posty forum (approve/reject/pin/lock/delete)
  */

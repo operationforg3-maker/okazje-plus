@@ -16,7 +16,6 @@ import {
   Database,
   ChevronRight,
   Share2,
-  MessageCircle,
   Wrench,
   Rocket,
   ShieldCheck,
@@ -59,7 +58,6 @@ const navStructure: (NavItem | NavGroup)[] = [
     items: [
       { title: 'Panel moderacji', href: '/admin/moderation', icon: AlertTriangle },
       { title: 'Wykrywanie duplikatów', href: '/admin/duplicates', icon: Search },
-      { title: 'Moderacja forum', href: '/admin/forum/moderation', icon: MessageCircle },
       { title: 'Kategorie forum', href: '/admin/forum/categories', icon: Layers },
     ],
   },
