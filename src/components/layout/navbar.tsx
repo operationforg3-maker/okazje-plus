@@ -47,13 +47,11 @@ export function Navbar() {
   const { formatPrice } = useCurrency();
   const pathname = usePathname();
   const [isAtTop, setIsAtTop] = React.useState(true);
-  const [showQuickLinks, setShowQuickLinks] = React.useState(true);
 
   React.useEffect(() => {
     setIsMounted(true);
     const handleScroll = () => {
       setIsAtTop(window.scrollY < 180);
-      setShowQuickLinks(window.scrollY < 50);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
@@ -95,9 +93,10 @@ export function Navbar() {
   const prefix = `/${locale}`;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
-      <div className="page-container flex flex-col py-3">
-        <div className="flex items-center gap-3">
+    <>
+      <header className="sticky top-0 z-50 w-full border-b border-border/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
+        <div className="page-container flex flex-col py-3">
+          <div className="flex items-center gap-3">
           {/* Mobile Nav */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild className="hidden">
@@ -337,15 +336,14 @@ export function Navbar() {
             </div>
           </div>
         </div>
+      </div>
+    </header>
 
-        {/* Secondary quick links (mobile-friendly scroll) */}
+    {/* Secondary quick links (non-sticky, scrolls away naturally like the category selector bar below it) */}
+    <div className="w-full bg-background border-b border-border/20 py-2.5 relative z-40">
+      <div className="page-container">
         <nav 
-          className={cn(
-            "flex items-center gap-2 overflow-x-auto text-xs text-zinc-700 dark:text-zinc-300 font-medium transition-all duration-300 ease-in-out origin-top",
-            showQuickLinks 
-              ? "opacity-100 max-h-10 mt-3" 
-              : "opacity-0 max-h-0 pointer-events-none overflow-hidden mt-0 py-0"
-          )}
+          className="flex items-center gap-2 overflow-x-auto text-xs text-zinc-700 dark:text-zinc-300 font-medium"
           aria-label="Szybkie linki"
         >
           <span className="rounded-full px-3 py-1 font-bold text-foreground" role="status">{t('seasonalHits')}</span>
@@ -355,6 +353,7 @@ export function Navbar() {
           <Link href={`${prefix}/forum`} className="rounded-full px-3 py-1 transition-colors hover:text-primary" title="Forum społeczności">{t('forum')}</Link>
         </nav>
       </div>
-    </header>
-  );
+    </div>
+  </>
+);
 }
