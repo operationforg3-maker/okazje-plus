@@ -47,11 +47,13 @@ export function Navbar() {
   const { formatPrice } = useCurrency();
   const pathname = usePathname();
   const [isAtTop, setIsAtTop] = React.useState(true);
+  const [showQuickLinks, setShowQuickLinks] = React.useState(true);
 
   React.useEffect(() => {
     setIsMounted(true);
     const handleScroll = () => {
       setIsAtTop(window.scrollY < 180);
+      setShowQuickLinks(window.scrollY < 50);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
@@ -94,7 +96,7 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90">
-      <div className="page-container flex flex-col gap-3 py-3">
+      <div className="page-container flex flex-col py-3">
         <div className="flex items-center gap-3">
           {/* Mobile Nav */}
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -330,7 +332,15 @@ export function Navbar() {
         </div>
 
         {/* Secondary quick links (mobile-friendly scroll) */}
-        <nav className="flex items-center gap-2 overflow-x-auto text-xs text-zinc-700 dark:text-zinc-300 font-medium" aria-label="Szybkie linki">
+        <nav 
+          className={cn(
+            "flex items-center gap-2 overflow-x-auto text-xs text-zinc-700 dark:text-zinc-300 font-medium transition-all duration-300 ease-in-out origin-top",
+            showQuickLinks 
+              ? "opacity-100 max-h-10 mt-3" 
+              : "opacity-0 max-h-0 pointer-events-none overflow-hidden mt-0 py-0"
+          )}
+          aria-label="Szybkie linki"
+        >
           <span className="rounded-full px-3 py-1 font-bold text-foreground" role="status">{t('seasonalHits')}</span>
           <Link href={`${prefix}/deals?sort=hot`} className="rounded-full px-3 py-1 transition-colors hover:text-primary" title="Gorące okazje">{t('hottest')}</Link>
           <Link href={`${prefix}/deals?sort=new`} className="rounded-full px-3 py-1 transition-colors hover:text-primary" title="Nowe okazje">{t('newest')}</Link>
