@@ -63,8 +63,8 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
               onClick={!isActive ? () => handleCategoryClick(category) : undefined}
             >
               {/* Header/Button Row */}
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between w-full min-w-0">
+                <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
                   <div className={cn(
                     "rounded-xl flex items-center justify-center flex-shrink-0 transition-all bg-gradient-to-br shadow-sm",
                     isActive ? "p-2.5 shadow-lg w-12 h-12" : "h-10 w-10",
@@ -77,7 +77,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                       <span className={cn(isActive ? "text-2xl" : "text-lg")}>{IconComponent}</span>
                     )}
                   </div>
-                  <div className="text-left">
+                  <div className="text-left min-w-0 flex-1">
                     <span className={cn(
                       "block font-bold text-foreground transition-colors",
                       isActive ? "text-xl font-headline font-black" : "text-sm truncate group-hover:text-primary"
@@ -85,7 +85,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                       {getLocalizedCategoryName(category, locale as SupportedLanguage)}
                     </span>
                     {!isActive && totalProducts > 0 && (
-                      <span className="block text-[10px] text-muted-foreground mt-0.5 font-medium">
+                      <span className="block text-[10px] text-muted-foreground mt-0.5 font-medium truncate">
                         {totalProducts} ofert
                       </span>
                     )}
@@ -105,14 +105,14 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                 {isActive ? (
                   <button 
                     onClick={(e) => { e.stopPropagation(); setActiveCategory(null); }} 
-                    className="p-2 rounded-full hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors relative z-10"
+                    className="p-2 rounded-full hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors relative z-10 shrink-0"
                     aria-label="Zamknij podkategorie"
                     title="Zamknij"
                   >
                     <X className="h-5 w-5" />
                   </button>
                 ) : (
-                  <ChevronRight className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-all group-hover:translate-x-0.5" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-all group-hover:translate-x-0.5 shrink-0" />
                 )}
               </div>
 
