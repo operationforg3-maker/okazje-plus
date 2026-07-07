@@ -469,6 +469,24 @@ export async function getProductCoreAdmin(productId: string): Promise<ProductCor
         .get();
       if (!querySnap.empty) {
         docSnap = querySnap.docs[0];
+      } else {
+        // Fallback to slug search
+        const normalizedId = productId.replace(/-+$/, '');
+        const idsToTry = normalizedId !== productId ? [productId, normalizedId] : [productId];
+        for (const slugCandidate of idsToTry) {
+          const slugQueries = await Promise.all([
+            adminDb.collection('product_cores').where('slug.pl', '==', slugCandidate).limit(1).get(),
+            adminDb.collection('product_cores').where('slug.en', '==', slugCandidate).limit(1).get(),
+            adminDb.collection('product_cores').where('slug', '==', slugCandidate).limit(1).get()
+          ]);
+          for (const res of slugQueries) {
+            if (!res.empty) {
+              docSnap = res.docs[0];
+              break;
+            }
+          }
+          if (docSnap.exists) break;
+        }
       }
     }
 

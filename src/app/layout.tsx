@@ -25,6 +25,47 @@ export default function RootLayout({
         <link rel="preconnect" href="https://imgproxy.convertiser.com" />
         <link rel="dns-prefetch" href="https://ae-pic-a1.aliexpress-media.com" />
         <link rel="dns-prefetch" href="https://imgproxy.convertiser.com" />
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            (function() {
+              try {
+                var stored = localStorage.getItem('uxSettings');
+                var themeFamily = 'classic';
+                var themeMode = 'dark';
+                if (stored) {
+                  var parsed = JSON.parse(stored);
+                  if (parsed.themeFamily) themeFamily = parsed.themeFamily;
+                  if (parsed.themeMode) themeMode = parsed.themeMode;
+                } else {
+                  var legacyFamily = localStorage.getItem('okp_theme_variant');
+                  if (legacyFamily) themeFamily = legacyFamily;
+                  var legacyTheme = localStorage.getItem('okp_theme');
+                  if (legacyTheme) themeMode = legacyTheme;
+                }
+                var root = document.documentElement;
+                root.setAttribute('data-theme', themeFamily === 'classic' ? 'default' : themeFamily);
+                root.setAttribute('data-mode', themeMode);
+                root.style.colorScheme = themeMode;
+                if (themeMode === 'dark') {
+                  root.classList.add('dark');
+                } else {
+                  root.classList.remove('dark');
+                }
+                var classesToRemove = [];
+                for (var i = 0; i < root.classList.length; i++) {
+                  var cls = root.classList[i];
+                  if (cls.startsWith('theme-')) classesToRemove.push(cls);
+                }
+                for (var i = 0; i < classesToRemove.length; i++) {
+                  root.classList.remove(classesToRemove[i]);
+                }
+                if (themeFamily !== 'classic') {
+                  root.classList.add('theme-' + themeFamily);
+                }
+              } catch (e) {}
+            })();
+          `
+        }} />
         <style dangerouslySetInnerHTML={{__html: `
           html { scroll-behavior: smooth; }
         `}} />
