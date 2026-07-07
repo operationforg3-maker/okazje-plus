@@ -53,12 +53,13 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
 
           return (
             <Fragment key={category.id}>
+              {/* Closed State Button - Hidden when active */}
               <button
                 onClick={() => handleCategoryClick(category)}
                 className={cn(
                   "w-full flex items-center gap-3 p-3 rounded-2xl border transition-all duration-300 text-left group relative",
                   isActive
-                    ? "bg-background border-primary shadow-lg ring-2 ring-primary/20 -translate-y-0.5"
+                    ? "hidden"
                     : "bg-background/60 backdrop-blur-md hover:bg-background border-border/40 hover:border-primary/40 hover:shadow-xl hover:-translate-y-0.5"
                 )}
               >
@@ -83,13 +84,10 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                     </span>
                   )}
                 </div>
-                <ChevronRight className={cn(
-                  "h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-all",
-                  isActive ? "rotate-90 text-primary opacity-100" : "group-hover:translate-x-0.5"
-                )} />
+                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-all group-hover:translate-x-0.5" />
               </button>
 
-              {/* Collapsible Subcategories Panel - Grid Accordion Layout inside Fragment */}
+              {/* Opened State Panel - Spans full width of the row, replaces the button */}
               <div 
                 className={cn(
                   "col-span-full overflow-hidden transition-all duration-500 ease-in-out relative",
@@ -104,35 +102,47 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                       {/* Subtle background glow matching category theme */}
                       <div className={cn("absolute -top-12 -left-12 w-48 h-48 rounded-full blur-3xl opacity-20 pointer-events-none bg-gradient-to-br", style.bg)} />
 
-                      {/* Close Button */}
-                      <button 
-                        onClick={() => setActiveCategory(null)} 
-                        className="absolute top-4 right-4 p-2 rounded-full hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors z-10"
-                        aria-label="Zamknij podkategorie"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-
-                      {/* Category Title Header */}
-                      <div className="flex items-center gap-4 mb-6 pb-4 border-b border-border/20 relative z-10">
-                        <div className={cn('p-2.5 rounded-xl bg-gradient-to-br shadow-lg flex items-center justify-center w-12 h-12', style.bg, style.accent)}>
-                          {typeof IconComponent === 'function' ? (
-                            <IconComponent className="h-6 w-6" />
-                          ) : (
-                            <span className="text-2xl">{IconComponent}</span>
-                          )}
+                      {/* Header containing clickable Title and inline CTA/Close */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-border/20 relative z-10">
+                        {/* Left Side: Clickable Title to collapse */}
+                        <div 
+                          onClick={() => setActiveCategory(null)}
+                          className="flex items-center gap-4 cursor-pointer group/title hover:opacity-85 transition-opacity"
+                          title="Zwiń kategorię"
+                        >
+                          <div className={cn('p-2.5 rounded-xl bg-gradient-to-br shadow-lg flex items-center justify-center w-12 h-12', style.bg, style.accent)}>
+                            {typeof IconComponent === 'function' ? (
+                              <IconComponent className="h-6 w-6" />
+                            ) : (
+                              <span className="text-2xl">{IconComponent}</span>
+                            )}
+                          </div>
+                          <div className="text-left">
+                            <h3 className="text-xl font-bold font-headline text-foreground group-hover/title:text-primary transition-colors flex items-center gap-1.5">
+                              {getLocalizedCategoryName(category, locale as SupportedLanguage)}
+                              <ChevronRight className="h-4 w-4 rotate-90 text-primary opacity-50 group-hover/title:opacity-100 transition-all" />
+                            </h3>
+                          </div>
                         </div>
-                        <div className="text-left">
-                          <h3 className="text-xl font-bold font-headline text-foreground">
-                            {getLocalizedCategoryName(category, locale as SupportedLanguage)}
-                          </h3>
+
+                        {/* Right Side: CTA link and Close button inline */}
+                        <div className="flex items-center justify-between sm:justify-end gap-3">
                           <Link
                             href={buildCategoryPath(locale, category.slug || category.id || '')}
-                            className="text-xs text-primary hover:underline flex items-center mt-1 font-semibold"
+                            className="text-xs text-primary hover:underline flex items-center font-semibold bg-primary/10 border border-primary/20 px-3.5 py-2 rounded-xl transition-all hover:bg-primary/20"
                           >
                             Przeglądaj całą kategorię
-                            <ChevronRight className="h-3 w-3 ml-0.5" />
+                            <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
                           </Link>
+                          
+                          <button 
+                            onClick={() => setActiveCategory(null)} 
+                            className="p-2 rounded-full hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors relative z-10"
+                            aria-label="Zamknij podkategorie"
+                            title="Zamknij"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
 
