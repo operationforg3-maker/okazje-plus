@@ -11,17 +11,23 @@ export function Footer() {
   const locale = useLocale();
   const [hydrated, setHydrated] = useState(false);
   const [currentYear, setCurrentYear] = useState('2024');
+  const [uptimeStr, setUptimeStr] = useState('0 min 0 s');
 
   useEffect(() => {
     setHydrated(true);
     setCurrentYear(new Date().getFullYear().toString());
-  }, []);
 
-  // Uptime procesu (od ostatniego startu serwera)
-  const uptimeMs = getUptimeMs();
-  const uptimeMinutes = Math.floor(uptimeMs / 60_000);
-  const uptimeSeconds = Math.floor((uptimeMs % 60_000) / 1000);
-  const uptimeHuman = `${uptimeMinutes} min ${uptimeSeconds} s`;
+    const updateUptime = () => {
+      const ms = getUptimeMs();
+      const minutes = Math.floor(ms / 60_000);
+      const seconds = Math.floor((ms % 60_000) / 1000);
+      setUptimeStr(`${minutes} min ${seconds} s`);
+    };
+
+    updateUptime();
+    const interval = setInterval(updateUptime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Build info (wersja, commit i czas zbudowania)
   const { version, commitShort, builtAt } = buildInfo;
@@ -88,7 +94,7 @@ export function Footer() {
             &copy; {currentYear} Okazje+. {t('copyright')}
           </p>
           <p className="mt-1" suppressHydrationWarning>
-            {t('version')} v{version} ({t('commit')} <abbr title={buildInfo.commit}>#{commitShort}</abbr>) · {t('builtAt')} {builtLocal} · {t('runtime')}: <span suppressHydrationWarning>{hydrated ? uptimeHuman : '0 min 0 s'}</span>
+            {t('version')} v{version} ({t('commit')} <abbr title={buildInfo.commit}>#{commitShort}</abbr>) · {t('builtAt')} {builtLocal} · {t('runtime')}: <span suppressHydrationWarning>{hydrated ? uptimeStr : '0 min 0 s'}</span>
           </p>
         </div>
       </div>

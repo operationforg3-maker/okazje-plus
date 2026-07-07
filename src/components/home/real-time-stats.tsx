@@ -233,20 +233,22 @@ export function ForumStats() {
   }, []);
 
   return (
-    <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
       {[
-        { label: 'Aktywnych wątków', value: stats.threads, icon: TrendingUp },
-        { label: 'Użytkowników', value: stats.users, icon: Users },
-        { label: 'Odpowiedzi dziennie', value: stats.replies, icon: Clock },
+        { label: 'Aktywnych wątków', value: stats.threads, icon: TrendingUp, color: 'bg-primary/10 text-primary border-primary/20' },
+        { label: 'Użytkowników', value: stats.users, icon: Users, color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
+        { label: 'Odpowiedzi dziennie', value: stats.replies, icon: Clock, color: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
       ].map((stat, idx) => {
         const Icon = stat.icon;
         return (
-          <div key={idx} className="text-center p-4 rounded-lg hover:bg-card/50 transition-colors">
-            <Icon className="h-6 w-6 mx-auto mb-2 text-primary" />
-            <div className={cn('text-3xl font-bold', isLoading ? 'text-muted animate-pulse' : 'text-primary')}>
+          <div key={idx} className="flex flex-col items-center text-center p-5 rounded-2xl bg-card/40 border border-border/20 hover:border-primary/30 hover:bg-card/65 transition-all hover:scale-[1.03] duration-300 shadow-sm">
+            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-3 border", stat.color)}>
+              <Icon className="h-5 w-5" />
+            </div>
+            <div className={cn('text-2xl font-bold tracking-tight', isLoading ? 'text-muted animate-pulse' : 'text-foreground')}>
               {isLoading ? '...' : stat.value}
             </div>
-            <div className="text-sm text-muted-foreground">{stat.label}</div>
+            <div className="text-xs text-muted-foreground mt-1.5 font-medium leading-tight">{stat.label}</div>
           </div>
         );
       })}

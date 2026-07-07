@@ -31,35 +31,44 @@ export default function HomeSecondarySections() {
   return (
     <>
       {/* FORUM TEASER */}
-      <section className="py-16 bg-card/40 border-y border-border/60">
+      <section className="py-20 bg-gradient-to-b from-card/30 to-card/10 border-y border-border/40">
         <div className="page-container">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
-            <MessageSquare className="h-16 w-16 mx-auto text-primary" />
-            <h2 className="font-headline text-4xl md:text-5xl font-bold">
-              {t('forum.title')}
-            </h2>
-            <p className="text-xl text-muted-foreground">
-              {t('forum.subtitle')}
-            </p>
+          <div className="max-w-6xl mx-auto">
+            <div className="grid md:grid-cols-12 gap-12 items-center">
+              {/* Left Column: Text & Action CTAs */}
+              <div className="md:col-span-6 space-y-6 text-left">
+                <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20">
+                  <MessageSquare className="h-8 w-8 animate-pulse" />
+                </div>
+                <h2 className="font-headline text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
+                  {t('forum.title')}
+                </h2>
+                <p className="text-lg text-muted-foreground">
+                  {t('forum.subtitle')}
+                </p>
 
-            <div className="flex flex-wrap justify-center gap-4">
-              <Button size="lg" variant="outline" asChild>
-                <Link href={`/${locale}/forum`}>
-                  {t('forum.browseButton')}
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button size="lg" asChild>
-                <Link href={`/${locale}/forum/new`}>
-                  {t('forum.createButton')}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
+                <div className="flex flex-wrap gap-4 pt-2">
+                  <Button size="lg" variant="outline" className="rounded-xl font-semibold shadow-sm" asChild>
+                    <Link href={`/${locale}/forum`}>
+                      {t('forum.browseButton')}
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold shadow-md" asChild>
+                    <Link href={`/${locale}/forum/new`}>
+                      {t('forum.createButton')}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
 
-            {/* Forum stats - Real time from database */}
-            <div className="pt-4">
-              <ForumStats />
+              {/* Right Column: Forum Real-time Stats Card */}
+              <div className="md:col-span-6">
+                <Card className="border border-border/30 bg-background/60 backdrop-blur-md rounded-3xl shadow-lg p-6 sm:p-8 hover:shadow-2xl transition-all duration-300">
+                  <ForumStats />
+                </Card>
+              </div>
             </div>
           </div>
         </div>
@@ -68,14 +77,14 @@ export default function HomeSecondarySections() {
       {/* ABOUT / MISSION */}
       <section className="py-16">
         <div className="page-container">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div className="space-y-6">
-                <Badge className="text-base px-4 py-2">
-                  <Target className="mr-2 h-4 w-4" />
+                <Badge className="text-base px-4 py-2 rounded-xl">
+                  <Target className="mr-2 h-4 w-4 text-primary" />
                   {t('about.badge')}
                 </Badge>
-                <h2 className="font-headline text-3xl md:text-4xl font-bold">
+                <h2 className="font-headline text-3xl md:text-4xl font-bold leading-tight">
                   {t('about.title')}
                   <br />
                   <span className="text-primary">{t('about.titleHighlight')}</span>
@@ -94,24 +103,24 @@ export default function HomeSecondarySections() {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
+                <div className="flex flex-wrap gap-4 pt-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <CheckCircle className="h-5 w-5 text-primary" />
                     <span>100% darmowa platforma</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <CheckCircle className="h-5 w-5 text-primary" />
                     <span>Sprawdzone przez społeczność</span>
                   </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <CheckCircle className="h-5 w-5 text-primary" />
                     <span>AI wspierające jakość</span>
                   </div>
                 </div>
               </div>
 
               <div className="relative">
-                <Card className="border border-border/40 bg-background/60 backdrop-blur-md rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300">
+                <Card className="border border-border/40 bg-background/60 backdrop-blur-md rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300">
                   <CardContent className="p-8 space-y-6">
                     <div className="space-y-4">
                       {[
@@ -140,7 +149,7 @@ export default function HomeSecondarySections() {
       </section>
 
       {/* CTA SECTION */}
-      <section className="py-20 relative overflow-hidden bg-gradient-to-br from-primary to-accent text-white rounded-3xl mx-4 sm:mx-6 my-16 shadow-2xl">
+      <section className="py-20 relative overflow-hidden bg-gradient-to-br from-primary via-primary/95 to-primary/80 text-white rounded-3xl mx-4 sm:mx-6 my-16 shadow-2xl">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.1),transparent)] pointer-events-none" />
         <div className="page-container text-center relative z-10">
           <div className="max-w-3xl mx-auto space-y-6">
@@ -151,13 +160,13 @@ export default function HomeSecondarySections() {
               Dołącz do tysięcy użytkowników, którzy już oszczędzają z Okazje Plus.
             </p>
             <div className="flex flex-wrap justify-center gap-4 pt-6">
-              <Button size="lg" variant="secondary" className="text-sm font-bold px-8 py-6 rounded-full hover:shadow-lg transition-all" asChild>
+              <Button size="lg" variant="secondary" className="text-sm font-bold px-8 py-6 rounded-xl hover:shadow-lg transition-all" asChild>
                 <Link href={`/${locale}/deals`}>
                   <Flame className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary fill-primary" />
                   Przeglądaj okazje
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" className="text-sm font-bold px-8 py-6 rounded-full border-white/40 bg-black/15 backdrop-blur-[2px] text-white hover:bg-black/35 hover:border-white transition-all shadow-sm" asChild>
+              <Button size="lg" variant="outline" className="text-sm font-bold px-8 py-6 rounded-xl border-white/40 bg-black/15 backdrop-blur-[2px] text-white hover:bg-black/35 hover:border-white transition-all shadow-sm" asChild>
                 <Link href={`/${locale}/products`}>
                   <ShoppingBag className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                   Katalog produktów

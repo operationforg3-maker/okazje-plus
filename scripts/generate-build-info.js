@@ -22,7 +22,7 @@ const builtAt = new Date().toISOString();
 
 const isCI = String(process.env.CI || '').toLowerCase() === 'true'
   || String(process.env.GITHUB_ACTIONS || '').toLowerCase() === 'true';
-const forceWrite = process.env.FORCE_BUILD_INFO === '1';
+const forceWrite = process.env.FORCE_BUILD_INFO === '1' || process.env.NODE_ENV === 'production';
 const allowLocalWrite = process.env.LOCAL_BUILD_INFO === '1';
 
 // Get commit count for version numbering
