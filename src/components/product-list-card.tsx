@@ -381,7 +381,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
           <Button
             asChild
             size="lg"
-            className="w-full whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="w-full whitespace-nowrap bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
           >
             <a
               href={offerUrl}
@@ -396,7 +396,7 @@ export default function ProductListCard({ product }: ProductListCardProps) {
           <Button
             asChild
             size="lg"
-            className="w-full whitespace-nowrap bg-emerald-600 text-white"
+            className="w-full whitespace-nowrap bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
           >
             <Link href={`${prefix}/products/${productId}`}>
               <ExternalLink className="h-4 w-4 mr-2 opacity-70" />

@@ -190,8 +190,9 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCo
       <div className="flex items-center gap-2 justify-start">
         {/* Language Switch (literowy kod) */}
         {isMountedLang && (
-          <Link
-            href={`/${SUPPORTED_LANGUAGES[(SUPPORTED_LANGUAGES.indexOf(locale) + 1) % SUPPORTED_LANGUAGES.length]}${basePath}`}
+          <IntlLink
+            href={basePath}
+            locale={SUPPORTED_LANGUAGES[(SUPPORTED_LANGUAGES.indexOf(locale) + 1) % SUPPORTED_LANGUAGES.length]}
             onClick={(e) => {
               e.stopPropagation();
               // Keep dropdown open after language change by setting sessionStorage flag
@@ -207,7 +208,7 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCo
             aria-label={t('changeLanguage')}
           >
             {locale}
-          </Link>
+          </IntlLink>
         )}
 
         {/* Currency Switch (kod waluty) */}

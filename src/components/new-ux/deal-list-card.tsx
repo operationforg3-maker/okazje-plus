@@ -499,13 +499,13 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
 
           <div className="w-full grid grid-cols-1 gap-2">
             {dealUrl ? (
-              <Button asChild size="lg" className="w-full whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button asChild size="lg" className="w-full whitespace-nowrap bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl">
                 <Link href={dealUrl} target="_blank" rel="noopener noreferrer">
                   {t('actions.goTo')}
                 </Link>
               </Button>
             ) : (
-              <Button size="lg" className="w-full whitespace-nowrap bg-emerald-600 text-white opacity-80" disabled>
+              <Button size="lg" className="w-full whitespace-nowrap bg-primary hover:bg-primary/90 text-primary-foreground opacity-80 rounded-xl" disabled>
                 {t('actions.goTo')}
               </Button>
             )}

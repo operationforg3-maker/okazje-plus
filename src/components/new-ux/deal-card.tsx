@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import {useParams} from 'next/navigation';
+import {useParams, useRouter} from 'next/navigation';
 import { withImageProxy } from '@/lib/image-proxy';
 import type { Deal, Product } from '@/lib/types';
 import { useCommentsCount } from '@/hooks/use-comments-count';
@@ -195,6 +195,7 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
   // Używaj przekazanego ProductCore jeśli dostępny (spójność z ProductCard)
   const resolvedProduct = product || null;
   const params = useParams();
+  const router = useRouter();
   const localeFromParams = (params?.locale as string) || 'pl';
   const [locale, setLocale] = useState(localeFromParams);
   const prefix = `/${locale}`;
@@ -572,11 +573,11 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
     <div 
       className="group relative flex h-full flex-col overflow-hidden cursor-pointer rounded-2xl border border-border/30 bg-background/50 backdrop-blur-md shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-1 hover:border-primary/20"
       onClick={() => {
-        window.location.href = `${prefix}/new-ux/deals/${deal.id}`;
+        router.push(`${prefix}/new-ux/deals/${deal.id}`);
       }}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
-          window.location.href = `${prefix}/new-ux/deals/${deal.id}`;
+          router.push(`${prefix}/new-ux/deals/${deal.id}`);
         }
       }}
       role="link"
@@ -838,7 +839,7 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
         </div>
       </div>
       
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 border-t bg-muted/30 p-2 sm:p-3">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 p-4 pt-0">
         <div className="flex items-center gap-1 justify-center sm:justify-start">
           <Button 
             variant={userVote === 1 ? "default" : "outline"} 
@@ -959,13 +960,13 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
               variant="button"
             />
           ) : dealExternalUrl ? (
-            <Button asChild size="icon" className="h-11 w-11 bg-emerald-600 hover:bg-emerald-700 text-white" aria-label={t('actions.goTo')}>
+            <Button asChild size="icon" className="h-11 w-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl" aria-label={t('actions.goTo')}>
               <a href={dealExternalUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
                 <ArrowUp className="h-4 w-4 rotate-90" />
               </a>
             </Button>
           ) : (
-            <Button size="icon" className="h-11 w-11 bg-emerald-600 text-white opacity-80" aria-label={t('actions.goTo')} disabled>
+            <Button size="icon" className="h-11 w-11 bg-primary hover:bg-primary/90 text-primary-foreground opacity-80 rounded-xl" aria-label={t('actions.goTo')} disabled>
               <ArrowUp className="h-4 w-4 rotate-90" />
             </Button>
           )}

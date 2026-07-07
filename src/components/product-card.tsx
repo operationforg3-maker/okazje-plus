@@ -4,7 +4,7 @@
 import { ProductGallery } from './product-gallery';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { withImageProxy } from '@/lib/image-proxy';
 import { 
   Star, Tag, ExternalLink, Heart, MessageSquare, Truck, Package, 
@@ -61,6 +61,7 @@ const safeText = (value: unknown, fallback = ''): string => {
 
 function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layoutMode = 'grid', fetchBestDeal = false }: ProductCardProps) {
   const params = useParams();
+  const router = useRouter();
   const localeFromParams = (params?.locale as string) || 'pl';
   const [locale, setLocale] = useState(() => localeFromParams);
   const prefix = `/${locale}`;
@@ -484,7 +485,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
     <div 
       className="group relative flex h-full flex-col overflow-hidden cursor-pointer rounded-2xl border border-border/30 bg-background/50 backdrop-blur-md shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-1 hover:border-primary/20"
       onClick={() => {
-        window.location.href = productUrl;
+        router.push(productUrl);
       }}
       role="link"
       tabIndex={0}
@@ -618,14 +619,14 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
       </div>
 
       {/* Footer Actions */}
-      <div className="flex flex-col gap-2 border-t bg-muted/30 p-3 mt-auto">
+      <div className="flex flex-col gap-2 p-4 mt-auto pt-0">
         <div className="flex items-center gap-1.5 w-full mt-auto pt-2">
           {/* Main CTA */}
           <div className="flex-1 min-w-0">
             {productExternalUrl ? (
               <Button
                 asChild
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 shadow-sm flex items-center justify-center gap-1"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs h-9 shadow-sm flex items-center justify-center gap-1 rounded-xl"
               >
                 <a
                   href={productExternalUrl}
@@ -640,7 +641,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
             ) : (
               <Button
                 asChild
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 shadow-sm flex items-center justify-center gap-1"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-xs h-9 shadow-sm flex items-center justify-center gap-1 rounded-xl"
               >
                 <Link href={productUrl}>
                   <span>Kup teraz</span>
