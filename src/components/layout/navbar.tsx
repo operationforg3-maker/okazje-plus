@@ -138,7 +138,7 @@ export function Navbar() {
           </Link>
 
           {/* Mobile Search Bar */}
-          <div className="flex-1 sm:hidden max-w-[240px]">
+          <div className="flex-grow sm:hidden">
             <AutocompleteSearch />
           </div>
 

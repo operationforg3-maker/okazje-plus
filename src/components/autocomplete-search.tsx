@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { getAutocompleteSuggestions, Suggestion } from '@/lib/search';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -17,8 +18,13 @@ export function AutocompleteSearch({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileOverlayOpen, setIsMobileOverlayOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Detect mobile viewport
   useEffect(() => {
@@ -148,7 +154,7 @@ export function AutocompleteSearch({ className }: { className?: string }) {
           id="autocomplete-popover"
           role="listbox"
           aria-label={t('search.resultsLabel')}
-          className="absolute left-0 right-0 mt-1 rounded-lg border bg-popover shadow-lg z-50 p-2 space-y-1"
+          className="absolute left-0 right-0 mt-1 rounded-lg border bg-popover shadow-lg z-[100] p-2 space-y-1"
         >
           {suggestions.map((s, i) => (
             <button
@@ -177,14 +183,14 @@ export function AutocompleteSearch({ className }: { className?: string }) {
       )}
 
       {open && !isMobile && !loading && suggestions.length === 0 && query.trim().length >= 2 && (
-        <div className="absolute left-0 right-0 mt-1 rounded-md border bg-popover shadow-md z-50 p-3 text-sm text-muted-foreground">
+        <div className="absolute left-0 right-0 mt-1 rounded-md border bg-popover shadow-md z-[100] p-3 text-sm text-muted-foreground">
           {t('search.noSuggestions')}
         </div>
       )}
 
       {/* Mobile Full-Screen Search Overlay */}
-      {isMobileOverlayOpen && (
-        <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in slide-in-from-bottom duration-200">
+      {isMobileOverlayOpen && mounted && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[100] bg-background flex flex-col animate-in fade-in slide-in-from-bottom duration-200">
           {/* Mobile Search Header */}
           <div className="flex items-center gap-2 p-3 border-b border-border bg-background">
             <Button
@@ -274,7 +280,8 @@ export function AutocompleteSearch({ className }: { className?: string }) {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
