@@ -14,7 +14,7 @@ function HarvesterPage() {
       const first = pathname.split('/')[1];
       return ['pl', 'en', 'de'].includes(first) ? `/${first}` : '';
     })();
-    router.replace(`${localePrefix}/admin/m6-import-dashboard`);
+    router.replace(`${localePrefix}/admin/import`);
   }, [router, pathname]);
 
   return (

@@ -17,11 +17,9 @@ import {
   ChevronRight,
   Share2,
   MessageCircle,
-  SearchCheck,
   Wrench,
   Rocket,
   ShieldCheck,
-  Eye,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -32,6 +30,8 @@ import {
 import { useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+
+
 
 interface NavItem {
   title: string;
@@ -54,27 +54,31 @@ const navStructure: (NavItem | NavGroup)[] = [
     icon: LayoutDashboard,
   },
   {
-    title: 'Moderacja i forum',
+    title: 'Moderacja',
     icon: ShieldCheck,
     items: [
       { title: 'Panel moderacji', href: '/admin/moderation', icon: AlertTriangle },
       { title: 'Wykrywanie duplikatów', href: '/admin/duplicates', icon: Search },
       { title: 'Moderacja forum', href: '/admin/forum/moderation', icon: MessageCircle },
-      { title: 'Kategorie', href: '/admin/forum/categories', icon: Layers },
+      { title: 'Kategorie forum', href: '/admin/forum/categories', icon: Layers },
     ],
   },
   {
-    title: 'Import i pipeline',
+    title: 'Import & Pipeline',
     icon: Rocket,
     items: [
-      { title: 'M6 import dashboard', href: '/admin/m6-import-dashboard', icon: TrendingUp },
+      {
+        title: 'Centrum importu',
+        href: '/admin/import',
+        icon: Wrench,
+        badge: 'AliExpress',
+        badgeVariant: 'secondary',
+      },
       { title: 'Presety harvestera', href: '/admin/harvester-presets', icon: Layers },
-      { title: 'M6 pipeline visualizer', href: '/admin/m6-pipeline-visualizer', icon: Database },
-      { title: 'Nadzór Typesense queue', href: '/admin/typesense-queue', icon: SearchCheck, badge: 'OPS', badgeVariant: 'destructive' },
     ],
   },
   {
-    title: 'Analityka i operacje',
+    title: 'Analityka',
     icon: FileBarChart,
     items: [
       { title: 'Analityka', href: '/admin/analytics', icon: TrendingUp },
@@ -98,22 +102,13 @@ const navStructure: (NavItem | NavGroup)[] = [
     items: [
       { title: 'Ustawienia', href: '/admin/settings', icon: Settings },
       { title: 'OAuth', href: '/admin/settings/oauth', icon: Settings },
-      { title: 'Przewodnik M6 UI', href: '/admin/m6-ui-guide', icon: FileBarChart, badge: 'DOCS', badgeVariant: 'secondary' },
     ],
   },
-  {
-    title: 'Propozycje UX',
-    icon: Eye,
-    items: [
-      { title: 'V0 — Home Redesign', href: '/admin/ux-preview', icon: Eye, badge: 'LIVE', badgeVariant: 'default' },
-      { title: 'V1 — Lista + Sidebar', href: '/admin/ux-preview/v1', icon: Eye },
-      { title: 'V2 — Magazynowy', href: '/admin/ux-preview/v2', icon: Eye },
-      { title: 'V3 — Dark Neon', href: '/admin/ux-preview/v3', icon: Eye },
-      { title: 'V4 — Masonry/Kafelki', href: '/admin/ux-preview/v4', icon: Eye },
-      { title: 'V5 — Kategorie', href: '/admin/ux-preview/v5', icon: Eye },
-    ],
-  },
+  // DevTools — dostępne przez URL, ukryte w nawigacji:
+  // /admin/m6-import-dashboard, /admin/m6-pipeline-visualizer,
+  // /admin/m6-ui-guide, /admin/typesense-queue, /admin/ux-preview/*
 ];
+
 
 export function AdminNav() {
   const pathname = usePathname();

@@ -429,31 +429,29 @@ function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* Harvester Status Card */}
-        <Card className="border-l-4 border-l-indigo-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Harvester (M6)</CardTitle>
-            <Activity className="h-4 w-4 text-indigo-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats?.harvester?.running || 0}</div>
-            <div className="mt-3 space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Aktywne:</span>
-                <span className="font-medium text-blue-600">{dashboardStats?.harvester?.running || 0}</span>
+        {/* Import & Pipeline Status Card */}
+        <Link href={adminHref('/admin/import')}>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-l-indigo-500 h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Import & Pipeline</CardTitle>
+              <Activity className="h-4 w-4 text-indigo-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{dashboardStats?.harvester?.created24h || 0}</div>
+              <p className="text-xs text-muted-foreground mt-1">produktów importowanych (24h)</p>
+              <div className="mt-3 space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Aktywne joby:</span>
+                  <span className="font-medium text-blue-600">{dashboardStats?.harvester?.running || 0}</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Stworzonych (24h):</span>
-                <span className="font-medium text-green-600">{dashboardStats?.harvester?.created24h || 0}</span>
+              <div className="mt-3 pt-2 border-t">
+                <span className="text-xs text-blue-600 hover:underline">Centrum importu →</span>
               </div>
-            </div>
-            <div className="mt-3 pt-2 border-t">
-              <Link href={adminHref('/admin/harvester')} className="text-xs text-blue-600 hover:underline">
-                Detale → 
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
+
 
         {/* Average Temperature Card */}
         <Card className="border-l-4 border-l-rose-500">
