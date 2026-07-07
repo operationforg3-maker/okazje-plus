@@ -1,9 +1,25 @@
 import puppeteer from 'puppeteer';
 import fetch from 'node-fetch';
 
+/**
+ * A single customer review with optional photos (scraped from MTOP feedback endpoint).
+ */
+export interface ScrapedReview {
+  rating: number;
+  content?: string;
+  translatedContent?: string;
+  images: string[];
+  country?: string;
+  date?: string;
+  /** SKU info string, e.g. "Color:Black;Size:M" */
+  skuInfo?: string;
+}
+
 export interface ScrapedAliExpressData {
   title?: string;
   descriptionHtml?: string;
+  /** Image URLs extracted from the description HTML block (CDN) */
+  descriptionImages?: string[];
   specs?: Record<string, string>;
   images?: string[];
   mainImage?: string;
@@ -32,12 +48,90 @@ export interface ScrapedAliExpressData {
     stock?: number;
     image?: string;
   }>;
+  /** Deduplicated list of customer-uploaded review photo URLs (max 20) */
+  reviewImages?: string[];
+  /** Structured review data — only entries that have images (max 10) */
+  reviews?: ScrapedReview[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper utilities
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Normalise a raw image URL from AliExpress CDN */
+function normaliseAliExpressImageUrl(url: string): string {
+  if (!url) return '';
+  // Prepend protocol for protocol-relative URLs
+  if (url.startsWith('//')) url = `https:${url}`;
+  // Strip AliExpress inline resize suffix (e.g. _50x50.jpg, _100x100.webp)
+  url = url.replace(/(_\d+x\d+)\.(jpg|webp|png)$/i, '.$2');
+  return url;
+}
+
+/** Returns true when a URL looks like an AliExpress CDN image we want to keep */
+function isValidAliCdnUrl(url: string): boolean {
+  return (
+    url.startsWith('https://') &&
+    (url.includes('alicdn.com') || url.includes('aliexpress-media.com'))
+  );
 }
 
 /**
- * Scrapes detailed product information from AliExpress (including specifications, description HTML, and variants)
- * by rendering the page in Puppeteer (simulating mobile layout) and intercepting dynamic content.
- * 
+ * Extract all image URLs from a raw MTOP feedback/evaluation item.
+ * Handles three known field shapes: images[], imageList[{imgUrl}], imagePathList[].
+ */
+function extractReviewImages(reviewItem: any): string[] {
+  const raw: string[] = [];
+
+  // Format 1: images as string[]
+  if (Array.isArray(reviewItem.images)) {
+    for (const u of reviewItem.images) {
+      if (typeof u === 'string') raw.push(u);
+    }
+  }
+  // Format 2: imageList as { imgUrl: string }[]
+  if (Array.isArray(reviewItem.imageList)) {
+    for (const img of reviewItem.imageList) {
+      const u = img?.imgUrl || img?.url || img;
+      if (typeof u === 'string') raw.push(u);
+    }
+  }
+  // Format 3: imagePathList as string[]
+  if (Array.isArray(reviewItem.imagePathList)) {
+    for (const u of reviewItem.imagePathList) {
+      if (typeof u === 'string') raw.push(u);
+    }
+  }
+
+  return raw
+    .map(normaliseAliExpressImageUrl)
+    .filter(isValidAliCdnUrl);
+}
+
+/**
+ * Returns true for any MTOP URL that may carry customer review/feedback data.
+ * AliExpress uses several different endpoint names depending on region and A/B tests.
+ */
+function isFeedbackUrl(url: string): boolean {
+  const lower = url.toLowerCase();
+  return (
+    (lower.includes('aliexpress') || lower.includes('aeserver')) &&
+    (
+      lower.includes('feedback') ||
+      lower.includes('evaluation') ||
+      lower.includes('evalist') ||
+      lower.includes('review')
+    )
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Scrapes detailed product information from AliExpress (including specifications,
+ * description HTML, variants, and customer review images) by rendering the page
+ * in Puppeteer (mobile UA) and intercepting dynamic MTOP XHR/fetch responses.
+ *
  * @param productId AliExpress product ID
  */
 export async function scrapeAliExpressProduct(productId: string): Promise<ScrapedAliExpressData> {
@@ -59,7 +153,10 @@ export async function scrapeAliExpressProduct(productId: string): Promise<Scrape
     specs: {},
     images: [],
     variants: [],
-    skuList: []
+    skuList: [],
+    reviewImages: [],
+    reviews: [],
+    descriptionImages: [],
   };
 
   try {
@@ -92,11 +189,15 @@ export async function scrapeAliExpressProduct(productId: string): Promise<Scrape
     let mtopVariants: any[] = [];
     let mtopSkuList: any[] = [];
 
-    // Listen to network responses to extract variants and description CDN URL from H5 MTOP response
+    // Accumulated review data from MTOP feedback intercepts
+    const reviewImageSet = new Set<string>();
+    const reviewsList: ScrapedReview[] = [];
+
+    // Listen to network responses to extract variants, description CDN URL, and review images
     page.on('response', async (response) => {
       const respUrl = response.url();
-      
-      // Look for H5 detail query response
+
+      // ── 1. Product detail (variants, SKU, shipping, desc URL) ─────────────
       if (respUrl.includes('mtop.aliexpress.pdp.msite.query')) {
         try {
           const buffer = await response.buffer();
@@ -228,12 +329,63 @@ export async function scrapeAliExpressProduct(productId: string): Promise<Scrape
           console.warn(`[AliExpress Scraper] Response read error for ${respUrl.slice(0, 80)}: ${e.message}`);
         }
       }
+
+      // ── 2. Customer review / feedback images ────────────────────────────────
+      if (isFeedbackUrl(respUrl)) {
+        try {
+          const buffer = await response.buffer();
+          let text = buffer.toString('utf-8').trim();
+
+          // Unwrap JSONP if present
+          const jsonpMatch = text.match(/^\s*\w+\(([\s\S]*)\)\s*;?\s*$/);
+          if (jsonpMatch) text = jsonpMatch[1].trim();
+
+          const feedbackJson = JSON.parse(text);
+
+          // Try multiple known response shapes
+          const evaList: any[] =
+            feedbackJson?.data?.evaListResult?.evaList ||
+            feedbackJson?.data?.result?.feedbackList ||
+            feedbackJson?.result?.evaList ||
+            feedbackJson?.data?.feedbackList ||
+            [];
+
+          let newImagesThisResponse = 0;
+
+          for (const review of evaList) {
+            const imgs = extractReviewImages(review);
+            if (imgs.length === 0) continue;
+
+            imgs.forEach(u => reviewImageSet.add(u));
+            newImagesThisResponse += imgs.length;
+
+            // Store structured review data (only entries that have images)
+            if (reviewsList.length < 10) {
+              reviewsList.push({
+                rating: Number(review.star ?? review.rating ?? 5),
+                content: review.content || review.buyerFeedback || undefined,
+                translatedContent: review.buyerTranslationFeedback || review.translatedContent || undefined,
+                images: imgs,
+                country: review.buyerCountry || review.country || undefined,
+                date: review.feedbackDate || review.date || undefined,
+                skuInfo: review.skuInfo || review.skuProperties || undefined,
+              });
+            }
+          }
+
+          if (newImagesThisResponse > 0) {
+            console.log(`[AliExpress Scraper] Review images captured: +${newImagesThisResponse} (total: ${reviewImageSet.size})`);
+          }
+        } catch {
+          // Non-JSON or unrelated endpoint — silently skip
+        }
+      }
     });
 
     console.log(`[AliExpress Scraper] Navigating to: ${url}`);
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 35000 });
 
-    // Scroll to trigger lazy loading of description and specs
+    // ── Phase A: scroll to trigger lazy loading of description and specs ─────
     try {
       await page.evaluate(`(() => {
         window.scrollTo(0, document.body.scrollHeight / 3);
@@ -246,8 +398,33 @@ export async function scrapeAliExpressProduct(productId: string): Promise<Scrape
       })()`);
     } catch (scrollErr) {}
 
-    // Wait for dynamic content to render and network queries to settle
+    // Wait for product MTOP response + lazy content
     await new Promise(r => setTimeout(r, 4500));
+
+    // ── Phase B: scroll to the review section to trigger MTOP feedback call ───
+    try {
+      await page.evaluate(`(() => {
+        // Try known selectors for the review/feedback section
+        const reviewSection =
+          document.querySelector('#nav-review') ||
+          document.querySelector('[id*="review"]') ||
+          document.querySelector('[class*="review--wrap"]') ||
+          document.querySelector('[class*="feedback--wrap"]') ||
+          document.querySelector('[class*="evaluation--wrap"]');
+
+        if (reviewSection) {
+          reviewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          // Fallback: scroll past bottom to trigger any remaining lazy requests
+          window.scrollTo(0, document.body.scrollHeight + 500);
+        }
+      })()`);
+
+      // Give the MTOP feedback request time to fire and respond
+      await new Promise(r => setTimeout(r, 3000));
+    } catch (reviewScrollErr) {
+      console.warn('[AliExpress Scraper] Review section scroll failed:', reviewScrollErr);
+    }
 
     // Evaluate basic specifications from DOM as fallback
     const domData = await page.evaluate(`(() => {
@@ -395,7 +572,7 @@ export async function scrapeAliExpressProduct(productId: string): Promise<Scrape
 
     await browser.close();
 
-    // Fetch the description HTML block directly from CDN using intercepted pcDescUrl
+    // ── Phase E: Fetch description HTML + extract its embedded images ──────────
     if (pcDescUrl) {
       try {
         console.log(`[AliExpress Scraper] Fetching description HTML from CDN URL...`);
@@ -406,14 +583,34 @@ export async function scrapeAliExpressProduct(productId: string): Promise<Scrape
           timeout: 10000
         } as any);
         if (descRes.ok) {
-          result.descriptionHtml = await descRes.text();
-          console.log(`[AliExpress Scraper] ✓ Description HTML successfully fetched (${result.descriptionHtml.length} chars)`);
+          const html = await descRes.text();
+          result.descriptionHtml = html;
+          console.log(`[AliExpress Scraper] ✓ Description HTML fetched (${html.length} chars)`);
+
+          // Extract image URLs embedded in the description HTML
+          const imgMatches = Array.from(html.matchAll(/src=["']([^"']+alicdn\.com[^"']+)["']/gi));
+          const descImages = imgMatches
+            .map(m => normaliseAliExpressImageUrl(m[1]))
+            .filter(isValidAliCdnUrl);
+
+          result.descriptionImages = [...new Set(descImages)].slice(0, 10);
+          if (result.descriptionImages.length > 0) {
+            console.log(`[AliExpress Scraper] ✓ Description images extracted: ${result.descriptionImages.length}`);
+          }
         } else {
           console.error(`[AliExpress Scraper] Description CDN fetch returned status: ${descRes.status}`);
         }
       } catch (descErr: any) {
         console.error(`[AliExpress Scraper] Failed to fetch description from CDN: ${descErr.message}`);
       }
+    }
+
+    // ── Phase F: Populate review image results ─────────────────────────────────
+    result.reviewImages = Array.from(reviewImageSet).slice(0, 20);
+    result.reviews = reviewsList;
+
+    if (result.reviewImages.length > 0) {
+      console.log(`[AliExpress Scraper] ✓ Total review images: ${result.reviewImages.length}`);
     }
 
   } catch (err: any) {

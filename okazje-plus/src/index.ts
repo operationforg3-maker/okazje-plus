@@ -2439,6 +2439,14 @@ export * from "./triggers/seoZombieCleanerCron";
 // Export triggers from smartImageOptimizer module
 export * from "./triggers/smartImageOptimizer";
 
+// =============================================================================
+// ASYNC ALIEXPRESS PRODUCT SCRAPER
+// =============================================================================
+
+// Export trigger: scrapes product data (specs, reviewImages, descriptionImages)
+// asynchronously after product_cores document is created by harvester.
+export * from "./triggers/scrapeProductCore";
+
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
 }

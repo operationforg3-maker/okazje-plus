@@ -99,6 +99,10 @@ interface RawProduct {
     minimumAvailableQuantity?: number;
     promotionCampaign?: any;
   };
+  /** Customer-uploaded review/feedback photos (scraped from MTOP feedback endpoint) */
+  reviewImages?: string[];
+  /** Images extracted from the product description HTML block */
+  descriptionImages?: string[];
 }
 
 /**
@@ -495,7 +499,7 @@ export class SmartHarvester {
     };
   }
 
-  private async scrapeAliExpressPage(url: string, explicitProductId?: string): Promise<{
+  private async scrapeAliExpressPage(url: string): Promise<{
     title?: string;
     description?: string;
     specs?: Record<string, string>;
@@ -513,19 +517,18 @@ export class SmartHarvester {
       storeId?: string;
       positiveRate?: string;
     };
+    /** Customer review images captured from MTOP feedback endpoint */
+    reviewImages?: string[];
+    /** Images embedded in the product description HTML block */
+    descriptionImages?: string[];
   }> {
     if (!url || !url.startsWith('http')) {
-      if (!explicitProductId) {
-        return {};
-      }
+      return {};
     }
 
     try {
-      let productId = explicitProductId || '';
-      if (!productId) {
-        const match = url.match(/\/item\/(\d+)\.html/i);
-        productId = match ? match[1] : '';
-      }
+      const match = url.match(/\/item\/(\d+)\.html/i);
+      const productId = match ? match[1] : '';
       if (!productId) {
         this.addLog('warn', `AliExpress Scraper: Could not extract product ID from URL: ${url}`);
         return {};
@@ -553,6 +556,8 @@ export class SmartHarvester {
           originalPrice: scraped.originalPrice,
           shippingCost: scraped.shippingCost,
           shippingDays: scraped.shippingDays,
+          reviewImages: scraped.reviewImages,
+          descriptionImages: scraped.descriptionImages,
         };
       }
     } catch (err: any) {
@@ -1574,6 +1579,8 @@ export class SmartHarvester {
           }
         : undefined,
       warehouses: warehouses.length > 0 ? warehouses : (shippingFromCountry ? [shippingFromCountry] : undefined),
+      // Status scrapingu — Cloud Function wykona scraping asynchronicznie po zapisie do Firestore
+      scrapingStatus: source === 'aliexpress' ? 'pending' as const : undefined,
       metadata: {
         source,
         originalId: sourceProduct.sourceProductId,
@@ -1589,6 +1596,10 @@ export class SmartHarvester {
         flashDeal: promotionCampaign?.flashDeal,
         shippingVerified: sourceProduct.shippingVerified,
       },
+      // UGC photos from customer reviews (MTOP feedback endpoint)
+      reviewImages: sourceProduct.reviewImages?.length ? sourceProduct.reviewImages : undefined,
+      // Images from seller's description HTML block (CDN)
+      descriptionImages: sourceProduct.descriptionImages?.length ? sourceProduct.descriptionImages : undefined,
     };
 
     return { productData, productRef };
@@ -2908,10 +2919,24 @@ export class SmartHarvester {
           fallbackUrl: p.product_url || p.product_detail_url || p.promotion_link || '',
         });
 
-        const pid = String(p.item_id || p.product_id || '');
         const scrapeTarget = p.product_detail_url || p.product_url || p.promotion_link || '';
-        const shouldScrape = (!p.product_description || !p.product_props) && (Boolean(scrapeTarget) || Boolean(pid));
-        const scraped = shouldScrape ? await this.scrapeAliExpressPage(scrapeTarget, pid) : {};
+        // Scraper jest teraz ASYNCHRONICZNY — triggerowany przez Cloud Function
+        // po zapisie product_cores dokumentu do Firestore (patrz: triggers/scrapeProductCore.ts)
+        const scraped: Partial<{
+          title?: string;
+          description?: string;
+          specs?: Record<string, string>;
+          images?: string[];
+          mainImage?: string;
+          price?: number;
+          originalPrice?: number;
+          shippingCost?: number;
+          shippingDays?: number;
+          shippingVerified?: boolean;
+          seller?: { name: string; rating?: number; positiveRate?: string; followers?: number; storeUrl?: string; storeId?: string };
+          reviewImages?: string[];
+          descriptionImages?: string[];
+        }> = {};
 
         const baseCandidates = [
           p.price?.current,
@@ -3135,6 +3160,9 @@ export class SmartHarvester {
           gtin: p.gtin || undefined,
           upc: p.upc || undefined,
           mpn: p.mpn || p.manufacturer_part_number || undefined,
+          // Review / description images from scraper
+          reviewImages: scraped?.reviewImages?.length ? scraped.reviewImages : undefined,
+          descriptionImages: scraped?.descriptionImages?.length ? scraped.descriptionImages : undefined,
           ...this.extractSourceCategoryHints(p),
         };
       }));

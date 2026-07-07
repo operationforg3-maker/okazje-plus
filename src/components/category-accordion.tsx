@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Fragment } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
@@ -52,164 +52,132 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
           const isActive = activeCategory?.id === category.id;
 
           return (
-            <Fragment key={category.id}>
-              {/* Closed State Button - Hidden when active */}
-              <button
-                onClick={() => handleCategoryClick(category)}
-                className={cn(
-                  "w-full flex items-center gap-3 p-3 rounded-2xl border transition-all duration-300 text-left group relative",
-                  isActive
-                    ? "hidden"
-                    : "bg-background/60 backdrop-blur-md hover:bg-background border-border/40 hover:border-primary/40 hover:shadow-xl hover:-translate-y-0.5"
-                )}
-              >
-                <div className={cn(
-                  "h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all bg-gradient-to-br shadow-sm group-hover:shadow-md",
-                  style.bg,
-                  style.accent
-                )}>
-                  {typeof IconComponent === 'function' ? (
-                    <IconComponent className="h-5 w-5" />
-                  ) : (
-                    <span className="text-lg">{IconComponent}</span>
-                  )}
-                </div>
-                <div className="flex-grow min-w-0">
-                  <span className="block text-sm font-bold truncate text-foreground group-hover:text-primary transition-colors">
-                    {getLocalizedCategoryName(category, locale as SupportedLanguage)}
-                  </span>
-                  {totalProducts > 0 && (
-                    <span className="block text-[10px] text-muted-foreground mt-0.5 font-medium">
-                      {totalProducts} ofert
+            <div
+              key={category.id}
+              className={cn(
+                "transition-all duration-300 flex flex-col group relative",
+                isActive
+                  ? "col-span-full bg-background border border-primary/20 shadow-2xl rounded-3xl p-5 sm:p-6"
+                  : "bg-background/60 backdrop-blur-md hover:bg-background border border-border/40 hover:border-primary/40 hover:shadow-xl hover:-translate-y-0.5 rounded-2xl cursor-pointer p-3"
+              )}
+              onClick={!isActive ? () => handleCategoryClick(category) : undefined}
+            >
+              {/* Header/Button Row */}
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "rounded-xl flex items-center justify-center flex-shrink-0 transition-all bg-gradient-to-br shadow-sm",
+                    isActive ? "p-2.5 shadow-lg w-12 h-12" : "h-10 w-10",
+                    style.bg,
+                    style.accent
+                  )}>
+                    {typeof IconComponent === 'function' ? (
+                      <IconComponent className={cn(isActive ? "h-6 w-6" : "h-5 w-5")} />
+                    ) : (
+                      <span className={cn(isActive ? "text-2xl" : "text-lg")}>{IconComponent}</span>
+                    )}
+                  </div>
+                  <div className="text-left">
+                    <span className={cn(
+                      "block font-bold text-foreground transition-colors",
+                      isActive ? "text-xl font-headline font-black" : "text-sm truncate group-hover:text-primary"
+                    )}>
+                      {getLocalizedCategoryName(category, locale as SupportedLanguage)}
                     </span>
-                  )}
+                    {!isActive && totalProducts > 0 && (
+                      <span className="block text-[10px] text-muted-foreground mt-0.5 font-medium">
+                        {totalProducts} ofert
+                      </span>
+                    )}
+                    {isActive && (
+                      <Link
+                        href={buildCategoryPath(locale, category.slug || category.id || '')}
+                        className="text-xs text-primary hover:underline flex items-center mt-1 font-semibold"
+                      >
+                        Przeglądaj całą kategorię
+                        <ChevronRight className="h-3 w-3 ml-0.5" />
+                      </Link>
+                    )}
+                  </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-all group-hover:translate-x-0.5" />
-              </button>
 
-              {/* Opened State Panel - Spans full width of the row, replaces the button */}
-              <div 
-                className={cn(
-                  "col-span-full overflow-hidden transition-all duration-500 ease-in-out relative",
-                  isActive ? "max-h-[1200px] opacity-100 py-2" : "max-h-0 opacity-0 py-0 pointer-events-none"
+                {/* Right side icon / Close button */}
+                {isActive ? (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setActiveCategory(null); }} 
+                    className="p-2 rounded-full hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors relative z-10"
+                    aria-label="Zamknij podkategorie"
+                    title="Zamknij"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-all group-hover:translate-x-0.5" />
                 )}
-              >
-                {isActive && (() => {
-                  const style = getCategoryStyle(category);
-                  const IconComponent = style.icon;
-                  return (
-                    <div className="bg-background/40 backdrop-blur-xl border border-border/40 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-                      {/* Subtle background glow matching category theme */}
-                      <div className={cn("absolute -top-12 -left-12 w-48 h-48 rounded-full blur-3xl opacity-20 pointer-events-none bg-gradient-to-br", style.bg)} />
+              </div>
 
-                      {/* Header containing clickable Title and inline CTA/Close */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-border/20 relative z-10">
-                        {/* Left Side: Clickable Title to collapse */}
+              {/* Subcategories list - Rendered only when active */}
+              {isActive && (
+                <div className="mt-6 pt-6 border-t border-border/20 max-h-[500px] overflow-y-auto pr-1">
+                  {category.subcategories && category.subcategories.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                      {category.subcategories.map((sub) => (
                         <div 
-                          onClick={() => setActiveCategory(null)}
-                          className="flex items-center gap-4 cursor-pointer group/title hover:opacity-85 transition-opacity"
-                          title="Zwiń kategorię"
+                          key={sub.id} 
+                          className="space-y-3 p-4 rounded-2xl bg-background/55 border border-border/40 hover:border-primary/20 hover:bg-background/80 transition-all duration-300 shadow-sm hover:shadow-md"
                         >
-                          <div className={cn('p-2.5 rounded-xl bg-gradient-to-br shadow-lg flex items-center justify-center w-12 h-12', style.bg, style.accent)}>
-                            {typeof IconComponent === 'function' ? (
-                              <IconComponent className="h-6 w-6" />
-                            ) : (
-                              <span className="text-2xl">{IconComponent}</span>
-                            )}
-                          </div>
-                          <div className="text-left">
-                            <h3 className="text-xl font-bold font-headline text-foreground group-hover/title:text-primary transition-colors flex items-center gap-1.5">
-                              {getLocalizedCategoryName(category, locale as SupportedLanguage)}
-                              <ChevronRight className="h-4 w-4 rotate-90 text-primary opacity-50 group-hover/title:opacity-100 transition-all" />
-                            </h3>
-                          </div>
-                        </div>
-
-                        {/* Right Side: CTA link and Close button inline */}
-                        <div className="flex items-center justify-between sm:justify-end gap-3">
+                          {/* Level 2: Subcategory Link */}
                           <Link
-                            href={buildCategoryPath(locale, category.slug || category.id || '')}
-                            className="text-xs text-primary hover:underline flex items-center font-semibold bg-primary/10 border border-primary/20 px-3.5 py-2 rounded-xl transition-all hover:bg-primary/20"
+                            href={buildCategoryPath(
+                              locale,
+                              category.slug || category.id || '',
+                              sub.slug || sub.id || ''
+                            )}
+                            className="flex items-center gap-2.5 font-bold text-sm text-foreground hover:text-primary transition-colors group/sub"
                           >
-                            Przeglądaj całą kategorię
-                            <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+                            <div className={cn("p-1.5 rounded-lg text-primary flex items-center justify-center bg-gradient-to-br", style.bg, style.accent)}>
+                              {sub.icon ? (
+                                <span className="text-sm font-black">{sub.icon}</span>
+                              ) : (
+                                <Package className="h-3.5 w-3.5" />
+                              )}
+                            </div>
+                            <span className="truncate">{getLocalizedCategoryName(sub, locale as SupportedLanguage)}</span>
+                            <ChevronRight className="h-3.5 w-3.5 ml-auto opacity-0 group-hover/sub:opacity-100 group-hover/sub:translate-x-0.5 transition-all text-primary" />
                           </Link>
-                          
-                          <button 
-                            onClick={() => setActiveCategory(null)} 
-                            className="p-2 rounded-full hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors relative z-10"
-                            aria-label="Zamknij podkategorie"
-                            title="Zamknij"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
 
-                      {/* Subcategories Grid List */}
-                      <div className="max-h-[500px] overflow-y-auto pr-1 relative z-10">
-                        {category.subcategories && category.subcategories.length > 0 ? (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-                            {category.subcategories.map((sub) => (
-                              <div 
-                                key={sub.id} 
-                                className="space-y-3 p-4 rounded-2xl bg-background/55 border border-border/40 hover:border-primary/20 hover:bg-background/80 transition-all duration-300 shadow-sm hover:shadow-md"
-                              >
-                                {/* Level 2: Subcategory Link */}
+                          {/* Level 3: Sub-subcategories Links */}
+                          {sub.subcategories && sub.subcategories.length > 0 && (
+                            <div className="space-y-1.5 pl-2 border-l border-border/40">
+                              {sub.subcategories.map((subsub) => (
                                 <Link
+                                  key={subsub.id}
                                   href={buildCategoryPath(
                                     locale,
                                     category.slug || category.id || '',
-                                    sub.slug || sub.id || ''
+                                    sub.slug || sub.id || '',
+                                    subsub.slug || subsub.id || ''
                                   )}
-                                  className="flex items-center gap-2.5 font-bold text-sm text-foreground hover:text-primary transition-colors group/sub"
+                                  className="flex items-center gap-1.5 py-1 px-2 rounded-md text-xs text-muted-foreground hover:text-primary hover:bg-secondary/40 transition-colors group/subsub"
                                 >
-                                  <div className={cn("p-1.5 rounded-lg text-primary flex items-center justify-center bg-gradient-to-br", style.bg, style.accent)}>
-                                    {sub.icon ? (
-                                      <span className="text-sm font-black">{sub.icon}</span>
-                                    ) : (
-                                      <Package className="h-3.5 w-3.5" />
-                                    )}
-                                  </div>
-                                  <span className="truncate">{getLocalizedCategoryName(sub, locale as SupportedLanguage)}</span>
-                                  <ChevronRight className="h-3.5 w-3.5 ml-auto opacity-0 group-hover/sub:opacity-100 group-hover/sub:translate-x-0.5 transition-all text-primary" />
+                                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30 group-hover/subsub:bg-primary transition-colors" />
+                                  <span className="flex-grow truncate">{getLocalizedCategoryName(subsub, locale as SupportedLanguage)}</span>
+                                  <ChevronRight className="h-3 w-3 opacity-0 group-hover/subsub:opacity-100 transition-opacity ml-1" />
                                 </Link>
-
-                                {/* Level 3: Sub-subcategories Links */}
-                                {sub.subcategories && sub.subcategories.length > 0 && (
-                                  <div className="space-y-1.5 pl-2 border-l border-border/40">
-                                    {sub.subcategories.map((subsub) => (
-                                      <Link
-                                        key={subsub.id}
-                                        href={buildCategoryPath(
-                                          locale,
-                                          category.slug || category.id || '',
-                                          sub.slug || sub.id || '',
-                                          subsub.slug || subsub.id || ''
-                                        )}
-                                        className="flex items-center gap-1.5 py-1 px-2 rounded-md text-xs text-muted-foreground hover:text-primary hover:bg-secondary/40 transition-colors group/subsub"
-                                      >
-                                        <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30 group-hover/subsub:bg-primary transition-colors" />
-                                        <span className="flex-grow truncate">{getLocalizedCategoryName(subsub, locale as SupportedLanguage)}</span>
-                                        <ChevronRight className="h-3 w-3 opacity-0 group-hover/subsub:opacity-100 transition-opacity ml-1" />
-                                      </Link>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground text-center py-6">
-                            Brak podkategorii
-                          </p>
-                        )}
-                      </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  );
-                })()}
-              </div>
-            </Fragment>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-6">
+                      Brak podkategorii
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>

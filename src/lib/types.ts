@@ -2462,6 +2462,48 @@ export interface ProductCore {
     currency: string;
     range?: { min: number; max: number };
   };
+
+  /**
+   * Customer-uploaded review/feedback photos scraped from AliExpress MTOP feedback endpoint.
+   * These are user-generated content (UGC) — display separately from official product gallery.
+   * Max 20 entries.
+   */
+  reviewImages?: string[];
+
+  /**
+   * Images extracted from the product description HTML block (CDN).
+   * Typically show assembly, usage, or detailed product photos provided by the seller.
+   * Max 10 entries.
+   */
+  descriptionImages?: string[];
+
+  /**
+   * Status asynchronicznego scrapingu Puppeteer (Cloud Function pipeline).
+   *   pending  → Cloud Function jeszcze nie wykonana (ustawiane przez harvester)
+   *   running  → Cloud Function aktualnie scrapuje
+   *   done     → scraping zakończony sukcesem
+   *   failed   → wszystkie 3 retry wyczerpane
+   */
+  scrapingStatus?: 'pending' | 'running' | 'done' | 'failed';
+
+  /**
+   * Metadata z ostatniego uruchomienia scrapera.
+   * Zapisywana przez Cloud Function po każdym scrape run.
+   */
+  scrapingMetadata?: {
+    /** ISO timestamp ostatniego udanego scrape */
+    scrapedAt?: string;
+    /** Wersja scrapera (np. '2.0') — do śledzenia regresji */
+    scrapingVersion?: string;
+    /** Licznik prób (max 3, potem scrapingStatus → 'failed') */
+    scrapingAttempts?: number;
+    /** Czy scraper napotkał CAPTCHA podczas ostatniej próby */
+    captchaEncountered?: boolean;
+    /** Ile recenzji ze zdjęciami znaleziono w MTOP feedback response */
+    reviewsCount?: number;
+    /** Ostatni komunikat błędu (max 200 znaków, tylko gdy status 'failed') */
+    lastError?: string;
+  };
 }
 
 /**
