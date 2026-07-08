@@ -40,8 +40,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Tylko admini' }, { status: 403 });
     }
 
-    const { ids } = await req.json() as { ids: string[] };
+    const payload = await req.json() as { ids?: string[]; mode?: string };
+    
+    let processedCount = 0;
+    
+    if (payload.mode === 'all') {
+      const allDocs = await adminDb.collection('import_discarded').select().get();
+      const bulkWriter = adminDb.bulkWriter();
+      
+      for (const doc of allDocs.docs) {
+        bulkWriter.delete(doc.ref);
+        processedCount++;
+      }
+      
+      await bulkWriter.close();
+      
+      return NextResponse.json({
+        success: true,
+        processed: processedCount,
+        total: allDocs.size,
+        message: `Deleted ${processedCount} items from database`,
+      }, { status: 200 });
+    }
 
+    const ids = payload.ids;
     if (!Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json(
         { success: false, message: 'ids must be non-empty array' },
@@ -50,7 +72,6 @@ export async function POST(req: NextRequest) {
     }
 
     const perItemResults: Array<{ id: string; success: boolean; error?: string }> = [];
-    let processedCount = 0;
 
     // Chunk deletion into batches (max 500 per batch)
     const batchSize = 500;

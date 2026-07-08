@@ -52,6 +52,7 @@ const resolveImageCandidate = (value: unknown): string => {
 
 const resolveProductImage = (product: ProductCore): string => {
   const image = resolveImageCandidate(product.images)
+    || resolveImageCandidate((product as any).gallery)
     || resolveImageCandidate((product as any).imageUrl)
     || resolveImageCandidate((product as any).image)
     || resolveImageCandidate((product as any).metadata?.imageUrl)

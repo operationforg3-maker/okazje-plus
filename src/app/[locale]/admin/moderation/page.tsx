@@ -95,14 +95,14 @@ function getPrice(product: Product): string {
 
 function DiscardedTab({
   items,
-  loading,
-  onReload,
+  totalCount = 0,
   getToken,
+  onReload,
 }: {
   items: unknown[];
-  loading: boolean;
-  onReload: () => void;
+  totalCount?: number;
   getToken: () => Promise<string | null>;
+  onReload: () => void;
 }) {
   const { toast } = useToast();
   const [selection, setSelection] = useState<Record<string, boolean>>({});
@@ -137,14 +137,6 @@ function DiscardedTab({
     }
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-3">
-        {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 w-full" />)}
-      </div>
-    );
-  }
-
   if (items.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -160,18 +152,26 @@ function DiscardedTab({
       <div className="border rounded-md p-3 bg-muted/30 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold">
-            {selectedIds.length} / {items.length} zaznaczonych
+            {selectedIds.length} / {totalCount || items.length} w bazie
           </span>
           <div className="ml-auto flex gap-2">
             <Button size="sm" variant="outline" disabled={processing}
               onClick={() => {
-                const all: Record<string, boolean> = {};
-                (items as Array<{ id: string }>).forEach(item => { all[item.id] = true; });
-                setSelection(all);
+                if (window.confirm(`Zaznaczyć wszystkie ${totalCount || items.length} elementów w bazie? Akcja wykona się na wszystkich elementach (nie tylko tych na liście).`)) {
+                  setSelection({ __ALL__: true });
+                }
               }}>
-              Zaznacz wszystkie
+              Zaznacz całą bazę ({totalCount || items.length})
             </Button>
-            <Button size="sm" variant="outline" disabled={processing || selectedIds.length === 0}
+            <Button size="sm" variant="outline" disabled={processing}
+              onClick={() => {
+                const visible: Record<string, boolean> = {};
+                (items as Array<{ id: string }>).forEach(item => { visible[item.id] = true; });
+                setSelection(visible);
+              }}>
+              Zaznacz widoczne
+            </Button>
+            <Button size="sm" variant="outline" disabled={processing || (selectedIds.length === 0 && !selection['__ALL__'])}
               onClick={() => setSelection({})}>
               Wyczyść
             </Button>
@@ -179,19 +179,31 @@ function DiscardedTab({
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button size="sm" className="bg-green-600 hover:bg-green-700"
-            disabled={processing || selectedIds.length === 0}
-            onClick={() => doAction('/api/admin/moderation/restore-discarded', {
-              items: selectedIds.map(id => ({ id, type: 'product' })),
-              targetStatus: 'pending',
-            })}>
+            disabled={processing || (selectedIds.length === 0 && !selection['__ALL__'])}
+            onClick={() => {
+              if (selection['__ALL__']) {
+                doAction('/api/admin/moderation/restore-discarded', { mode: 'all', targetStatus: 'pending' });
+              } else {
+                doAction('/api/admin/moderation/restore-discarded', {
+                  items: selectedIds.map(id => ({ id, type: 'product' })),
+                  targetStatus: 'pending',
+                });
+              }
+            }}>
             {processing ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
             ↩️ Przywróć zaznaczone
           </Button>
           <Button size="sm" variant="destructive"
-            disabled={processing || selectedIds.length === 0}
+            disabled={processing || (selectedIds.length === 0 && !selection['__ALL__'])}
             onClick={() => {
-              if (window.confirm(`Trwale usunąć ${selectedIds.length} elementów?`))
-                doAction('/api/admin/moderation/delete-discarded', { ids: selectedIds });
+              const count = selection['__ALL__'] ? (totalCount || items.length) : selectedIds.length;
+              if (window.confirm(`Trwale usunąć ${count} elementów?`)) {
+                if (selection['__ALL__']) {
+                  doAction('/api/admin/moderation/delete-discarded', { mode: 'all' });
+                } else {
+                  doAction('/api/admin/moderation/delete-discarded', { ids: selectedIds });
+                }
+              }
             }}>
             🗑️ Usuń zaznaczone
           </Button>
@@ -202,13 +214,28 @@ function DiscardedTab({
       {(items as Array<Record<string, unknown>>).map(item => {
         const id = String(item.id || '');
         const title = getLocalizedTitle(item.title || item.name);
-        const imageUrl = typeof item.imageUrl === 'string' ? item.imageUrl : '';
+        const imageUrl = typeof item.imageUrl === 'string' ? item.imageUrl : 
+                         typeof item.image === 'string' ? item.image :
+                         Array.isArray(item.gallery) && item.gallery[0]?.url ? item.gallery[0].url : 
+                         Array.isArray(item.images) && typeof item.images[0] === 'string' ? item.images[0] : '';
         return (
           <div key={id} className="flex flex-col sm:flex-row items-start gap-3 p-3 border rounded-lg hover:bg-accent transition-colors">
             <input
               type="checkbox"
-              checked={selection[id] || false}
-              onChange={e => setSelection(prev => ({ ...prev, [id]: e.target.checked }))}
+              checked={selection[id] || selection['__ALL__'] || false}
+              onChange={e => {
+                if (selection['__ALL__']) {
+                  // If unchecking one while ALL is selected, we should probably clear ALL
+                  setSelection(prev => {
+                    const next = { ...prev };
+                    delete next['__ALL__'];
+                    next[id] = e.target.checked;
+                    return next;
+                  });
+                } else {
+                  setSelection(prev => ({ ...prev, [id]: e.target.checked }));
+                }
+              }}
               className="w-5 h-5 cursor-pointer mt-1 shrink-0"
             />
             {imageUrl && (
@@ -375,6 +402,7 @@ function ModerationPage() {
   const [approvedItems, setApprovedItems] = useState<unknown[]>([]);
   const [rejectedItems, setRejectedItems] = useState<unknown[]>([]);
   const [discardedItems, setDiscardedItems] = useState<unknown[]>([]);
+  const [discardedCount, setDiscardedCount] = useState<number>(0);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [isBackfilling, setIsBackfilling] = useState(false);
 
@@ -426,6 +454,7 @@ function ModerationPage() {
       const payload = await res.json() as {
         deals?: Deal[]; products?: Product[];
         approved?: unknown[]; rejected?: unknown[]; discarded?: unknown[];
+        discardedCount?: number;
       };
 
       let deals = payload.deals || [];
@@ -449,6 +478,7 @@ function ModerationPage() {
       setApprovedItems(payload.approved || []);
       setRejectedItems(payload.rejected || []);
       setDiscardedItems(payload.discarded || []);
+      setDiscardedCount(payload.discardedCount || 0);
     } catch (err) {
       console.error('[Moderation] fetch error:', err);
       toast({ title: 'Błąd', description: 'Nie udało się pobrać danych', variant: 'destructive' });
@@ -601,7 +631,7 @@ function ModerationPage() {
           { label: 'Do moderacji', value: totalPending, icon: <Clock className="h-4 w-4 text-muted-foreground" />, sub: 'Oczekuje na akcję' },
           { label: 'Okazje', value: pendingDeals.length, icon: <AlertTriangle className="h-4 w-4 text-amber-500" />, sub: 'Do zatwierdzenia' },
           { label: 'Produkty', value: pendingProducts.length, icon: <ListChecks className="h-4 w-4 text-blue-500" />, sub: 'Do zatwierdzenia' },
-          { label: 'Odfiltrowane', value: discardedItems.length, icon: <XCircle className="h-4 w-4 text-red-400" />, sub: 'Import discarded' },
+          { label: 'Odfiltrowane', value: discardedCount, icon: <XCircle className="h-4 w-4 text-red-400" />, sub: 'Import discarded' },
         ].map(({ label, value, icon, sub }) => (
           <Card key={label}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -639,8 +669,8 @@ function ModerationPage() {
           <TabsTrigger value="forum">Forum</TabsTrigger>
           <TabsTrigger value="discarded">
             Odfiltrowane
-            {discardedItems.length > 0 && (
-              <Badge variant="secondary" className="ml-1.5 text-[10px] py-0 h-4">{discardedItems.length}</Badge>
+            {discardedCount > 0 && (
+              <Badge variant="secondary" className="ml-1.5 text-[10px] py-0 h-4">{discardedCount}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="history">
@@ -795,7 +825,7 @@ function ModerationPage() {
             <CardContent>
               <DiscardedTab
                 items={discardedItems}
-                loading={loading}
+                totalCount={discardedCount}
                 onReload={fetchModerationData}
                 getToken={getIdToken}
               />

@@ -72,6 +72,11 @@ const navStructure: (NavItem | NavGroup)[] = [
         badge: 'AliExpress',
         badgeVariant: 'secondary',
       },
+      {
+        title: 'Ręczny import (Kreator)',
+        href: '/admin/m6-import-dashboard',
+        icon: Search,
+      },
       { title: 'Presety harvestera', href: '/admin/harvester-presets', icon: Layers },
     ],
   },

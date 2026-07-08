@@ -48,10 +48,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Tylko admini' }, { status: 403 });
     }
 
-    const { items, targetStatus = 'pending' } = await req.json() as {
-      items: RestoreItem[];
+    const payload = await req.json() as {
+      items?: RestoreItem[];
       targetStatus?: 'pending' | 'draft';
+      mode?: 'all';
     };
+
+    const targetStatus = payload.targetStatus || 'pending';
+    let items = payload.items || [];
+
+    if (payload.mode === 'all') {
+      const allDocs = await adminDb.collection('import_discarded').select('type').get();
+      items = allDocs.docs.map(doc => ({ 
+        id: doc.id, 
+        type: (doc.data().type || 'product') as 'product' | 'deal' 
+      }));
+    }
 
     if (!Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -63,6 +75,8 @@ export async function POST(req: NextRequest) {
     const perItemResults: Array<{ id: string; success: boolean; error?: string }> = [];
     const cacheInvalidations: string[] = [];
     let processedCount = 0;
+    
+    const bulkWriter = adminDb.bulkWriter();
 
     // Process each item
     for (const restoreItem of items) {
@@ -168,7 +182,7 @@ export async function POST(req: NextRequest) {
             }
           };
 
-          await productRef.set(productData);
+          bulkWriter.set(productRef, productData);
 
           // 2. Create the associated Deal (Offer) document
           const dealRef = adminDb.collection('deals').doc();
@@ -219,10 +233,10 @@ export async function POST(req: NextRequest) {
             updatedAt: now,
           };
 
-          await dealRef.set(dealData);
+          bulkWriter.set(dealRef, dealData);
 
           // 3. Link the deal back to the product core
-          await productRef.update({
+          bulkWriter.update(productRef, {
             linkedDealIds: [dealId],
             bestDealId: dealId,
           });
@@ -293,7 +307,7 @@ export async function POST(req: NextRequest) {
             ],
           };
 
-          await dealRef.set(dealData);
+          bulkWriter.set(dealRef, dealData);
 
           perItemResults.push({
             id: restoreItem.id,
@@ -303,7 +317,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Remove from discarded queue since it is now restored
-        await adminDb.collection('import_discarded').doc(restoreItem.id).delete();
+        bulkWriter.delete(adminDb.collection('import_discarded').doc(restoreItem.id));
       } catch (itemError: any) {
         perItemResults.push({
           id: restoreItem.id,
@@ -312,6 +326,8 @@ export async function POST(req: NextRequest) {
         });
       }
     }
+
+    await bulkWriter.close();
 
     // Invalidate caches
     try {

@@ -109,6 +109,9 @@ export async function GET(request: NextRequest) {
       rejected = [...mapRecent(rejectedDealsSnap, 'deal'), ...rejectedProducts];
     }
 
+    const discardedCountSnap = await adminDb.collection('import_discarded').count().get();
+    const discardedCount = discardedCountSnap.data().count;
+
     const discardedSnap = await adminDb
       .collection('import_discarded')
       .orderBy('createdAt', 'desc')
@@ -127,6 +130,7 @@ export async function GET(request: NextRequest) {
       approved,
       rejected,
       discarded,
+      discardedCount,
     });
   } catch (error: any) {
     console.error('[Moderation Data API] Error:', error);

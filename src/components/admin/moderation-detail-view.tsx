@@ -7,6 +7,7 @@ import { Copy, ChevronDown, ChevronUp, ExternalLink, Package, Truck, DollarSign,
 import { toast } from 'sonner';
 import { useCategoryName } from '@/hooks/use-category-name';
 import Image from 'next/image';
+import { withImageProxy } from '@/lib/image-proxy';
 
 interface ModerationDetailViewProps {
   item: any;
@@ -45,7 +46,7 @@ export function ModerationDetailView({ item, itemType }: ModerationDetailViewPro
   const description = getLocalized(item.description || item.fullDescription || item.shortDescription);
   
   // Images
-  const mainImage = item.mainImage || item.image || item.imageUrl || (item.images?.[0]);
+  const mainImage = item.mainImage || item.image || item.imageUrl || (item.images?.[0]) || (item.gallery?.[0]?.url);
   const gallery = item.images || [];
 
   // Financials
@@ -77,7 +78,7 @@ export function ModerationDetailView({ item, itemType }: ModerationDetailViewPro
           {mainImage ? (
             <div className="aspect-square relative rounded-lg border bg-muted overflow-hidden">
               {/* Using standard img to avoid next/image domain configuration issues in admin panel */}
-              <img src={mainImage} alt={title} className="object-contain w-full h-full" />
+              <img src={withImageProxy(mainImage)} alt={title} className="object-contain w-full h-full" />
             </div>
           ) : (
             <div className="aspect-square rounded-lg border bg-muted flex items-center justify-center text-muted-foreground">

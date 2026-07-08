@@ -7,17 +7,23 @@ const PROXY_HOSTS = new Set([
 
 export function withImageProxy(url?: string): string {
   if (!url || typeof url !== 'string') return '';
+  
+  // Convert protocol-relative URLs to https
+  let processedUrl = url;
+  if (processedUrl.startsWith('//')) {
+    processedUrl = `https:${processedUrl}`;
+  }
 
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(processedUrl);
     if (parsed.protocol === 'https:' && PROXY_HOSTS.has(parsed.hostname)) {
       return `/api/image-proxy?url=${encodeURIComponent(parsed.toString())}`;
     }
   } catch {
-    return url;
+    return processedUrl;
   }
 
-  return url;
+  return processedUrl;
 }
 
 export function isAliExpressImage(url?: string): boolean {
