@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { requireAdmin } from '@/lib/auth-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,6 +45,9 @@ interface ScheduledTask {
 
 export async function POST(req: NextRequest) {
   try {
+    // Secure endpoint: only admin can trigger scheduled runs
+    await requireAdmin();
+
     getDb();
     const { taskId, config } = await req.json();
 

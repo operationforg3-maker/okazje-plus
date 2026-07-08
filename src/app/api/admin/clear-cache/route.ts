@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
+import { requireAdmin } from '@/lib/auth-server';
 
 /**
  * Clear categories cache endpoint
@@ -10,6 +11,9 @@ import { headers } from 'next/headers';
  */
 export async function GET() {
   try {
+    // Secure endpoint: only admins can clear cache
+    await requireAdmin();
+
     // Import cache functions
     const { cacheDel } = await import('@/lib/cache');
     

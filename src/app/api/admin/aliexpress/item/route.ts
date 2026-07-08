@@ -1,7 +1,18 @@
 import { NextResponse } from 'next/server';
 import { getAliExpressProductDetailsDirect } from '@/integrations/aliexpress/details';
+import { requireModerator } from '@/lib/auth-server';
 
 export async function GET(request: Request) {
+  try {
+    await requireModerator();
+  } catch (authError: any) {
+    const isForbidden = authError.message?.includes('Forbidden');
+    return NextResponse.json(
+      { error: authError.message || 'Unauthorized' },
+      { status: isForbidden ? 403 : 401 }
+    );
+  }
+
   const url = new URL(request.url);
   const id = url.searchParams.get('id') 
     || url.searchParams.get('itemId') 

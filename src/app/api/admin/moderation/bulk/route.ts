@@ -169,7 +169,8 @@ export async function POST(req: NextRequest) {
             updatePayload.rejectedAt = new Date().toISOString();
           }
 
-          batch.update(docRef, updatePayload);
+          // Use set with merge: true to avoid crashes if document was physically deleted
+          batch.set(docRef, updatePayload, { merge: true });
           perItemResults.push({ id: item.id, type: item.type, success: true });
 
           // Track for secondary operations
@@ -226,29 +227,33 @@ export async function POST(req: NextRequest) {
         }
 
         if (productCoreIdsToApprove.size > 0) {
-          const syncBatch = adminDb.batch();
-          const productCoreIdsList = Array.from(productCoreIdsToApprove);
-          const productCoreChunks = chunks(productCoreIdsList, 30);
+            try {
+              const syncBatch = adminDb.batch();
+              const productCoreIdsList = Array.from(productCoreIdsToApprove);
+              const productCoreChunks = chunks(productCoreIdsList, 30);
 
-          for (const pChunk of productCoreChunks) {
-            const productsSnapshot = await adminDb
-              .collection('product_cores')
-              .where('__name__', 'in', pChunk)
-              .get();
+              for (const pChunk of productCoreChunks) {
+                const productsSnapshot = await adminDb
+                  .collection('product_cores')
+                  .where('__name__', 'in', pChunk)
+                  .get();
 
-            for (const productDoc of productsSnapshot.docs) {
-              const productStatus = productDoc.data()?.status;
-              if (productStatus === 'pending_approval' || productStatus === 'draft') {
-                syncBatch.update(productDoc.ref, {
-                  status: 'approved',
-                  approvedAt: new Date().toISOString(),
-                  updatedAt: ts,
-                });
+                for (const productDoc of productsSnapshot.docs) {
+                  const productStatus = productDoc.data()?.status;
+                  if (productStatus === 'pending_approval' || productStatus === 'draft') {
+                    syncBatch.set(productDoc.ref, {
+                      status: 'approved',
+                      approvedAt: new Date().toISOString(),
+                      updatedAt: ts,
+                    }, { merge: true });
+                  }
+                }
               }
+              await syncBatch.commit();
+            } catch (syncErr) {
+              console.error('[bulk moderation] Error syncing Deal->ProductCore:', syncErr);
             }
           }
-          await syncBatch.commit();
-        }
       }
     }
 
@@ -281,42 +286,46 @@ export async function POST(req: NextRequest) {
           .get();
 
         if (!dealsSnapshot.empty) {
-          const syncBatch = adminDb.batch();
-          let batchOps = 0;
+          try {
+            const syncBatch = adminDb.batch();
+            let batchOps = 0;
 
-          for (const dealDoc of dealsSnapshot.docs) {
-            const dealData = dealDoc.data();
-            const currentStatus = dealData.status;
+            for (const dealDoc of dealsSnapshot.docs) {
+              const dealData = dealDoc.data();
+              const currentStatus = dealData.status;
 
-            if (action === 'approve') {
-              if (['pending', 'draft', 'poczekalnia'].includes(currentStatus)) {
-                syncBatch.update(dealDoc.ref, {
-                  status: 'approved',
-                  approvedAt: new Date().toISOString(),
-                  promotedAt: new Date().toISOString(),
-                  updatedAt: ts,
-                });
-                batchOps++;
+              if (action === 'approve') {
+                if (['pending', 'draft', 'poczekalnia'].includes(currentStatus)) {
+                  syncBatch.set(dealDoc.ref, {
+                    status: 'approved',
+                    approvedAt: new Date().toISOString(),
+                    promotedAt: new Date().toISOString(),
+                    updatedAt: ts,
+                  }, { merge: true });
+                  batchOps++;
+                }
+              } else if (action === 'reject') {
+                if (currentStatus !== 'rejected') {
+                  syncBatch.set(dealDoc.ref, {
+                    status: 'rejected',
+                    rejectedAt: new Date().toISOString(),
+                    updatedAt: ts,
+                  }, { merge: true });
+                  batchOps++;
+                }
               }
-            } else if (action === 'reject') {
-              if (currentStatus !== 'rejected') {
-                syncBatch.update(dealDoc.ref, {
-                  status: 'rejected',
-                  rejectedAt: new Date().toISOString(),
-                  updatedAt: ts,
-                });
-                batchOps++;
+
+              if (batchOps >= 400) {
+                await syncBatch.commit();
+                batchOps = 0;
               }
             }
 
-            if (batchOps >= 400) {
+            if (batchOps > 0) {
               await syncBatch.commit();
-              batchOps = 0;
             }
-          }
-
-          if (batchOps > 0) {
-            await syncBatch.commit();
+          } catch (syncErr) {
+            console.error('[bulk moderation] Error syncing ProductCore->Deal:', syncErr);
           }
         }
       }

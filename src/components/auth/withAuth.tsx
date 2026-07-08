@@ -25,13 +25,26 @@ export function withAuth<P extends object>(
       if (!loading && !user) {
         router.push('/login');
       } else if (!loading && user && options?.requiredRole) {
-        // TODO: Sprawdź role użytkownika z Firebase custom claims
-        // na razie pozwalamy wszystkim zalogowanym
+        const userRole = user.role;
+        const required = options.requiredRole;
+        if (required === 'admin' && userRole !== 'admin') {
+          router.push('/');
+        } else if (required === 'moderator' && userRole !== 'admin' && userRole !== 'moderator') {
+          router.push('/');
+        }
       }
     }, [user, loading, router, options?.requiredRole]);
 
-    if (loading || !user) {
-      return <div>Loading...</div>; // Or a proper loading component
+    const isAuthorized = !options?.requiredRole || (
+      user && (
+        options.requiredRole === 'user' ||
+        (options.requiredRole === 'moderator' && (user.role === 'admin' || user.role === 'moderator')) ||
+        (options.requiredRole === 'admin' && user.role === 'admin')
+      )
+    );
+
+    if (loading || !user || !isAuthorized) {
+      return <div>Loading...</div>;
     }
 
     return <Component {...props} />;

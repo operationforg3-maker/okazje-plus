@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
+import { requireModerator } from '@/lib/auth-server';
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { commentId: string } }
 ) {
   try {
-    // W produkcji: weryfikuj auth i role admina
-    // const user = await verifyAuth(request);
-    // if (!user || user.role !== 'admin') return 401
+    // Secure endpoint: moderator/admin access required
+    await requireModerator();
 
     const commentId = params.commentId;
     const body = await request.json();
@@ -22,10 +21,10 @@ export async function DELETE(
       );
     }
 
-    // Ścieżka do komentarza w subkolekcji
-    const commentRef = doc(db, collectionName, docId, 'comments', commentId);
+    // Path to comment in subcollection (using Firestore Admin SDK)
+    const commentRef = adminDb.collection(collectionName).doc(docId).collection('comments').doc(commentId);
     
-    await deleteDoc(commentRef);
+    await commentRef.delete();
 
     return NextResponse.json({
       success: true,
@@ -35,7 +34,7 @@ export async function DELETE(
   } catch (error: any) {
     console.error('Delete comment error:', error);
     return NextResponse.json(
-      { success: false, message: 'Błąd podczas usuwania komentarza' },
+      { success: false, message: error.message || 'Błąd podczas usuwania komentarza' },
       { status: 500 }
     );
   }

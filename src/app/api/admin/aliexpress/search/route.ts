@@ -1,11 +1,22 @@
 import { NextResponse } from 'next/server';
 import { buildSignedParams, toQueryString } from '@/lib/aliexpress';
 import { expandQueryWithSynonyms, rankProductsByRelevance } from '@/lib/search-helpers';
+import { requireModerator } from '@/lib/auth-server';
 
 // Official AliExpress Affiliate API integration
 // Uses aliexpress.affiliate.productquery method
 
 export async function GET(request: Request) {
+  try {
+    await requireModerator();
+  } catch (authError: any) {
+    const isForbidden = authError.message?.includes('Forbidden');
+    return NextResponse.json(
+      { error: authError.message || 'Unauthorized' },
+      { status: isForbidden ? 403 : 401 }
+    );
+  }
+
   const url = new URL(request.url);
   const q = url.searchParams.get('q') || '';
   const category = url.searchParams.get('category') || '';

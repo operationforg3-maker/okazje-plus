@@ -5,9 +5,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logging';
+import { requireAdmin } from '@/lib/auth-server';
 
 export async function GET(request: NextRequest) {
   try {
+    // Secure endpoint: only admin can view oauth debugging info
+    await requireAdmin();
+
     const searchParams = request.nextUrl.searchParams;
     const vendorId = searchParams.get('vendorId') || 'aliexpress';
     

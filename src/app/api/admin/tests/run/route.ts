@@ -5,18 +5,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { runAllTests } from '@/lib/test-service';
+import { requireAdmin } from '@/lib/auth-server';
 
 export async function POST(request: NextRequest) {
   try {
-    // TODO: Add proper admin authentication
-    // For now, basic check (should use Firebase Auth + role check)
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    // Secure endpoint: only admin can run tests
+    await requireAdmin();
 
     const body = await request.json().catch(() => ({}));
     const options = {

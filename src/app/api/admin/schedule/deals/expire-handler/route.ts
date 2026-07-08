@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { requestDealIndexing } from '@/lib/google-indexing';
 import { Timestamp } from 'firebase-admin/firestore';
+import { checkAdminAuth } from '@/lib/auth-helpers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,6 +41,21 @@ interface ExpiredDealResult {
  */
 export async function POST(request: NextRequest) {
   try {
+    // ===== AUTH =====
+    const internalSecret = request.headers.get('x-internal-secret');
+    const cronSecret = process.env.CRON_SECRET;
+    const isInternalRequest = internalSecret && cronSecret && internalSecret === cronSecret;
+
+    if (!isInternalRequest) {
+      const authResult = await checkAdminAuth(request);
+      if (!authResult.authorized) {
+        return NextResponse.json(
+          { error: authResult.error || 'Unauthorized' },
+          { status: 401 }
+        );
+      }
+    }
+
     // Verify authorization (optional: can require service account auth)
     // For Cloud Scheduler: verify X-CloudScheduler-JobName header
     const schedulerJobName = request.headers.get('x-cloudscheduler-jobname');
@@ -203,6 +219,15 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    // Verify authorization
+    const authResult = await checkAdminAuth(request);
+    if (!authResult.authorized) {
+      return NextResponse.json(
+        { error: authResult.error || 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const logDoc = await adminDb.collection('config').doc('expireHandlerLog').get();
     const log = logDoc.exists ? logDoc.data() : null;
 

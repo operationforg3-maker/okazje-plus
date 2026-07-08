@@ -9,11 +9,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllTokens } from '@/lib/oauth';
 import { logger } from '@/lib/logging';
+import { requireAdmin } from '@/lib/auth-server';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
+    // Secure endpoint: only admin can list OAuth tokens
+    await requireAdmin();
+
     const searchParams = request.nextUrl.searchParams;
     const vendorId = searchParams.get('vendorId');
     
@@ -23,9 +27,6 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-    
-    // TODO: Check user authorization
-    // Only admins should be able to list tokens
     
     const tokens = await getAllTokens(vendorId);
     

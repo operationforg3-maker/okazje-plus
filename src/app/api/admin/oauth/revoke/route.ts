@@ -10,11 +10,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revokeOAuthToken } from '@/lib/oauth';
 import { logger } from '@/lib/logging';
+import { requireAdmin } from '@/lib/auth-server';
 
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   try {
+    // Secure endpoint: only admin can revoke OAuth tokens
+    await requireAdmin();
+
     const body = await request.json();
     const { tokenId } = body;
     
@@ -24,9 +28,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
-    // TODO: Check user authorization
-    // Only admins should be able to revoke tokens
     
     await revokeOAuthToken(tokenId);
     

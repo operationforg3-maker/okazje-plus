@@ -9,11 +9,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOAuthConfig, generateAuthorizationUrl } from '@/lib/oauth';
 import { logger } from '@/lib/logging';
+import { requireAdmin } from '@/lib/auth-server';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
+    // Secure endpoint: only admin can initiate OAuth flow
+    await requireAdmin();
+
     const searchParams = request.nextUrl.searchParams;
     const vendorId = searchParams.get('vendorId');
     const accountName = searchParams.get('accountName') || 'default';

@@ -21,6 +21,14 @@ import { requireAdmin } from '@/lib/auth-server';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Security constraint: never allow code execution in production
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { error: 'Code execution is disabled in production environment for security reasons' },
+        { status: 403 }
+      );
+    }
+
     // Verify admin authentication
     const session = await requireAdmin();
 

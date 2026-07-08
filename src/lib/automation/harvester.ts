@@ -799,7 +799,6 @@ export class SmartHarvester {
         isOfferOnly,
         rating: 0,
         ratingCount: 0,
-        imageUrl,
         images: [imageUrl],
         offerMeta: {
           promotionType: 'offer',

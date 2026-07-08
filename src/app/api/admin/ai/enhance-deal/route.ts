@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
+import { requireAdmin } from '@/lib/auth-server';
 
 /**
  * POST /api/admin/ai/enhance-deal
@@ -11,6 +12,9 @@ import { aiNormalizeTitlePL } from '@/ai/flows/aliexpress/aiNormalizeTitlePL';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Secure endpoint: only admin can trigger AI enhancement
+    await requireAdmin();
+
     const { dealId, operations = ['normalize-title'] } = await request.json();
 
     if (!dealId) {

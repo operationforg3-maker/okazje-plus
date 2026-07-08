@@ -1,10 +1,14 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { deleteAllProducts, deleteAllDeals, deleteAllCategories, deleteAllProductCores, deleteAllIdentityMatches, deleteAllHarvesterJobs } from '@/lib/data-admin';
+import { requireAdmin } from '@/lib/auth-server';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
+    // Secure endpoint: only admin can wipe database
+    await requireAdmin();
+
     const [deletedProducts, deletedDeals, deletedProductCores, deletedIdentityMatches, deletedHarvesterJobs, deletedCategories] = await Promise.all([
       deleteAllProducts(),
       deleteAllDeals(),

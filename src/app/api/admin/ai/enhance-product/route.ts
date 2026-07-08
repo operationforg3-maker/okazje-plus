@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { aiTranslateProduct } from '@/ai/flows/aiTranslateProduct';
+import { requireAdmin } from '@/lib/auth-server';
 
 /**
  * POST /api/admin/ai/enhance-product
@@ -11,6 +12,9 @@ import { aiTranslateProduct } from '@/ai/flows/aiTranslateProduct';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Secure endpoint: only admin can trigger AI enhancement
+    await requireAdmin();
+
     const { productId, operations = ['translate'] } = await request.json();
 
     if (!productId) {
