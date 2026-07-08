@@ -57,6 +57,25 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => toMillis(b.postedAt || b.createdAt) - toMillis(a.postedAt || a.createdAt))
       .slice(0, limit);
 
+    await Promise.all(deals.map(async (deal) => {
+      if ((!deal.image || deal.image === '/icon_okazjeplus.svg') && deal.linkedProductIds?.length > 0) {
+        try {
+          const productSnap = await adminDb.collection('product_cores').doc(deal.linkedProductIds[0]).get();
+          if (productSnap.exists) {
+            const pData = productSnap.data();
+            const pImage = pData?.images?.[0] || pData?.imageUrl || pData?.image;
+            if (pImage) {
+              deal.image = pImage;
+              if (!deal.images) deal.images = [];
+              if (deal.images.length === 0) deal.images.push(pImage);
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }));
+
     const productQueries = await Promise.all(
       productStatuses.map(status =>
         adminDb
