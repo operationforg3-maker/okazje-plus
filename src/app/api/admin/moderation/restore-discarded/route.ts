@@ -133,6 +133,7 @@ export async function POST(req: NextRequest) {
           const productRef = adminDb.collection('product_cores').doc();
           const productId = productRef.id;
 
+          const finalProductImage = discardedData.imageUrl || (discardedData.images && discardedData.images[0]) || '/icon_okazjeplus.svg';
           const productData = {
             id: productId,
             identityHash: discardedData.identityHash || `restored_${restoreItem.id}_${Date.now()}`,
@@ -145,8 +146,8 @@ export async function POST(req: NextRequest) {
             mainCategorySlug,
             subCategorySlug,
             subSubCategorySlug,
-            imageUrl: discardedData.imageUrl || '',
-            images: discardedData.imageUrl ? [discardedData.imageUrl] : [],
+            imageUrl: finalProductImage,
+            images: finalProductImage !== '/icon_okazjeplus.svg' ? [finalProductImage] : [],
             reviewsSummary: {
               pl: 'Brak podsumowania opinii (ręcznie przywrócony)',
               en: 'No reviews summary (manually restored)',
@@ -188,6 +189,7 @@ export async function POST(req: NextRequest) {
           const dealRef = adminDb.collection('deals').doc();
           const dealId = dealRef.id;
 
+          const finalImage = discardedData.imageUrl || (discardedData.images && discardedData.images[0]) || '/icon_okazjeplus.svg';
           const dealData = {
             id: dealId,
             productId: productId,
@@ -195,8 +197,8 @@ export async function POST(req: NextRequest) {
             mainCategorySlug,
             subCategorySlug,
             subSubCategorySlug,
-            image: discardedData.imageUrl || '',
-            images: discardedData.imageUrl ? [discardedData.imageUrl] : [],
+            image: finalImage,
+            images: finalImage !== '/icon_okazjeplus.svg' ? [finalImage] : [],
             price: {
               amount: priceAmount,
               currency: discardedData.currency || 'PLN',
