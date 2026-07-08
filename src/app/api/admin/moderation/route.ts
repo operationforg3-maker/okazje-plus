@@ -76,7 +76,10 @@ export async function POST(request: NextRequest) {
     }
 
     // If editPayload provided (from QuickEditDialog), merge safe fields
-    const ALLOWED_EDIT_FIELDS = ['title', 'titlePl', 'description', 'descriptionPl', 'price', 'mainCategorySlug'];
+    const ALLOWED_EDIT_FIELDS = [
+      'title', 'titlePl', 'description', 'descriptionPl', 'price', 'mainCategorySlug',
+      'shippingCost', 'freeShipping', 'mainImage', 'image', 'imageUrl'
+    ];
     if (editPayload && typeof editPayload === 'object' && action === 'approve') {
       for (const key of ALLOWED_EDIT_FIELDS) {
         if (key in editPayload && (editPayload as Record<string, unknown>)[key] !== undefined) {
@@ -98,10 +101,11 @@ export async function POST(request: NextRequest) {
 
     // Use transaction for atomic Deal↔ProductCore update
     await adminDb.runTransaction(async (transaction) => {
-      // Update the item
-      transaction.update(itemRef, itemUpdatePayload);
+      let productRefToUpdate: any = null;
+      let productStatusToUpdate: string | null = null;
+      let dealsToUpdate: any[] = [];
 
-      // If approving a deal, auto-approve its ProductCore (if in pending state)
+      // 1. All READS first
       if (itemType === 'deal' && action === 'approve' && beforeSnap.exists) {
         const dealData = beforeSnap.data() as any;
         const productCoreId = dealData?.productCoreId || dealData?.productId;
@@ -113,17 +117,15 @@ export async function POST(request: NextRequest) {
           if (productSnap.exists) {
             const productStatus = productSnap.data()?.status;
             if (productStatus === 'pending_approval' || productStatus === 'draft') {
-              transaction.update(productRef, {
-                status: 'approved',
-                approvedAt: new Date().toISOString(),
-                updatedAt: ts,
-              });
+              productRefToUpdate = productRef;
+              productStatusToUpdate = 'approved';
             }
           }
         }
       }
 
       // If approving/rejecting a product, sync status to all associated deals
+      // Note: We use a standard query here because transaction queries have limitations
       if (itemType === 'product') {
         const productDealsSnap = await adminDb.collection('deals')
           .where('productId', '==', itemId)
@@ -135,23 +137,39 @@ export async function POST(request: NextRequest) {
 
           if (action === 'approve') {
             if (['pending', 'draft', 'poczekalnia'].includes(currentStatus)) {
-              transaction.update(dealDoc.ref, {
-                status: 'approved',
-                approvedAt: new Date().toISOString(),
-                promotedAt: new Date().toISOString(),
-                updatedAt: ts,
-              });
+              dealsToUpdate.push({ ref: dealDoc.ref, newStatus: 'approved' });
             }
           } else if (action === 'reject') {
             if (currentStatus !== 'rejected') {
-              transaction.update(dealDoc.ref, {
-                status: 'rejected',
-                rejectedAt: new Date().toISOString(),
-                updatedAt: ts,
-              });
+              dealsToUpdate.push({ ref: dealDoc.ref, newStatus: 'rejected' });
             }
           }
         }
+      }
+
+      // 2. All WRITES after reads
+      transaction.update(itemRef, itemUpdatePayload);
+
+      if (productRefToUpdate && productStatusToUpdate) {
+        transaction.update(productRefToUpdate, {
+          status: productStatusToUpdate,
+          approvedAt: new Date().toISOString(),
+          updatedAt: ts,
+        });
+      }
+
+      for (const deal of dealsToUpdate) {
+        const updateData: any = {
+          status: deal.newStatus,
+          updatedAt: ts,
+        };
+        if (deal.newStatus === 'approved') {
+          updateData.approvedAt = new Date().toISOString();
+          updateData.promotedAt = new Date().toISOString();
+        } else if (deal.newStatus === 'rejected') {
+          updateData.rejectedAt = new Date().toISOString();
+        }
+        transaction.update(deal.ref, updateData);
       }
     });
 

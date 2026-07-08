@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       // Validate statuses
       const validStatuses = type === "product"
         ? ["draft", "pending_approval", "rejected", "approved"]
-        : ["draft", "pending", "rejected", "approved"];
+        : ["draft", "pending", "poczekalnia", "rejected", "approved"];
       
       statuses = statuses.filter(s => validStatuses.includes(s));
       
@@ -69,10 +69,10 @@ export async function GET(request: NextRequest) {
         }, { status: 400 });
       }
     } else {
-      // Default: only pending/draft (for moderation queue)
+      // Default: only pending/draft/poczekalnia (for moderation queue)
       statuses = type === "product"
         ? ["draft", "pending_approval"]
-        : ["draft", "pending"];
+        : ["draft", "pending", "poczekalnia"];
     }
 
     console.log(`[get-all-ids] Fetching ${type} with statuses: ${statuses.join(', ')}`);

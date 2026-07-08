@@ -1135,7 +1135,8 @@ export class AliExpressClient {
   async getLogisticsInfo(
     productId: string,
     countryCode: string = 'PL',
-    quantity: number = 1
+    quantity: number = 1,
+    sendGoodsCountryCode: string = 'CN'
   ): Promise<{
     shippingCost: number;
     currency: string;
@@ -1149,14 +1150,14 @@ export class AliExpressClient {
       company: string;
     }>;
   } | null> {
-    logger.info('Fetching logistics info', { productId, countryCode, quantity });
+    logger.info('Fetching logistics info', { productId, countryCode, quantity, sendGoodsCountryCode });
     
     try {
       const params = {
         product_id: productId,
         product_num: quantity.toString(),
         country_code: countryCode,
-        send_goods_country_code: 'CN', // Most AliExpress products ship from China
+        send_goods_country_code: sendGoodsCountryCode,
       };
       
       const result = await this.request<any>('aliexpress.logistics.buyer.freight.get', params);

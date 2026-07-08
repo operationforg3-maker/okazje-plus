@@ -157,19 +157,35 @@ export class SmartHarvester {
     }
 
     if (productId && !skipLogisticsApi) {
-      try {
-        const logistics = await client.getLogisticsInfo(productId, 'PL', 1);
-        if (logistics) {
-          return {
-            amount: Math.max(0, Number(logistics.shippingCost || 0)),
-            currency: String(logistics.currency || 'PLN').toUpperCase(),
-            days: Number(logistics.estimatedDays || product?.ship_to_days || 7) || 7,
-            freeShipping: Boolean(logistics.isFreeShipping),
-            verified: true,
-          };
+      // Extract available warehouses if passed in product (e.g. from affiliate API)
+      const warehouses = Array.isArray(product?.ships_from_countries)
+        ? product.ships_from_countries
+        : (product?.ships_from_countries?.string || []);
+      
+      const euWarehouses = ['PL', 'ES', 'FR', 'CZ', 'DE', 'IT'];
+      const availableEuWarehouses = warehouses.filter((w: string) => euWarehouses.includes(w.toUpperCase()));
+      
+      // Try CN first, then available EU warehouses, then fallback
+      const countriesToTry = ['CN', ...availableEuWarehouses];
+
+      for (const originCountry of countriesToTry) {
+        try {
+          const logistics = await client.getLogisticsInfo(productId, 'PL', 1, originCountry);
+
+          if (logistics !== null) {
+            return {
+              amount: Math.max(0, Number(logistics.shippingCost || 0)),
+              currency: String(logistics.currency || 'PLN').toUpperCase(),
+              days: Number(logistics.estimatedDays || product?.ship_to_days || 7) || 7,
+              freeShipping: Boolean(logistics.isFreeShipping),
+              verified: true,
+            };
+          } else {
+            this.addLog('info', `Logistics API: No shipping options from ${originCountry} for product ${productId}`);
+          }
+        } catch (error) {
+          this.addLog('warn', `Logistics API error for ${productId} from ${originCountry}: ${error instanceof Error ? error.message : String(error)}`);
         }
-      } catch {
-        // Keep graceful fallback below.
       }
     }
 
@@ -457,11 +473,18 @@ export class SmartHarvester {
       product.preview_image_url,
     ];
     
-    primaryFields.forEach(field => {
-      if (typeof field === 'string' && field.trim() && field.startsWith('http')) {
-        imageSet.add(field);
+    const addValidUrl = (field: any) => {
+      if (typeof field === 'string' && field.trim()) {
+        const url = field.trim();
+        if (url.startsWith('http')) {
+          imageSet.add(url);
+        } else if (url.startsWith('//')) {
+          imageSet.add(`https:${url}`);
+        }
       }
-    });
+    };
+
+    primaryFields.forEach(addValidUrl);
 
     // Gallery/secondary images (multiple sources)
     const galleryFields = [
@@ -476,13 +499,9 @@ export class SmartHarvester {
 
     galleryFields.forEach(field => {
       if (Array.isArray(field)) {
-        field.forEach(url => {
-          if (typeof url === 'string' && url.trim() && url.startsWith('http')) {
-            imageSet.add(url);
-          }
-        });
-      } else if (typeof field === 'string' && field.trim() && field.startsWith('http')) {
-        imageSet.add(field);
+        field.forEach(addValidUrl);
+      } else {
+        addValidUrl(field);
       }
     });
 
@@ -2082,17 +2101,18 @@ export class SmartHarvester {
             const discarded = sourceProducts.filter((p) => !keptIds.has(p.sourceProductId || p.title));
 
             await Promise.all(
-              discarded.map((item) =>
-                this.recordDiscardedItem({
+              discarded.map((item) => {
+                const isLowQuality = item.rating && item.rating > 0 && item.rating < 3.0;
+                return this.recordDiscardedItem({
                   source,
                   type: 'product',
-                  reason: 'Odrzucone przez filtr jakości (rating/oceny).',
-                  reasonCode: 'quality_filter',
+                  reason: isLowQuality ? 'Odrzucone ze względu na niską ocenę (< 3.0).' : 'Odrzucone z powodu limitu pobierania (nie zmieściły się w TOP ofercie).',
+                  reasonCode: isLowQuality ? 'low_rating' : 'excess_items',
                   item,
                   query: currentQuery,
                   categoryPath: currentQuery,
-                })
-              )
+                });
+              })
             );
           }
           

@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
                 .filter(Boolean)
                 .slice(0, 15)
             )),
-            status: targetStatus,
+            status: targetStatus === 'pending' ? 'pending_approval' : targetStatus,
             createdAt: discardedData.createdAt || now,
             updatedAt: now,
             metadata: {
@@ -204,7 +204,7 @@ export async function POST(req: NextRequest) {
             description: localizedDesc,
             stockStatus: 'in_stock',
             isActive: true,
-            status: 'poczekalnia', // Force to moderation queue
+            status: targetStatus === 'pending' ? 'poczekalnia' : targetStatus,
             voteCount: 0,
             temperature: 0,
             commentsCount: 0,
@@ -275,7 +275,7 @@ export async function POST(req: NextRequest) {
             merchantName: discardedData.merchantName || 'Unknown',
             merchantRating: discardedData.merchantRating || 0,
             inStock: true,
-            status: targetStatus,
+            status: targetStatus === 'pending' ? 'poczekalnia' : targetStatus,
             title: localizedTitle,
             description: localizedDesc,
             voteCount: 0,
@@ -302,12 +302,8 @@ export async function POST(req: NextRequest) {
           processedCount++;
         }
 
-        // Mark as restored in discarded (for audit trail)
-        await adminDb.collection('import_discarded').doc(restoreItem.id).update({
-          restoredAt: now,
-          restoredBy: decoded.uid,
-          restoredStatus: 'success',
-        });
+        // Remove from discarded queue since it is now restored
+        await adminDb.collection('import_discarded').doc(restoreItem.id).delete();
       } catch (itemError: any) {
         perItemResults.push({
           id: restoreItem.id,

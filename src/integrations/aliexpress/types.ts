@@ -208,6 +208,41 @@ export interface AliExpressProductDetailsParams {
 }
 
 /**
+ * Logistics API request parameters
+ */
+export interface AliExpressLogisticsParams {
+  productId: string;
+  productNum?: number; // quantity, default 1
+  countryCode?: string; // destination country, default 'PL'
+  sendGoodsCountryCode?: string; // origin country, default 'CN'
+  price?: number; // Product price (sometimes needed for better shipping options)
+  currency?: string;
+}
+
+/**
+ * Logistics API response
+ */
+export interface AliExpressLogisticsResponse {
+  success: boolean;
+  freight_list?: Array<{
+    amount: number;
+    cent: number; // amount in cents
+    currency: string;
+    company: string; // e.g. "AliExpress Standard Shipping"
+    serviceName: string;
+    time: number; // estimated delivery days (max)
+    commitDay: number;
+    delivery_time?: string; // optional string description
+    estimatedDeliveryTime?: string;
+    trackingAvailable: boolean;
+  }>;
+  error?: {
+    code: string;
+    message: string;
+  };
+}
+
+/**
  * API error response
  */
 export interface AliExpressApiError {

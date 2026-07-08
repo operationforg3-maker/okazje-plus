@@ -1,36 +1,31 @@
-// @ts-nocheck
 "use client";
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Copy, ChevronDown, ChevronUp } from 'lucide-react';
+import { Copy, ChevronDown, ChevronUp, ExternalLink, Package, Truck, DollarSign, Percent, Info, Tags, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCategoryName } from '@/hooks/use-category-name';
+import Image from 'next/image';
 
 interface ModerationDetailViewProps {
   item: any;
   itemType: 'deal' | 'product';
 }
 
-/**
- * ModerationDetailView - Wyświetla WSZYSTKIE dane z bazy dla pojedynczego deal/produktu
- * Pokazuje pełną raw data w formacie JSON z możliwością kopii
- * - Harvester fields (wszystkie pola importowane)
- * - Metadata (status, daty, Quality Score, itd)
- * - Pełna struktura JSON
- */
+function getLocalized(val: any, fallback = ''): string {
+  if (!val) return fallback;
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') return val.pl || val.en || val.de || Object.values(val)[0] || fallback;
+  return fallback;
+}
+
 export function ModerationDetailView({ item, itemType }: ModerationDetailViewProps) {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    overview: true,
-    rawData: true,
-    specs: true,
-    descriptions: true,
-    pricing: true,
-    metadata: true,
+    rawData: false,
+    variants: true,
   });
 
-  // Load category names
   const { mainName, subName, subSubName } = useCategoryName(
     item.mainCategorySlug,
     item.subCategorySlug,
@@ -46,384 +41,207 @@ export function ModerationDetailView({ item, itemType }: ModerationDetailViewPro
     toast.success('Skopiowano do schowka');
   };
 
-  const Section = ({ 
-    title, 
-    id, 
-    children, 
-    count 
-  }: { 
-    title: string; 
-    id: string; 
-    children: React.ReactNode; 
-    count?: number;
-  }) => (
-    <div className="border rounded-lg mb-3">
-      <button
-        onClick={() => toggleSection(id)}
-        className="w-full flex items-center justify-between p-3 hover:bg-muted transition-colors"
-      >
-        <div className="flex items-center gap-2 min-w-0">
-          {expandedSections[id] ? (
-            <ChevronUp className="h-4 w-4 flex-shrink-0" />
-          ) : (
-            <ChevronDown className="h-4 w-4 flex-shrink-0" />
-          )}
-          <h3 className="font-semibold text-sm truncate">{title}</h3>
-          {count !== undefined && (
-            <Badge variant="outline" className="ml-2 text-xs flex-shrink-0">
-              {count}
-            </Badge>
-          )}
-        </div>
-      </button>
-      
-      {expandedSections[id] && (
-        <div className="border-t p-3 bg-muted/30 text-sm max-h-[400px] overflow-y-auto">
-          {children}
-        </div>
-      )}
-    </div>
-  );
+  const title = getLocalized(item.title || item.name);
+  const description = getLocalized(item.description || item.fullDescription || item.shortDescription);
+  
+  // Images
+  const mainImage = item.mainImage || item.image || item.imageUrl || (item.images?.[0]);
+  const gallery = item.images || [];
 
-  const FieldRow = ({ label, value }: { label: string; value: any }) => {
-    const displayValue = typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
-    
-    return (
-      <div className="py-2 border-b last:border-b-0 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 sm:gap-2">
-        <div className="font-medium text-xs min-w-0 sm:min-w-[150px] flex-shrink-0 break-words">{label}:</div>
-        <div className="flex-1 break-words font-mono text-xs text-muted-foreground w-full sm:max-w-[calc(100%-160px)]">
-          {displayValue}
+  // Financials
+  const priceAmount = item.price?.amount || item.price || item.bestPrice?.amount || 0;
+  const priceCurrency = item.price?.currency || item.bestPrice?.currency || 'PLN';
+  const originalPrice = item.originalPrice || 0;
+  const shippingCost = item.shippingCost || item.shippingInfo?.shippingCost || 0;
+  const isFreeShipping = item.freeShipping || item.shippingInfo?.freeShipping || shippingCost === 0;
+  const totalCost = Number(priceAmount) + Number(shippingCost);
+  const commissionRate = item.commissionRate || item.commission_rate;
+  const orders = item.orders || item.volume || item.lastest_volume;
+
+  // Source URL
+  const sourceUrl = item.sourceUrl || item.affiliateUrl || item.url || (item.sourceLinks?.[0]?.url);
+
+  return (
+    <div className="space-y-6">
+      {/* HERO SECTION */}
+      <div className="flex flex-col md:flex-row gap-6 bg-card border rounded-xl p-6 shadow-sm relative overflow-hidden">
+        {/* Status Badge */}
+        <div className="absolute top-4 right-4">
+          <Badge variant={item.status === 'pending' || item.status === 'pending_approval' ? 'secondary' : item.status === 'approved' ? 'default' : 'destructive'} className="text-sm px-3 py-1 uppercase tracking-wider">
+            {item.status || 'Nieznany'}
+          </Badge>
         </div>
-        {displayValue.length > 20 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-5 w-5 p-0 flex-shrink-0"
-            onClick={() => copyToClipboard(displayValue)}
-            title="Kopiuj wartość"
-          >
-            <Copy className="h-3 w-3" />
-          </Button>
+
+        {/* Image */}
+        <div className="w-full md:w-[200px] flex-shrink-0 flex flex-col gap-2">
+          {mainImage ? (
+            <div className="aspect-square relative rounded-lg border bg-muted overflow-hidden">
+              {/* Using standard img to avoid next/image domain configuration issues in admin panel */}
+              <img src={mainImage} alt={title} className="object-contain w-full h-full" />
+            </div>
+          ) : (
+            <div className="aspect-square rounded-lg border bg-muted flex items-center justify-center text-muted-foreground">
+              <ImageIcon className="h-10 w-10 opacity-50" />
+            </div>
+          )}
+          {sourceUrl && (
+            <Button variant="outline" size="sm" className="w-full" asChild>
+              <a href={sourceUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-4 h-4 mr-2" /> Otwórz źródło
+              </a>
+            </Button>
+          )}
+        </div>
+
+        {/* Core Info */}
+        <div className="flex-1 min-w-0 space-y-4">
+          <div>
+            <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-1 flex items-center gap-1">
+              <Tags className="w-3 h-3" />
+              {mainName || item.mainCategorySlug || 'Brak kategorii'}
+              {subName && ` / ${subName}`}
+            </div>
+            <h2 className="text-2xl font-bold leading-tight break-words">{title || 'Bez tytułu'}</h2>
+            {(item.merchantName || item.merchant) && (
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant="outline" className="bg-primary/5 text-primary">
+                  🏪 {item.merchantName || item.merchant}
+                </Badge>
+                {(item.merchantRating || item.rating) && (
+                  <span className="text-sm text-muted-foreground flex items-center">
+                    ⭐ {item.merchantRating || item.rating}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="text-sm text-muted-foreground line-clamp-3 bg-muted/30 p-3 rounded-lg">
+            {description ? <div dangerouslySetInnerHTML={{ __html: description }} /> : <span className="italic">Brak opisu</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* FINANCE & METRICS */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="border rounded-xl p-4 bg-card shadow-sm flex flex-col justify-center items-center text-center">
+          <div className="text-muted-foreground text-xs uppercase font-bold mb-1 flex items-center gap-1">
+            <DollarSign className="w-3 h-3" /> Cena i Wartość
+          </div>
+          <div className="text-2xl font-black text-primary">{Number(priceAmount).toFixed(2)} {priceCurrency}</div>
+          {originalPrice > priceAmount && (
+            <div className="text-xs text-muted-foreground line-through">{Number(originalPrice).toFixed(2)} {priceCurrency}</div>
+          )}
+        </div>
+
+        <div className="border rounded-xl p-4 bg-card shadow-sm flex flex-col justify-center items-center text-center">
+          <div className="text-muted-foreground text-xs uppercase font-bold mb-1 flex items-center gap-1">
+            <Truck className="w-3 h-3" /> Wysyłka
+          </div>
+          {isFreeShipping ? (
+            <div className="text-xl font-bold text-green-600">Darmowa</div>
+          ) : (
+            <div className="text-xl font-bold">{Number(shippingCost).toFixed(2)} {priceCurrency}</div>
+          )}
+          {item.shippingDays && <div className="text-xs text-muted-foreground mt-1">Czas: {item.shippingDays} dni</div>}
+        </div>
+
+        <div className="border rounded-xl p-4 bg-card shadow-sm flex flex-col justify-center items-center text-center">
+          <div className="text-muted-foreground text-xs uppercase font-bold mb-1 flex items-center gap-1">
+            <Percent className="w-3 h-3" /> Prowizja (Affiliate)
+          </div>
+          <div className="text-xl font-bold text-blue-600">
+            {commissionRate ? `${(Number(commissionRate) * 100).toFixed(1)}%` : 'Brak danych'}
+          </div>
+        </div>
+
+        <div className="border rounded-xl p-4 bg-card shadow-sm flex flex-col justify-center items-center text-center">
+          <div className="text-muted-foreground text-xs uppercase font-bold mb-1 flex items-center gap-1">
+            <Package className="w-3 h-3" /> Zainteresowanie
+          </div>
+          <div className="text-xl font-bold text-orange-600">
+            {orders ? `${orders} sprzedanych` : 'Brak danych'}
+          </div>
+          {item.qualityScore && <div className="text-xs text-muted-foreground mt-1">Quality Score: {item.qualityScore}</div>}
+        </div>
+      </div>
+
+      {/* VARIANTS & SPECS */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {(item.variants || item.skuList) && (
+          <div className="border rounded-xl overflow-hidden bg-card shadow-sm">
+            <button onClick={() => toggleSection('variants')} className="w-full flex items-center justify-between p-4 bg-muted/40 hover:bg-muted/60 transition-colors">
+              <div className="font-semibold flex items-center gap-2"><Package className="w-4 h-4"/> Warianty / SKU</div>
+              {expandedSections['variants'] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+            {expandedSections['variants'] && (
+              <div className="p-4 border-t">
+                {Array.isArray(item.variants) && item.variants.map((v: any, i: number) => (
+                  <div key={i} className="mb-3 last:mb-0">
+                    <div className="text-xs font-bold text-muted-foreground mb-1">{v.name || 'Wariant'}:</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Array.isArray(v.values) ? v.values.map((val: string, idx: number) => (
+                        <Badge key={idx} variant="outline" className="bg-background">{val}</Badge>
+                      )) : <Badge variant="outline">{String(v.value || v)}</Badge>}
+                    </div>
+                  </div>
+                ))}
+                {!item.variants && <div className="text-sm text-muted-foreground">Warianty w formacie surowym (skuList), sprawdź RAW JSON.</div>}
+              </div>
+            )}
+          </div>
+        )}
+
+        {(item.specs || item.attributes) && (
+          <div className="border rounded-xl overflow-hidden bg-card shadow-sm">
+            <div className="w-full p-4 bg-muted/40 font-semibold flex items-center gap-2 border-b">
+              <Info className="w-4 h-4"/> Specyfikacja
+            </div>
+            <div className="p-0">
+              <div className="grid grid-cols-1 divide-y max-h-[300px] overflow-y-auto">
+                {item.attributes ? item.attributes.map((attr: any, i: number) => (
+                  <div key={i} className="flex p-3 text-sm hover:bg-muted/30">
+                    <div className="w-1/3 text-muted-foreground font-medium">{attr.name}</div>
+                    <div className="w-2/3">{attr.value}</div>
+                  </div>
+                )) : Object.entries(item.specs || {}).map(([key, val], i: number) => (
+                  <div key={i} className="flex p-3 text-sm hover:bg-muted/30">
+                    <div className="w-1/3 text-muted-foreground font-medium">{key}</div>
+                    <div className="w-2/3">{String(val)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
       </div>
-    );
-  };
 
-  // DEAL fields
-  if (itemType === 'deal') {
-    return (
-      <div className="space-y-3">
-        {/* Overview */}
-        <Section title="📋 Przegląd" id="overview">
-          <div className="space-y-1">
-            <FieldRow label="ID" value={item.id} />
-            <FieldRow label="Status" value={item.status} />
-            <FieldRow label="Title" value={item.title} />
-            <FieldRow label="Source" value={item.source} />
-            <FieldRow label="URL" value={item.url} />
-            <FieldRow label="Created At" value={item.createdAt} />
-            <FieldRow label="Posted By" value={item.postedBy} />
-          </div>
-        </Section>
-
-        {/* Pricing & Costs */}
-        <Section title="💰 Ceny i koszty" id="pricing" count={Object.keys(item.price || {}).length}>
-          <div className="space-y-1">
-            <FieldRow label="Price (PLN)" value={item.price?.amount} />
-            <FieldRow label="Currency" value={item.price?.currency} />
-            <FieldRow label="Original Price" value={item.originalPrice} />
-            <FieldRow label="Shipping Cost" value={item.shippingCost} />
-            <FieldRow label="Price History" value={item.priceHistory} />
-            {item.price && Object.entries(item.price).map(([key, value]) => (
-              key !== 'amount' && key !== 'currency' && (
-                <FieldRow key={key} label={`price.${key}`} value={value} />
-              )
-            ))}
-          </div>
-        </Section>
-
-        {/* Merchant & Source Info */}
-        <Section title="🏪 Merchant & Źródło" id="metadata" count={15}>
-          <div className="space-y-1">
-            <FieldRow label="Merchant Name" value={item.merchantName} />
-            <FieldRow label="Merchant Rating" value={item.merchantRating} />
-            <FieldRow label="In Stock" value={item.inStock} />
-            <FieldRow label="Source ID" value={item.sourceId} />
-            <FieldRow label="Source" value={item.source} />
-            <FieldRow label="Category" value={mainName ? `${mainName} (${item.mainCategorySlug})` : (item.category || item.mainCategorySlug)} />
-            <FieldRow label="Sub Category" value={subName ? `${subName} (${item.subCategorySlug})` : item.subCategorySlug} />
-            <FieldRow label="Campaign" value={item.campaign} />
-            <FieldRow label="Affiliate URL" value={item.affiliateUrl} />
-          </div>
-        </Section>
-
-        {/* Engagement & Moderation */}
-        <Section title="📊 Zaangażowanie" id="specs">
-          <div className="space-y-1">
-            <FieldRow label="Votes" value={item.votes} />
-            <FieldRow label="Temperature" value={item.temperature} />
-            <FieldRow label="Comments" value={item.comments} />
-            <FieldRow label="Quality Score" value={item.qualityScore} />
-            <FieldRow label="Expiry Date" value={item.expiryDate} />
-          </div>
-        </Section>
-
-        {/* Full Raw Data JSON */}
-        <Section title="📄 Pełne Raw Data (JSON)" id="rawData">
-          <div className="relative">
+      {/* RAW DATA ACCORDION */}
+      <div className="border rounded-xl overflow-hidden bg-card shadow-sm">
+        <button
+          onClick={() => toggleSection('rawData')}
+          className="w-full flex items-center justify-between p-4 bg-muted/20 hover:bg-muted/40 transition-colors"
+        >
+          <div className="font-semibold text-sm text-muted-foreground">⚙️ Surowe dane do debuggowania (RAW JSON)</div>
+          {expandedSections['rawData'] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+        {expandedSections['rawData'] && (
+          <div className="p-4 border-t relative bg-[#0d1117]">
             <Button
-              variant="outline"
+              variant="secondary"
               size="sm"
-              className="mb-3 sticky top-0 z-10"
+              className="absolute top-6 right-6 opacity-70 hover:opacity-100"
               onClick={() => copyToClipboard(JSON.stringify(item, null, 2))}
             >
               <Copy className="h-3 w-3 mr-1" />
-              Kopiuj JSON
+              Kopiuj
             </Button>
-            <pre className="bg-black text-green-400 p-3 rounded text-xs overflow-x-auto max-h-[500px] overflow-y-auto whitespace-pre-wrap break-words">
+            <pre className="text-green-400 font-mono text-xs overflow-x-auto max-h-[400px] overflow-y-auto p-2">
               {JSON.stringify(item, null, 2)}
             </pre>
           </div>
-        </Section>
+        )}
       </div>
-    );
-  }
-
-  // PRODUCT fields (ProductCore)
-  if (itemType === 'product') {
-    return (
-      <div className="space-y-3">
-        {/* Overview */}
-        <Section title="📋 Przegląd Produktu" id="overview">
-          <div className="space-y-1">
-            <FieldRow label="ID" value={item.id} />
-            <FieldRow label="Status" value={item.status} />
-            <FieldRow label="Title (PL)" value={item.title?.pl} />
-            <FieldRow label="Title (EN)" value={item.title?.en} />
-            <FieldRow label="Title (DE)" value={item.title?.de} />
-            <FieldRow label="Created At" value={item.createdAt} />
-            <FieldRow label="Updated At" value={item.updatedAt} />
-          </div>
-        </Section>
-
-        {/* Descriptions & AI Content */}
-        <Section title="🤖 AI Content & Descriptions" id="descriptions">
-          <div className="space-y-4">
-             {/* SEO & Meta */}
-             <div className="space-y-2 border-b pb-4">
-               <h4 className="text-xs font-bold uppercase text-muted-foreground">SEO & Meta</h4>
-               <FieldRow label="SEO Title (Generated)" value={item.seoTitle} />
-               <FieldRow label="SEO Desc (Generated)" value={item.seoDescription} />
-               <FieldRow label="Short Desc (PL)" value={item.shortDescription?.pl} />
-               {item.searchTags && (
-                 <div className="py-2">
-                   <div className="font-medium text-xs mb-1">Search Tags:</div>
-                   <div className="flex flex-wrap gap-1">
-                     {item.searchTags.map((tag: string, i: number) => (
-                       <Badge key={i} variant="secondary" className="text-[10px]">{tag}</Badge>
-                     ))}
-                   </div>
-                 </div>
-               )}
-             </div>
-
-             {/* Features */}
-             {(item.features?.pl || item.features?.en) && (
-               <div className="space-y-2 border-b pb-4">
-                 <h4 className="text-xs font-bold uppercase text-muted-foreground">Cechy (Features)</h4>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {item.features?.pl && (
-                      <div>
-                        <span className="text-xs font-bold text-blue-600">PL</span>
-                        <ul className="list-disc pl-4 mt-1 space-y-1">
-                          {item.features.pl.map((f: string, i: number) => (
-                            <li key={i} className="text-xs text-muted-foreground">{f}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {item.features?.en && (
-                      <div>
-                        <span className="text-xs font-bold text-orange-600">EN</span>
-                        <ul className="list-disc pl-4 mt-1 space-y-1">
-                          {item.features.en.map((f: string, i: number) => (
-                            <li key={i} className="text-xs text-muted-foreground">{f}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                 </div>
-               </div>
-             )}
-
-             {/* HTML Descriptions */}
-             <div className="space-y-2">
-                 <h4 className="text-xs font-bold uppercase text-muted-foreground">HTML Description (AI Generated)</h4>
-                 <div className="grid grid-cols-1 gap-4">
-                     {item.fullDescription?.pl ? (
-                         <div className="border rounded bg-white">
-                             <div className="bg-slate-100 p-2 border-b text-xs font-mono flex justify-between">
-                               <span>PL Preview</span>
-                               <span className="text-[10px] text-slate-500">Rendered HTML</span>
-                             </div>
-                             <div className="p-4 prose prose-sm prose-slate max-w-none text-xs" dangerouslySetInnerHTML={{ __html: item.fullDescription.pl }} />
-                         </div>
-                     ) : (
-                       <div className="text-xs text-red-500">Brak wygenerowanego opisu HTML (PL)</div>
-                     )}
-                     
-                     <div className="mt-2">
-                        <FieldRow label="Raw HTML (PL)" value={item.fullDescription?.pl?.substring(0, 100) + '...'} />
-                     </div>
-                 </div>
-             </div>
-          </div>
-        </Section>
-
-        {/* Specs & Attributes */}
-        <Section title="⚙️ Specyfikacja" id="specs" count={Object.keys(item.specs || {}).length}>
-          <div className="space-y-1">
-            {Object.entries(item.specs || {}).map(([key, value]) => (
-              <FieldRow key={key} label={key} value={value} />
-            ))}
-            {Object.keys(item.specs || {}).length === 0 && (
-              <div className="text-muted-foreground text-xs">Brak specyfikacji</div>
-            )}
-          </div>
-        </Section>
-
-        {/* Pricing */}
-        <Section title="💰 Cena & Dostępność" id="pricing">
-          <div className="space-y-1">
-            <FieldRow label="Best Price (Amount)" value={item.bestPrice?.amount} />
-            <FieldRow label="Best Price (Currency)" value={item.bestPrice?.currency} />
-            <FieldRow label="Best Price (Date)" value={item.bestPrice?.date} />
-            <FieldRow label="Lowest Price 30D" value={item.lowestPrice30Days} />
-            <FieldRow label="Best Deal ID" value={item.bestDealId} />
-          </div>
-        </Section>
-
-        {/* Ratings & Reviews */}
-        <Section title="⭐ Oceny i Recenzje" id="metadata">
-          <div className="space-y-1">
-            <FieldRow label="Rating (Average)" value={item.rating?.average} />
-            <FieldRow label="Rating (Count)" value={item.rating?.count} />
-            <FieldRow label="Quality Score (AI)" value={item.qualityScore} />
-            <FieldRow label="Review Summary (PL)" value={item.reviewsSummary?.pl} />
-            <FieldRow label="Review Summary (EN)" value={item.reviewsSummary?.en} />
-          </div>
-        </Section>
-
-        {/* Source Links & Categories */}
-        <Section title="🔗 Źródła i Kategorie" id="specs">
-          <div className="space-y-1">
-            <FieldRow label="Main Category Slug" value={mainName ? `${mainName} (${item.mainCategorySlug})` : item.mainCategorySlug} />
-            <FieldRow label="Sub Category Slug" value={subName ? `${subName} (${item.subCategorySlug})` : item.subCategorySlug} />
-            <FieldRow label="Sub Sub Category Slug" value={subSubName ? `${subSubName} (${item.subSubCategorySlug})` : item.subSubCategorySlug} />
-            <FieldRow 
-              label="Source Links" 
-              value={item.sourceLinks?.map((l: any) => `${l.source}: ${l.url}`).join(', ')} 
-            />
-          </div>
-        </Section>
-
-        {/* Images */}
-        <Section title="🖼️ Obrazy" id="images" count={(item.images?.length || (item.image ? 1 : 0))}>
-          <div className="space-y-2">
-            {(item.images && item.images.length > 0 ? item.images : (item.image ? [item.image] : [])).map((img: string, i: number) => (
-              <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-2 py-2 border-b last:border-b-0">
-                <div className="font-medium text-xs min-w-0 sm:min-w-[80px] flex-shrink-0">Image {i + 1}:</div>
-                <div className="flex-1 flex flex-col gap-2 w-full">
-                  <img src={img} alt="Preview" className="h-20 w-20 object-contain bg-white rounded border flex-shrink-0" />
-                  <input 
-                    type="text" 
-                    value={img} 
-                    readOnly 
-                    className="text-xs bg-muted p-1 rounded font-mono w-full truncate" 
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-auto self-start"
-                    onClick={() => copyToClipboard(img)}
-                  >
-                    <Copy className="h-3 w-3 mr-1" />
-                    Kopiuj URL
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {!item.images?.length && !item.image && (
-               <div className="text-muted-foreground text-xs italic">Brak obrazów</div>
-            )}
-          </div>
-        </Section>
-
-        {/* Search Tags */}
-        <Section title="🏷️ Tagi Wyszukiwania" id="searchTags" count={item.searchTags?.length || 0}>
-          <div className="space-y-1">
-            {item.searchTags?.map((tag: string, i: number) => (
-              <Badge key={i} variant="secondary" className="mr-2 mb-2">{tag}</Badge>
-            ))}
-            {(!item.searchTags || item.searchTags.length === 0) && (
-              <div className="text-muted-foreground text-xs">Brak tagów</div>
-            )}
-          </div>
-        </Section>
-
-        {/* Raw Data Comparison (Added for M6 Moderation) */}
-        <Section title="🔎 Porównanie: Oryginał vs AI Refined" id="comparison">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="border rounded p-2 bg-amber-50/50">
-              <h4 className="font-semibold text-xs text-amber-700 mb-2 uppercase border-b border-amber-200 pb-1">
-                Oryginał (Raw / Metadata)
-              </h4>
-              <div className="text-xs font-mono whitespace-pre-wrap max-h-[300px] overflow-auto">
-                 {JSON.stringify({
-                    title: item.metadata?.originalTitle || item.originalTitle || 'N/A',
-                    desc: (item.metadata?.originalDescription || item.originalDescription || 'N/A')?.substring(0, 300) + '...',
-                    specs: item.metadata?.originalSpecs || 'N/A',
-                    source: item.metadata?.source || 'N/A'
-                 }, null, 2)}
-              </div>
-            </div>
-            
-            <div className="border rounded p-2 bg-green-50/50">
-              <h4 className="font-semibold text-xs text-green-700 mb-2 uppercase border-b border-green-200 pb-1">
-                Wzbogacone (Refined)
-              </h4>
-              <div className="text-xs font-mono whitespace-pre-wrap max-h-[300px] overflow-auto">
-                 {JSON.stringify({
-                    title: item.title,
-                    desc: item.description,
-                    specs: item.specs,
-                    qualityScore: item.qualityScore
-                 }, null, 2)}
-              </div>
-            </div>
-          </div>
-        </Section>
-
-        {/* Full Raw Data JSON */}
-        <Section title="📄 Pełne Raw Data (JSON)" id="rawData">
-          <div className="relative">
-            <Button
-              variant="outline"
-              size="sm"
-              className="mb-3 sticky top-0 z-10"
-              onClick={() => copyToClipboard(JSON.stringify(item, null, 2))}
-            >
-              <Copy className="h-3 w-3 mr-1" />
-              Kopiuj JSON
-            </Button>
-            <pre className="bg-black text-green-400 p-3 rounded text-xs overflow-x-auto max-h-[500px] overflow-y-auto whitespace-pre-wrap break-words">
-              {JSON.stringify(item, null, 2)}
-            </pre>
-          </div>
-        </Section>
-      </div>
-    );
-  }
-
-  return <div className="text-muted-foreground">Nieznany typ elementu</div>;
+    </div>
+  );
 }

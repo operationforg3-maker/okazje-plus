@@ -112,10 +112,13 @@ export async function GET(request: NextRequest) {
     const discardedSnap = await adminDb
       .collection('import_discarded')
       .orderBy('createdAt', 'desc')
-      .limit(limit)
+      .limit(limit * 2) // Fetch extra to account for any existing 'success' items that are memory-filtered
       .get();
 
-    discarded = discardedSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    discarded = discardedSnap.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter((doc: any) => doc.restoredStatus !== 'success')
+      .slice(0, limit);
 
     return NextResponse.json({
       success: true,
