@@ -57,12 +57,32 @@ export async function POST(req: NextRequest) {
     const targetStatus = payload.targetStatus || 'pending';
     let items = payload.items || [];
 
+    let discardedDocsMap = new Map<string, any>();
+
     if (payload.mode === 'all') {
-      const allDocs = await adminDb.collection('import_discarded').select('type').get();
+      const allDocs = await adminDb.collection('import_discarded').get();
       items = allDocs.docs.map(doc => ({ 
         id: doc.id, 
         type: (doc.data().type || 'product') as 'product' | 'deal' 
       }));
+      allDocs.docs.forEach(doc => {
+        discardedDocsMap.set(doc.id, doc.data());
+      });
+    } else {
+      // Chunk getAll for specific IDs
+      const refs = items.map(item => adminDb.collection('import_discarded').doc(item.id));
+      const chunks = [];
+      for (let i = 0; i < refs.length; i += 100) {
+        chunks.push(refs.slice(i, i + 100));
+      }
+      for (const chunk of chunks) {
+        const docs = await adminDb.getAll(...chunk);
+        docs.forEach(doc => {
+          if (doc.exists) {
+            discardedDocsMap.set(doc.id, doc.data());
+          }
+        });
+      }
     }
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -91,8 +111,8 @@ export async function POST(req: NextRequest) {
         }
 
         // Fetch discarded item to get original data
-        const discardedDoc = await adminDb.collection('import_discarded').doc(restoreItem.id).get();
-        if (!discardedDoc.exists) {
+        const discardedData = discardedDocsMap.get(restoreItem.id);
+        if (!discardedData) {
           perItemResults.push({
             id: restoreItem.id,
             success: false,
@@ -100,8 +120,6 @@ export async function POST(req: NextRequest) {
           });
           continue;
         }
-
-        const discardedData = discardedDoc.data();
         const now = new Date().toISOString();
 
         if (restoreItem.type === 'product') {
