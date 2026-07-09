@@ -167,6 +167,10 @@ export async function GET(request: NextRequest) {
       discardedCount,
       totalDealsCount,
       totalProductsCount,
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+      }
     });
   } catch (error: any) {
     console.error('[Moderation Data API] Error:', error);

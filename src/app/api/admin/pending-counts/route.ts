@@ -33,6 +33,10 @@ export async function GET(request: NextRequest) {
       pendingDeals: dealsSnapshot.data().count,
       draftProducts: draftSnapshot.data().count,
       totalPending: productsSnapshot.data().count + dealsSnapshot.data().count
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+      }
     });
 
   } catch (error: any) {
