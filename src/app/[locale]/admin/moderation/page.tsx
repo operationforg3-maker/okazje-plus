@@ -403,6 +403,8 @@ function ModerationPage() {
   const [rejectedItems, setRejectedItems] = useState<unknown[]>([]);
   const [discardedItems, setDiscardedItems] = useState<unknown[]>([]);
   const [discardedCount, setDiscardedCount] = useState<number>(0);
+  const [totalDealsCount, setTotalDealsCount] = useState<number>(0);
+  const [totalProductsCount, setTotalProductsCount] = useState<number>(0);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [isBackfilling, setIsBackfilling] = useState(false);
 
@@ -455,6 +457,8 @@ function ModerationPage() {
         deals?: Deal[]; products?: Product[];
         approved?: unknown[]; rejected?: unknown[]; discarded?: unknown[];
         discardedCount?: number;
+        totalDealsCount?: number;
+        totalProductsCount?: number;
       };
 
       let deals = payload.deals || [];
@@ -479,6 +483,8 @@ function ModerationPage() {
       setRejectedItems(payload.rejected || []);
       setDiscardedItems(payload.discarded || []);
       setDiscardedCount(payload.discardedCount || 0);
+      setTotalDealsCount(payload.totalDealsCount || 0);
+      setTotalProductsCount(payload.totalProductsCount || 0);
     } catch (err) {
       console.error('[Moderation] fetch error:', err);
       toast({ title: 'Błąd', description: 'Nie udało się pobrać danych', variant: 'destructive' });
@@ -601,7 +607,7 @@ function ModerationPage() {
 
   // ── Stats ────────────────────────────────────────────────────────────────────
 
-  const totalPending = pendingDeals.length + pendingProducts.length;
+  const totalPending = totalDealsCount + totalProductsCount;
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -629,8 +635,8 @@ function ModerationPage() {
       <div className="grid gap-4 md:grid-cols-4">
         {[
           { label: 'Do moderacji', value: totalPending, icon: <Clock className="h-4 w-4 text-muted-foreground" />, sub: 'Oczekuje na akcję' },
-          { label: 'Okazje', value: pendingDeals.length, icon: <AlertTriangle className="h-4 w-4 text-amber-500" />, sub: 'Do zatwierdzenia' },
-          { label: 'Produkty', value: pendingProducts.length, icon: <ListChecks className="h-4 w-4 text-blue-500" />, sub: 'Do zatwierdzenia' },
+          { label: 'Okazje', value: totalDealsCount, icon: <AlertTriangle className="h-4 w-4 text-amber-500" />, sub: 'Do zatwierdzenia' },
+          { label: 'Produkty', value: totalProductsCount, icon: <ListChecks className="h-4 w-4 text-blue-500" />, sub: 'Do zatwierdzenia' },
           { label: 'Odfiltrowane', value: discardedCount, icon: <XCircle className="h-4 w-4 text-red-400" />, sub: 'Import discarded' },
         ].map(({ label, value, icon, sub }) => (
           <Card key={label}>
@@ -653,14 +659,14 @@ function ModerationPage() {
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="deals">
             Okazje
-            {pendingDeals.length > 0 && (
-              <Badge variant="secondary" className="ml-1.5 text-[10px] py-0 h-4">{pendingDeals.length}</Badge>
+            {totalDealsCount > 0 && (
+              <Badge variant="secondary" className="ml-1.5 text-[10px] py-0 h-4">{totalDealsCount}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="products">
             Produkty
-            {pendingProducts.length > 0 && (
-              <Badge variant="secondary" className="ml-1.5 text-[10px] py-0 h-4">{pendingProducts.length}</Badge>
+            {totalProductsCount > 0 && (
+              <Badge variant="secondary" className="ml-1.5 text-[10px] py-0 h-4">{totalProductsCount}</Badge>
             )}
           </TabsTrigger>
           <TabsTrigger value="comments">

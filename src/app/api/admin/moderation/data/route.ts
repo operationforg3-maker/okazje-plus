@@ -142,6 +142,21 @@ export async function GET(request: NextRequest) {
       .filter((doc: any) => doc.restoredStatus !== 'success')
       .slice(0, limit);
 
+    // Fetch total pending counts in database for correct stats display
+    const totalDealsCountSnap = await adminDb
+      .collection('deals')
+      .where('status', 'in', dealStatuses)
+      .count()
+      .get();
+    const totalDealsCount = totalDealsCountSnap.data().count;
+
+    const totalProductsCountSnap = await adminDb
+      .collection('product_cores')
+      .where('status', 'in', productStatuses)
+      .count()
+      .get();
+    const totalProductsCount = totalProductsCountSnap.data().count;
+
     return NextResponse.json({
       success: true,
       deals,
@@ -150,6 +165,8 @@ export async function GET(request: NextRequest) {
       rejected,
       discarded,
       discardedCount,
+      totalDealsCount,
+      totalProductsCount,
     });
   } catch (error: any) {
     console.error('[Moderation Data API] Error:', error);
