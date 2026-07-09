@@ -329,53 +329,65 @@ export async function getRecommendedProducts(count: number): Promise<Product[]> 
       if (cached) return cached as Product[];
     }
 
-    // Try M6 ProductCores first (they have bestPrice and deals).
-    // Public Firestore rules allow only approved, so non-public statuses are fetched via Admin SDK on server.
-    const coresRef = collection(db, "product_cores");
     const productMap = new Map<string, Product>();
     const baseLimit = count * 2;
 
-    try {
-      const approvedQ = query(
-        coresRef,
-        where("status", "==", "approved"),
-        limit(baseLimit)
-      );
-      const approvedSnap = await getDocs(approvedQ);
-
-      for (const snap of approvedSnap.docs) {
-        if (!productMap.has(snap.id)) {
-          productMap.set(snap.id, docToProductCore(snap) as any as Product);
-        }
-      }
-    } catch (err) {
-      console.error("getRecommendedProducts approved query failed:", err);
-    }
-
-    if (typeof window === 'undefined' && productMap.size < count) {
+    if (typeof window === 'undefined') {
       try {
         const { getAdminFirestore } = await import('@/lib/firebase-admin-server');
         const adminDb = getAdminFirestore();
-        const statusPriority = ['pending_approval', 'approval'];
 
-        for (const status of statusPriority) {
-          if (productMap.size >= baseLimit) break;
+        // 1. Fetch approved products on server using Admin SDK
+        const approvedSnap = await adminDb
+          .collection('product_cores')
+          .where('status', '==', 'approved')
+          .limit(baseLimit)
+          .get();
 
-          const snap = await adminDb
-            .collection('product_cores')
-            .where('status', '==', status)
-            .limit(baseLimit)
-            .get();
+        for (const doc of approvedSnap.docs) {
+          if (!productMap.has(doc.id)) {
+            productMap.set(doc.id, sanitizeProductCoreRecord(doc.data(), doc.id) as any as Product);
+          }
+        }
 
-          for (const doc of snap.docs) {
-            if (!productMap.has(doc.id)) {
-              productMap.set(doc.id, sanitizeProductCoreRecord(doc.data(), doc.id) as any as Product);
+        // 2. Fetch pending products as fallback if we don't have enough approved products
+        if (productMap.size < count) {
+          const statusPriority = ['pending_approval', 'approval'];
+          for (const status of statusPriority) {
+            if (productMap.size >= baseLimit) break;
+            const snap = await adminDb
+              .collection('product_cores')
+              .where('status', '==', status)
+              .limit(baseLimit)
+              .get();
+            for (const doc of snap.docs) {
+              if (!productMap.has(doc.id)) {
+                productMap.set(doc.id, sanitizeProductCoreRecord(doc.data(), doc.id) as any as Product);
+              }
             }
           }
         }
       } catch (err) {
-        // Keep homepage resilient when local admin credentials are unavailable.
-        console.warn('getRecommendedProducts admin fallback unavailable:', err);
+        console.warn('getRecommendedProducts admin query failed:', err);
+      }
+    } else {
+      // Client side query
+      try {
+        const coresRef = collection(db, "product_cores");
+        const approvedQ = query(
+          coresRef,
+          where("status", "==", "approved"),
+          limit(baseLimit)
+        );
+        const approvedSnap = await getDocs(approvedQ);
+
+        for (const snap of approvedSnap.docs) {
+          if (!productMap.has(snap.id)) {
+            productMap.set(snap.id, docToProductCore(snap) as any as Product);
+          }
+        }
+      } catch (err) {
+        console.error("getRecommendedProducts approved client query failed:", err);
       }
     }
 
@@ -2499,15 +2511,39 @@ export async function getAllProductCores(
     limitCount: number = 100
 ): Promise<any[]> {
   try {
-    const ref = collection(db, "product_cores");
+    if (typeof window === 'undefined') {
+      const { getAdminFirestore } = await import('@/lib/firebase-admin-server');
+      const adminDb = getAdminFirestore();
+      let queryRef: any = adminDb.collection("product_cores");
+      
+      if (status) {
+        queryRef = queryRef.where("status", "==", status);
+      }
+      
+      const snap = await queryRef
+        .orderBy("updatedAt", "desc")
+        .limit(limitCount)
+        .get();
+        
+      return snap.docs.map((doc: any) => {
+        const data = doc.data();
+        return {
+          ...data,
+          id: doc.id,
+          createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
+          updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
+        } as ProductCore;
+      });
+    } else {
+      const ref = collection(db, "product_cores");
       const constraints: any[] = [orderBy("updatedAt", "desc"), limit(limitCount)];
 
-    if (status) {
-      constraints.unshift(where("status", "==", status));
-    }
+      if (status) {
+        constraints.unshift(where("status", "==", status));
+      }
 
-    const q = query(ref, ...constraints);
-    const snap = await getDocs(q);
+      const q = query(ref, ...constraints);
+      const snap = await getDocs(q);
       return snap.docs.map(d => {
         const data = d.data();
         return {
@@ -2517,6 +2553,7 @@ export async function getAllProductCores(
           updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
         } as ProductCore;
       });
+    }
   } catch (err) {
     console.error("Error fetching product cores:", err);
     return [];

@@ -10,7 +10,7 @@ import { collection, doc, documentId, getDoc, getDocs, query, where } from 'fire
 import { db } from '@/lib/firebase';
 
 const DEAL_IMAGE_FALLBACK = '/icon_okazjeplus.svg';
-const MAX_PAGE_SIZE = 250;
+const MAX_PAGE_SIZE = 3000;
 
 const clampPageSize = (value?: number, fallback = 50): number => {
   const raw = typeof value === 'number' && Number.isFinite(value) ? Math.floor(value) : fallback;
