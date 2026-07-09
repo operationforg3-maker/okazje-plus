@@ -68,7 +68,7 @@ function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
   const priceCurrency = typeof rawPriceObject?.currency === 'string'
     ? rawPriceObject.currency.toUpperCase()
     : 'PLN';
-  const image = raw?.image || product?.images?.[0];
+  const image = (raw?.image && raw.image !== '/icon_okazjeplus.svg') ? raw.image : (product?.images?.[0] || product?.imageUrl || '/icon_okazjeplus.svg');
   if (!image) return null;
 
   const title = ensureLocalizedText(raw?.title, product?.title?.pl || 'Okazja');

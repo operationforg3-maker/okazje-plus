@@ -445,6 +445,7 @@ function ModerationPage() {
       if (productStatuses) qs.set('productStatuses', productStatuses.join(','));
       qs.set('limit', '200');
       qs.set('includeRecent', '1');
+      qs.set('_cb', Date.now().toString());
 
       const res = await fetch(`/api/admin/moderation/data?${qs}`, {
         cache: 'no-store',

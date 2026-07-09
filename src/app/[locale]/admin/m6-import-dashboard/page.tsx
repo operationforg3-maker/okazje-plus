@@ -647,7 +647,7 @@ export default function M6ImportDashboard() {
       }
 
       // Fetch Pending Counts (Moderation)
-      const resPending = await fetch("/api/admin/pending-counts", {
+      const resPending = await fetch(`/api/admin/pending-counts?_cb=${Date.now()}`, {
         cache: 'no-store',
         headers: { Authorization: `Bearer ${token}` },
       });

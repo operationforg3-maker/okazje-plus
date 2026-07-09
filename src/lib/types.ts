@@ -2523,6 +2523,7 @@ export interface DealM6 {
   productId: string; // References ProductCore.id (required)
   /** Alias for master schema compatibility */
   productCoreId?: string;
+  linkedProductIds?: string[];
   
   // Denormalized Taxonomy (for fast queries)
   mainCategorySlug?: string;

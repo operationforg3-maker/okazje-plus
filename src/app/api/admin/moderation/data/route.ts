@@ -58,9 +58,10 @@ export async function GET(request: NextRequest) {
       .slice(0, limit);
 
     await Promise.all(deals.map(async (deal) => {
-      if ((!deal.image || deal.image === '/icon_okazjeplus.svg') && deal.linkedProductIds?.length > 0) {
+      const pId = deal.linkedProductIds?.[0] || (deal as any).productCoreId || (deal as any).productId;
+      if ((!deal.image || deal.image === '/icon_okazjeplus.svg') && pId) {
         try {
-          const productSnap = await adminDb.collection('product_cores').doc(deal.linkedProductIds[0]).get();
+          const productSnap = await adminDb.collection('product_cores').doc(pId).get();
           if (productSnap.exists) {
             const pData = productSnap.data();
             const pImage = pData?.images?.[0] || pData?.imageUrl || pData?.image;

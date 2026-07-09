@@ -1667,6 +1667,7 @@ export class SmartHarvester {
       id: dealRef.id,
       productId,
       productCoreId: productId,
+      linkedProductIds: [productId],
       mainCategorySlug: categoryInfo?.mainCategorySlug,
       subCategorySlug: categoryInfo?.subCategorySlug,
       subSubCategorySlug: categoryInfo?.subSubCategorySlug,
