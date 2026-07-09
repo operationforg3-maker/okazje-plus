@@ -282,7 +282,7 @@ export class SmartHarvester {
     };
 
     const assigned = (sourceProduct as any)?.__categoryAssignment;
-    if (source === 'convertiser' && assigned?.mainCategorySlug && assigned?.subCategorySlug) {
+    if (assigned?.mainCategorySlug && assigned?.subCategorySlug) {
       return {
         mainCategorySlug: assigned.mainCategorySlug,
         subCategorySlug: assigned.subCategorySlug,
@@ -2120,11 +2120,20 @@ export class SmartHarvester {
           productsFound += sourceProducts.length;
           this.addLog('info', `Fetched ${sourceProducts.length} products from ${source} for "${currentQuery}", using ${filteredProducts.length} after quality filter`);
 
-          // Step 1.5: Batch AI categorization for Convertiser (optimize token costs)
-          if (source === 'convertiser' && filteredProducts.length > 0) {
+          // Step 1.5: Batch AI categorization (optimize token costs)
+          // Find products that need AI categorization (either because source is Convertiser, query is auto-browse, or local mapping failed to uncategorized)
+          const productsForAiCat: any[] = [];
+          for (const p of filteredProducts) {
+            const localCat = await this.resolveCategoryInfo(p, currentQuery, source);
+            if (source === 'convertiser' || currentQuery === '__AUTO_BROWSE__' || localCat.mainCategorySlug === 'uncategorized') {
+              productsForAiCat.push(p);
+            }
+          }
+
+          if (productsForAiCat.length > 0) {
             const aiCategorizationStartedAt = Date.now();
             try {
-              this.addLog('info', `Running batch AI categorization for ${filteredProducts.length} Convertiser products...`);
+              this.addLog('info', `Running batch AI categorization for ${productsForAiCat.length} products...`);
               
               // Get all available categories once
               const { getAllCategories, getSubcategories, getSubSubcategories } = await import('@/lib/data-admin');
@@ -2160,7 +2169,7 @@ export class SmartHarvester {
               // Batch assign categories
               const { batchAssignCategories } = await import('@/ai/flows/convertiser-auto-category');
               const batchResults = await batchAssignCategories({
-                products: filteredProducts.map((p, idx) => ({
+                products: productsForAiCat.map((p, idx) => ({
                   id: String(idx),
                   title: p.title,
                   description: p.description,
@@ -2168,14 +2177,15 @@ export class SmartHarvester {
                 availableCategories,
               });
               
-              // Cache results in filteredProducts for later use
+              // Cache results in productsForAiCat for later use
               batchResults.forEach((result, idx) => {
-                (filteredProducts[idx] as any).__categoryAssignment = result.assignment;
+                const originalProduct = productsForAiCat[idx];
+                originalProduct.__categoryAssignment = result.assignment;
               });
               
-              this.addLog('info', `✅ Batch categorization complete for ${batchResults.length} products`);
+              this.addLog('info', `✅ Batch AI categorization complete for ${batchResults.length} products`);
             } catch (batchErr) {
-              this.addLog('warn', `Batch categorization failed: ${batchErr instanceof Error ? batchErr.message : 'Unknown error'}`);
+              this.addLog('warn', `Batch AI categorization failed: ${batchErr instanceof Error ? batchErr.message : 'Unknown error'}`);
               // Continue without categories - will use uncategorized fallback
             } finally {
               const aiCategorizationDurationMs = Date.now() - aiCategorizationStartedAt;

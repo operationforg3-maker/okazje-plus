@@ -269,7 +269,7 @@ export async function scrapeAliExpressProduct(productId: string): Promise<Scrape
               prop.skuPropertyValues?.forEach((val: any) => {
                 valueIdToNameMap.set(String(val.propertyValueId), val.propertyValueName);
                 if (val.skuPropertyImagePath) {
-                  valueIdToImageMap.set(String(val.propertyValueId), val.skuPropertyImagePath);
+                  valueIdToImageMap.set(String(val.propertyValueId), normaliseAliExpressImageUrl(val.skuPropertyImagePath));
                 }
               });
             });
@@ -311,7 +311,8 @@ export async function scrapeAliExpressProduct(productId: string): Promise<Scrape
 
               // Extract image from skuImagesMap
               const imageList = skuImagesMap[skuId];
-              const image = (Array.isArray(imageList) && imageList.length > 0) ? imageList[0] : undefined;
+              const rawImage = (Array.isArray(imageList) && imageList.length > 0) ? imageList[0] : undefined;
+              const image = rawImage ? normaliseAliExpressImageUrl(rawImage) : undefined;
 
               return {
                 skuId,

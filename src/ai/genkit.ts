@@ -2,7 +2,7 @@ import { genkit } from 'genkit';
 import { vertexAI } from '@genkit-ai/vertexai';
 
 const projectId = process.env.GOOGLE_CLOUD_PROJECT || 'okazje-plus';
-const location = 'us-central1'; // Use us-central1 for full Gemini 2.5 support
+const location = process.env.VERTEX_AI_LOCATION || process.env.VERTEX_LOCATION || 'us-central1';
 
 if (process.env.NODE_ENV !== 'production' || process.env.GENKIT_DEBUG) {
   console.log(`✅ Vertex AI initialized for project ${projectId} in region ${location}`);

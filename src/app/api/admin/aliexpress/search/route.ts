@@ -148,25 +148,46 @@ export async function GET(request: Request) {
       }, { status: 502 });
     }
     
-    // Parse AliExpress response structure
-    // Response format: { aliexpress_affiliate_productquery_response: { resp_result: { result: { products: { product: [...] } } } } }
+    // Parse AliExpress response structure.
+    // Singapore /sync endpoint returns: { resp_result: { result: { products: [...] } } }
+    // Legacy TOP API (gateway.do) returns: { aliexpress_affiliate_product_query_response: { resp_result: { result: { products: { product: [...] } } } } }
     let products: any[] = [];
     let total = 0;
     
-    function extractProducts(wrapper: any) {
-      if (!wrapper) return { products: [], total: 0 };
-      const respResult = wrapper.resp_result?.result || wrapper.result;
-      if (!respResult) return { products: [], total: 0 };
-      const rawProducts = respResult.products?.product || respResult.products || [];
-      const total = respResult.total_record_count || rawProducts.length || 0;
+    function extractProductsFromResult(result: any): { rawProducts: any[]; total: number } {
+      if (!result) return { rawProducts: [], total: 0 };
+      // Products may be direct array OR object with .product array (legacy TOP API)
+      let rawProducts: any[] = [];
+      if (Array.isArray(result.products)) {
+        rawProducts = result.products;
+      } else if (result.products?.product && Array.isArray(result.products.product)) {
+        rawProducts = result.products.product;
+      } else if (Array.isArray(result.product)) {
+        rawProducts = result.product;
+      }
+      const total = result.total_record_count || rawProducts.length || 0;
       return { rawProducts, total };
     }
 
-    let responseWrapper = (data as any).aliexpress_affiliate_productquery_response || (data as any).aliexpress_affiliate_product_query_response;
-    const firstExtraction = extractProducts(responseWrapper);
-    if (firstExtraction.rawProducts && firstExtraction.rawProducts.length) {
-      total = firstExtraction.total;
-      products = firstExtraction.rawProducts;
+    // Try Singapore /sync format first (resp_result at top level)
+    if ((data as any).resp_result?.result) {
+      const extraction = extractProductsFromResult((data as any).resp_result.result);
+      products = extraction.rawProducts;
+      total = extraction.total;
+      console.log(`[AliExpress] Parsed via Singapore /sync format: ${products.length} products`);
+    }
+
+    // Try legacy TOP API format (aliexpress_affiliate_*_response wrapper)
+    if (products.length === 0) {
+      const responseWrapper = (data as any).aliexpress_affiliate_productquery_response 
+        || (data as any).aliexpress_affiliate_product_query_response;
+      if (responseWrapper) {
+        const result = responseWrapper.resp_result?.result || responseWrapper.result;
+        const extraction = extractProductsFromResult(result);
+        products = extraction.rawProducts;
+        total = extraction.total;
+        console.log(`[AliExpress] Parsed via legacy TOP API format: ${products.length} products`);
+      }
     }
 
     // Fallback: try secondary method if no products
@@ -185,11 +206,25 @@ export async function GET(request: Request) {
       let fallbackJson: any = null;
       try { fallbackJson = JSON.parse(fallbackText); } catch {}
       if (fallbackJson) {
-        responseWrapper = fallbackJson.aliexpress_affiliate_product_search_response || fallbackJson.aliexpress_affiliate_productsearch_response;
-        const secondExtraction = extractProducts(responseWrapper);
-        if (secondExtraction.rawProducts && secondExtraction.rawProducts.length) {
-          total = secondExtraction.total;
-          products = secondExtraction.rawProducts;
+        // Try Singapore /sync format
+        let fallbackProducts: any[] = [];
+        let fallbackTotal = 0;
+        if (fallbackJson.resp_result?.result) {
+          const extraction = extractProductsFromResult(fallbackJson.resp_result.result);
+          fallbackProducts = extraction.rawProducts;
+          fallbackTotal = extraction.total;
+        } else {
+          const fallbackWrapper = fallbackJson.aliexpress_affiliate_product_search_response || fallbackJson.aliexpress_affiliate_productsearch_response;
+          if (fallbackWrapper) {
+            const result = fallbackWrapper.resp_result?.result || fallbackWrapper.result;
+            const extraction = extractProductsFromResult(result);
+            fallbackProducts = extraction.rawProducts;
+            fallbackTotal = extraction.total;
+          }
+        }
+        if (fallbackProducts.length > 0) {
+          total = fallbackTotal;
+          products = fallbackProducts;
           console.log(`[AliExpress] Fallback succeeded with ${products.length} products.`);
         } else {
           console.warn('[AliExpress] Fallback also returned 0 products. Raw snippet:', fallbackText.slice(0, 300));
@@ -228,15 +263,27 @@ export async function GET(request: Request) {
         const hotText = await hotRes.text();
         let hotJson: any = null;
         try { hotJson = JSON.parse(hotText); } catch {}
-        if (hotJson) {
-          const hotWrapper = hotJson.aliexpress_affiliate_hotproduct_query_response || hotJson.aliexpress_affiliate_hotproductquery_response;
-          const hotExtraction = extractProducts(hotWrapper);
-          if (hotExtraction.rawProducts && hotExtraction.rawProducts.length) {
-            total = hotExtraction.total;
-            products = hotExtraction.rawProducts;
+        if (hotJson.resp_result?.result) {
+          const extraction = extractProductsFromResult(hotJson.resp_result.result);
+          if (extraction.rawProducts && extraction.rawProducts.length) {
+            total = extraction.total;
+            products = extraction.rawProducts;
             console.log(`[AliExpress] Hot Products fallback succeeded with ${products.length} products.`);
           } else {
             console.warn('[AliExpress] Hot Products returned 0. Snippet:', hotText.slice(0, 300));
+          }
+        } else {
+          const hotWrapper = hotJson.aliexpress_affiliate_hotproduct_query_response || hotJson.aliexpress_affiliate_hotproductquery_response;
+          if (hotWrapper) {
+            const result = hotWrapper.resp_result?.result || hotWrapper.result;
+            const extraction = extractProductsFromResult(result);
+            if (extraction.rawProducts && extraction.rawProducts.length) {
+              total = extraction.total;
+              products = extraction.rawProducts;
+              console.log(`[AliExpress] Hot Products fallback succeeded with ${products.length} products.`);
+            } else {
+              console.warn('[AliExpress] Hot Products returned 0. Snippet:', hotText.slice(0, 300));
+            }
           }
         }
       }

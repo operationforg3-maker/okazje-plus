@@ -57,6 +57,7 @@ export interface PipelineConfig extends Partial<ImportJobConfig> {
   translateToPolish?: boolean; // Legacy flag, now implicit in Refiner
   currencyRate?: number;
   bypassRefinement?: boolean;
+  autoApprove?: boolean;
   
   // Stage configs
   fetch?: { batchSize?: number; delayBetweenItems?: number; delayBetweenBatches?: number; maxRetries?: number };
@@ -250,6 +251,7 @@ export async function runProductImportPipeline(
         categoryNamePL: config.categoryNamePL,
         subcategoryNamePL: config.subcategoryNamePL,
         subsubcategoryNamePL: config.subsubcategoryNamePL,
+        autoApprove: config.autoApprove,
       }
     );
     

@@ -873,12 +873,14 @@ async function processUIImportJob(uiJob: any): Promise<void> {
       'progress.totalCategories': batches.length,
     });
 
-    // Get currency rate
+    // Get currency rate & autoApprove
     let currencyRate = 4.0;
+    let autoApprove = false;
     try {
       const configDoc = await adminDb.collection('config').doc('importSettings').get();
       if (configDoc.exists) {
         currencyRate = configDoc.data()?.currencyRate || 4.0;
+        autoApprove = !!configDoc.data()?.autoApprove;
       }
     } catch (_) {}
 
@@ -924,6 +926,7 @@ async function processUIImportJob(uiJob: any): Promise<void> {
           subsubcategorySlugEN: batch.subsubcategorySlug,
           translateToPolish: true,
           currencyRate,
+          autoApprove,
           fetch: { batchSize: 50, delayBetweenItems: 200, delayBetweenBatches: 1000 },
           dedupe: { batchSize: 50, minRating: 2.5, minOrders: 10 },
           enrich: { batchSize: 5, delayBetweenItems: 300, delayBetweenBatches: 2000 },

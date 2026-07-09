@@ -143,8 +143,19 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
   const locale = useLocale();
   const { getText } = useContentLanguage();
   const productData = product || null;
-  const dealTitle = typeof deal.title === 'object' ? getText(deal.title) : deal.title;
-  const dealDescriptionRaw = typeof deal.description === 'object' ? getText(deal.description) : deal.description;
+  const titleObj = typeof deal.title === 'object' ? deal.title : { pl: deal.title || '', en: deal.title || '' };
+  const descObj = typeof deal.description === 'object' ? deal.description : { pl: deal.description || '', en: deal.description || '' };
+  
+  const isDealTitleLocalized = titleObj.pl !== titleObj.en || titleObj.pl !== titleObj.de;
+  const productTitleObj = productData?.title;
+  const activeTitleObj = (!isDealTitleLocalized && productTitleObj) ? productTitleObj : titleObj;
+  
+  const isDealDescLocalized = descObj.pl !== descObj.en || descObj.pl !== descObj.de;
+  const productDescObj = productData?.description || productData?.shortDescription;
+  const activeDescObj = (!isDealDescLocalized && productDescObj) ? productDescObj : descObj;
+
+  const dealTitle = getText(activeTitleObj) || (activeTitleObj.pl || '');
+  const dealDescriptionRaw = getText(activeDescObj) || (activeDescObj.pl || '');
   const offerSummaryRaw = typeof deal?.metadata?.offerSummary === 'object'
     ? getText(deal.metadata.offerSummary)
     : (typeof deal?.metadata?.offerSummary === 'string' ? deal.metadata.offerSummary : '');

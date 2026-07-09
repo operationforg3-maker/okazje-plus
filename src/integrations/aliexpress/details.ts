@@ -125,6 +125,9 @@ export async function getAliExpressProductDetailsDirect(id: string) {
     videoUrl: product.product_video_url || scrapedData?.videoUrl || null,
     categoryId: product.category_id || product.first_level_category_id || null,
     categoryName: product.category_name || product.first_level_category_name || '',
+    reviewImages: scrapedData?.reviewImages || [],
+    reviews: scrapedData?.reviews || [],
+    descriptionImages: scrapedData?.descriptionImages || [],
   };
 
   return { product: normalized, raw: response };

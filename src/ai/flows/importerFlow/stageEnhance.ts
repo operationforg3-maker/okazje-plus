@@ -40,6 +40,9 @@ interface ProductDetails {
   deliveryTime: string;
   freeShipping: boolean;
   videoUrl?: string;
+  reviewImages?: string[];
+  reviews?: any[];
+  descriptionImages?: string[];
 }
 
 /**
@@ -67,6 +70,9 @@ async function fetchProductDetails(productId: string, siteUrl?: string): Promise
       deliveryTime: product.shippingInfo?.deliveryTime || '',
       freeShipping: product.shippingInfo?.freeShipping || false,
       videoUrl: product.videoUrl,
+      reviewImages: (product as any).reviewImages || [],
+      reviews: (product as any).reviews || [],
+      descriptionImages: (product as any).descriptionImages || [],
     };
 
     console.log(`[Importer:Enhance] ✓ Got details for ${productId}:`);
@@ -162,6 +168,9 @@ export async function enhanceProductDetails(
           deliveryTime: details.deliveryTime,
           freeShipping: details.freeShipping,
           videoUrl: details.videoUrl,
+          reviewImages: details.reviewImages,
+          reviews: details.reviews,
+          descriptionImages: details.descriptionImages,
           // Flag that this product was enhanced
           _enhanced: true,
           _enhancedAt: new Date().toISOString(),

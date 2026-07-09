@@ -5,6 +5,7 @@ import { calculateIdentityHash } from '@/lib/automation/identity-matcher';
 import { LocalizedText, ProductCore, DealM6 } from '@/lib/types';
 import { queueProductForIndexing, queueDealForIndexing } from '@/search/typesenseQueue';
 import { generateEmbeddings } from '@/ai/embeddings';
+import { formatProductDescription } from '@/ai/flows/product-formatting';
 
 export interface SaveConfig extends ImportStageConfig {
   skipExisting?: boolean;
@@ -12,6 +13,7 @@ export interface SaveConfig extends ImportStageConfig {
   categoryNamePL?: string;
   subcategoryNamePL?: string;
   subsubcategoryNamePL?: string;
+  autoApprove?: boolean;
 }
 
 const DEFAULT_CONFIG: SaveConfig = {
@@ -21,6 +23,7 @@ const DEFAULT_CONFIG: SaveConfig = {
   delayBetweenBatches: 500,
   maxRetries: 1,
   skipExisting: false,
+  autoApprove: false,
 };
 
 function removeUndefined(obj: any): any {
@@ -120,17 +123,33 @@ export async function saveProductsToFirestore(
       const isFreeShipping = product.freeShipping ?? (shippingCost === 0);
 
       // 4. Construct ProductCore document
+      const buildFormattedDescription = (lang: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk') => {
+        const titleStr = product.title?.[lang] || product.title?.pl || product.title?.en || 'Produkt';
+        const descStr = product.description?.[lang] || product.description?.pl || product.description?.en || '';
+        const specsObj = product.specsLocalized?.[lang] || product.specsLocalized?.pl || product.rawSpecs || {};
+        
+        // Convert specs record to features array (simple bullet list)
+        const features = Object.entries(specsObj).map(([k, v]) => `${k}: ${v}`);
+        
+        return formatProductDescription({
+          title: titleStr,
+          plainDescription: descStr,
+          specs: specsObj,
+          features: features.slice(0, 5), // Keep top 5 features as bullets
+        });
+      };
+
       const productCorePayload: Partial<ProductCore> = {
         title: product.title,
         shortDescription: product.description,
-        fullDescription: product.descriptionHtml ? {
-          pl: product.descriptionHtml,
-          en: product.descriptionHtml,
-          de: product.descriptionHtml,
-          fr: product.descriptionHtml,
-          es: product.descriptionHtml,
-          uk: product.descriptionHtml,
-        } : product.description,
+        fullDescription: {
+          pl: buildFormattedDescription('pl'),
+          en: buildFormattedDescription('en'),
+          de: buildFormattedDescription('de'),
+          fr: buildFormattedDescription('fr'),
+          es: buildFormattedDescription('es'),
+          uk: buildFormattedDescription('uk'),
+        },
         description: product.description,
         
         mainCategorySlug: product.categorySlugEN,
@@ -160,13 +179,24 @@ export async function saveProductsToFirestore(
 
         specs: product.specsLocalized?.pl || product.rawSpecs || {},
         coreSpecs: product.specsLocalized?.en || product.rawSpecs || {},
+        specsLocalized: product.specsLocalized || {
+          pl: product.specsLocalized?.pl || product.rawSpecs || {},
+          en: product.specsLocalized?.en || product.rawSpecs || {},
+          de: product.specsLocalized?.de || product.rawSpecs || {},
+          fr: product.specsLocalized?.fr || product.rawSpecs || {},
+          es: product.specsLocalized?.es || product.rawSpecs || {},
+          uk: product.specsLocalized?.uk || product.rawSpecs || {},
+        },
         embedding: embedding ? FieldValue.vector(embedding) as any : undefined,
         
         // Alternative format to specs (array for listing display)
         attributes: product.attributes || [],
         variants: product.variants || [],
+        reviewImages: product.reviewImages || [],
+        descriptionImages: product.descriptionImages || [],
+        skuList: product.skuList || [],
 
-        status: 'approved', // Auto-approve refined items
+        status: finalConfig.autoApprove ? 'approved' : 'pending_approval',
         updatedAt: now,
         
         metadata: {
@@ -285,7 +315,7 @@ export async function saveProductsToFirestore(
         temperature: existingDealDoc?.data()?.temperature || 0,
         commentsCount: existingDealDoc?.data()?.commentsCount || 0,
         
-        status: 'approved',
+        status: finalConfig.autoApprove ? 'approved' : 'poczekalnia',
         
         createdAt: existingDealDoc ? existingDealDoc.data().createdAt : now,
         updatedAt: now,

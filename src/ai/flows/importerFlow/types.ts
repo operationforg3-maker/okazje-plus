@@ -49,6 +49,9 @@ export interface AliExpressProduct {
   freeShipping?: boolean; // Added: freeShipping
   _enhanced?: boolean; // Added: enhancement flag
   _enhancedAt?: string; // Added: enhancement timestamp
+  reviewImages?: string[];
+  reviews?: any[];
+  descriptionImages?: string[];
 }
 
 export interface AliExpressDeal extends AliExpressProduct {

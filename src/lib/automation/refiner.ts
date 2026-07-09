@@ -306,14 +306,19 @@ export class AIRefiner {
       const sourceText = normalized[sourceLocale] || fallbackBase;
       const sourceComparable = normalizeComparable(sourceText);
 
-      // Traktujemy pola jako wymagające tłumaczenia tylko gdy są puste.
-      // Zapobiega to automatycznemu tłumaczeniu oryginalnych nazw marek i produktów (np. "Anker", "iPhone"),
-      // które są takie same we wszystkich językach.
+      // Traktujemy pola jako wymagające tłumaczenia gdy są puste, lub gdy są identyczne z oryginalnym
+      // tekstem źródłowym (co oznacza, że model AI pominął tłumaczenie w kreatywnym przebiegu) i są frazami wielowyrazowymi.
       const localesToTranslate = locales.filter((locale) => {
         if (locale === sourceLocale) return false;
 
         const current = String(normalized[locale] || '').trim();
-        return !current;
+        if (!current) return true;
+
+        const isUntranslated =
+          normalizeComparable(current) === sourceComparable &&
+          sourceComparable.split(/\s+/).filter(Boolean).length > 1;
+
+        return isUntranslated;
       });
 
       if (localesToTranslate.length > 0) {
@@ -707,6 +712,30 @@ export class AIRefiner {
 
       // Preserve approved products as publicly visible after re-enrichment.
       refined.status = product.status === 'approved' ? 'approved' : 'pending_approval';
+    }
+
+    // Translate specifications at the end to ensure we capture all updates (augmented, title cleanup, dimensions, etc.)
+    try {
+      const finalSpecs = refined.specs || product.specs || {};
+      if (Object.keys(finalSpecs).length > 0) {
+        this.addLog('info', `Translating ${Object.keys(finalSpecs).length} specs for product ${product.id || 'new'}...`);
+        const { translateSpecs } = await import('@/ai/flows/enrichment');
+        const translatedSpecsResult = await translateSpecs({
+          specs: finalSpecs,
+          targetLocales: ['pl', 'de', 'fr', 'es', 'uk'],
+        });
+
+        refined.specsLocalized = {
+          pl: translatedSpecsResult.translations.pl || finalSpecs,
+          en: refined.coreSpecs || finalSpecs,
+          de: translatedSpecsResult.translations.de || finalSpecs,
+          fr: translatedSpecsResult.translations.fr || finalSpecs,
+          es: translatedSpecsResult.translations.es || finalSpecs,
+          uk: translatedSpecsResult.translations.uk || finalSpecs,
+        };
+      }
+    } catch (err) {
+      this.addLog('warn', 'Failed to translate specifications', err);
     }
 
     refined.updatedAt = new Date().toISOString();

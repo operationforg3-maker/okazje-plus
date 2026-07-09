@@ -2444,6 +2444,7 @@ export interface ProductCore {
     values: string[];
     sku?: string;
   }>;
+  skuList?: any[];
   
   /**
    * M6+: Available warehouse locations (e.g., ['PL', 'CZ', 'CN'])

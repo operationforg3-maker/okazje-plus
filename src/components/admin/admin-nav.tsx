@@ -57,6 +57,7 @@ const navStructure: (NavItem | NavGroup)[] = [
     icon: ShieldCheck,
     items: [
       { title: 'Panel moderacji', href: '/admin/moderation', icon: AlertTriangle },
+      { title: 'Zarządzanie kategoriami', href: '/admin/categories', icon: Layers },
       { title: 'Wykrywanie duplikatów', href: '/admin/duplicates', icon: Search },
       { title: 'Kategorie forum', href: '/admin/forum/categories', icon: Layers },
     ],

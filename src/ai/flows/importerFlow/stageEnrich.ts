@@ -182,7 +182,7 @@ export async function refineProductsBatch(
 
       // Google Search grounding wyłączone — kosztuje $35/1000 zapytań.
       const { output: result } = await ai.generate({
-        model: 'vertexai/gemini-2.5-flash',
+        model: 'refine-model',
         prompt: prompt,
         output: { schema: RefinedOutputSchema },
         config: { 

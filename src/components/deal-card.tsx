@@ -321,8 +321,17 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid' }: Deal
   const titleObj = typeof deal.title === 'object' ? deal.title : { pl: deal.title || '', en: deal.title || '' };
   const descObj = typeof deal.description === 'object' ? deal.description : { pl: deal.description || '', en: deal.description || '' };
   
-  const dealTitle = normalizeDisplayText(getText(titleObj) || (titleObj.pl || ''));
-  const rawDealDescription = getText(descObj) || (descObj.pl || '');
+  // Prioritize translated product title if deal title is same across all languages (which indicates unrefined/untranslated copy)
+  const isDealTitleLocalized = titleObj.pl !== titleObj.en || titleObj.pl !== titleObj.de;
+  const productTitleObj = resolvedProduct?.title;
+  const activeTitleObj = (!isDealTitleLocalized && productTitleObj) ? productTitleObj : titleObj;
+  
+  const isDealDescLocalized = descObj.pl !== descObj.en || descObj.pl !== descObj.de;
+  const productDescObj = resolvedProduct?.description || resolvedProduct?.shortDescription;
+  const activeDescObj = (!isDealDescLocalized && productDescObj) ? productDescObj : descObj;
+
+  const dealTitle = normalizeDisplayText(getText(activeTitleObj) || (activeTitleObj.pl || ''));
+  const rawDealDescription = getText(activeDescObj) || (activeDescObj.pl || '');
   const dealDescription = normalizeDisplayText(rawDealDescription);
   
   const couponCode = safeText(deal.couponCode);

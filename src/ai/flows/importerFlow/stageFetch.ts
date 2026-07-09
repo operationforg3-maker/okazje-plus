@@ -247,19 +247,18 @@ export async function fetchProductsFromAliexpress(
         
         let products: any[] = [];
         
-        // Parse Affiliate API response structure (per ae_sdk / official types):
-        // { aliexpress_affiliate_product_query_response: { resp_result: { result: { products: [] } } } }
-        const respResult = response?.aliexpress_affiliate_product_query_response?.resp_result;
+        // Parse Affiliate API response structure:
+        // Singapore /sync format: { resp_result: { result: { products: [...] } } }
+        // Legacy TOP API: { aliexpress_affiliate_product_query_response: { resp_result: { result: { products: [] } } } }
+        const respResult = response?.resp_result || response?.aliexpress_affiliate_product_query_response?.resp_result;
         if (respResult?.result?.products) {
           if (Array.isArray(respResult.result.products.product)) {
             products = respResult.result.products.product;
           } else if (Array.isArray(respResult.result.products)) {
             products = respResult.result.products;
           }
-        }
-        // Fallback or simplified response check
-        else if (Array.isArray(response?.products)) { 
-             products = response.products;
+        } else if (Array.isArray(response?.products)) { 
+          products = response.products;
         }
         
         console.log(`[Importer:Fetch] Direct: Got ${products.length} products for "${keyword}"`);
@@ -288,6 +287,7 @@ export async function fetchProductsFromAliexpress(
                            (p.product_image || '');
           
           const product: AliExpressProduct = {
+            ...p,
             id: productId,
             title: p.product_title || p.title || 'Untitled',
             image: mainImage,
@@ -301,7 +301,6 @@ export async function fetchProductsFromAliexpress(
             currency: p.target_sale_price_currency || 'PLN', // We requested PLN
             description: p.product_description || '',
             images: Array.isArray(p.image_urls) && p.image_urls.length > 0 ? p.image_urls : (p.product_images || (mainImage ? [mainImage] : [])),
-            ...p
           };
           
           // Validate product

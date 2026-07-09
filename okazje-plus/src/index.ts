@@ -998,6 +998,7 @@ export const scheduleAliExpressSync = onSchedule(
     region: "europe-west1",
     memory: "256MiB",
     timeoutSeconds: 1800,
+    secrets: ["CRON_SECRET"],
   },
   async () => {
     const triggerStartedAt = Date.now();
@@ -1146,7 +1147,7 @@ export const processImportJobsTrigger = onRequest(
     memory: "256MiB",
     // Explicitly clear secret bindings for this function to avoid
     // overlap with non-secret env vars injected from .env.<projectId>.
-    secrets: [],
+    secrets: ["CRON_SECRET"],
   },
   async (req, res) => {
     const siteUrl = process.env.SITE_URL || "https://okazjeplus.pl";

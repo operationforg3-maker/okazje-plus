@@ -538,7 +538,7 @@ OUTPUT STRICTLY AS JSON:
       let response;
       try {
         response = await ai.generate({
-          model: 'vertexai/gemini-2.5-flash',
+          model: 'refine-model',
           prompt,
           config: {
             temperature: 0.3,
@@ -553,7 +553,7 @@ OUTPUT STRICTLY AS JSON:
         // Fallback z wyższą temperaturą przy błędzie
         logger.warn("Generation failed, retrying with higher temperature", { error: generationError });
         response = await ai.generate({
-          model: 'vertexai/gemini-2.5-flash',
+          model: 'refine-model',
           prompt,
           config: { temperature: 0.4, maxOutputTokens: 8192 },
           output: {
@@ -610,7 +610,7 @@ Description:
 Return JSON object: { "specs": [ { "name": "RAM", "value": "16GB" } ] }`;
 
       const response = await ai.generate({
-        model: 'vertexai/gemini-2.5-flash',
+        model: 'refine-model',
         prompt,
         config: { temperature: 0.1, maxOutputTokens: 2000 },
         output: {
@@ -618,7 +618,7 @@ Return JSON object: { "specs": [ { "name": "RAM", "value": "16GB" } ] }`;
             specs: z.array(
               z.object({
                 name: z.string(),
-                value: z.string(),
+                value: z.string().optional().nullable(),
               })
             ),
           }),
@@ -642,3 +642,98 @@ Return JSON object: { "specs": [ { "name": "RAM", "value": "16GB" } ] }`;
     }
   }
 );
+
+// ===== Flow: Translate Specifications =====
+export const translateSpecs = ai.defineFlow(
+  {
+    name: "translateSpecs",
+    inputSchema: z.object({
+      specs: z.record(z.string()),
+      targetLocales: z.array(z.string()),
+    }),
+    outputSchema: z.object({
+      translations: z.record(z.record(z.string())),
+    }),
+  },
+  async (input) => {
+    try {
+      if (Object.keys(input.specs).length === 0) {
+        const emptyResult: Record<string, Record<string, string>> = {};
+        for (const loc of input.targetLocales) {
+          emptyResult[loc] = {};
+        }
+        return { translations: emptyResult };
+      }
+
+      const prompt = `You are a professional e-commerce translator.
+Translate the following product specifications (keys and values) into these target languages: ${input.targetLocales.join(', ')}.
+Use standard local terminology for tech/e-commerce specs (e.g. for Polish "Color" -> "Kolor", "Red" -> "Czerwony", "Memory" -> "Pamięć").
+Keep technical values like "16GB", "5000mAh", "12V", "2.4GHz" as-is.
+
+Return JSON in this format:
+{
+  "translations": [
+    {
+      "locale": "pl",
+      "specs": {
+        "Kolor": "Czerwony",
+        "Pamięć": "16GB"
+      }
+    }
+  ]
+}
+
+Specifications to translate:
+${JSON.stringify(input.specs, null, 2)}`;
+
+      const response = await ai.generate({
+        model: 'refine-model',
+        prompt,
+        config: { temperature: 0.1, maxOutputTokens: 3000 },
+        output: {
+          schema: z.object({
+            translations: z.array(
+              z.object({
+                locale: z.string(),
+                specs: z.record(z.string()),
+              })
+            ),
+          }),
+        },
+      });
+
+      const parsed = response.output;
+      const translationsResult: Record<string, Record<string, string>> = {};
+      
+      // Initialize target locales
+      for (const loc of input.targetLocales) {
+        translationsResult[loc] = {};
+      }
+
+      if (parsed && Array.isArray(parsed.translations)) {
+        for (const item of parsed.translations) {
+          if (item.locale && item.specs && translationsResult[item.locale]) {
+            translationsResult[item.locale] = item.specs;
+          }
+        }
+      }
+
+      // Fallback check
+      for (const loc of input.targetLocales) {
+        if (Object.keys(translationsResult[loc]).length === 0) {
+          translationsResult[loc] = { ...input.specs };
+        }
+      }
+
+      return { translations: translationsResult };
+    } catch (error) {
+      logger.error("translateSpecs flow failed", { error, input });
+      const fallbackResult: Record<string, Record<string, string>> = {};
+      for (const loc of input.targetLocales) {
+        fallbackResult[loc] = { ...input.specs };
+      }
+      return { translations: fallbackResult };
+    }
+  }
+);
+
