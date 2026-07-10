@@ -56,14 +56,14 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
               key={category.id}
               onClick={() => handleCategoryClick(category)}
               className={cn(
-                "w-full flex items-center gap-3 p-3 rounded-2xl border transition-all duration-300 text-left group relative",
+                "w-full flex items-center gap-3 p-3 text-left group relative",
                 isActive
                   ? "bg-background border-primary shadow-lg ring-2 ring-primary/20 -translate-y-0.5"
-                  : "bg-background/60 backdrop-blur-md hover:bg-background border-border/40 hover:border-primary/40 hover:shadow-xl hover:-translate-y-0.5"
+                  : "ux-card-container"
               )}
             >
               <div className={cn(
-                "h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all bg-gradient-to-br shadow-sm group-hover:shadow-md",
+                "h-10 w-10 ux-icon-box flex items-center justify-center flex-shrink-0 bg-gradient-to-br shadow-sm group-hover:shadow-md",
                 style.bg,
                 style.accent
               )}>

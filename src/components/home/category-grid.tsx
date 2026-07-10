@@ -59,13 +59,10 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
             <button
               key={category.id}
               onClick={() => handleOpenDrawer(category)}
-              className={cn(
-                "w-full flex items-center gap-3 p-3 rounded-2xl border transition-all duration-300 text-left group",
-                "bg-background/60 backdrop-blur-md hover:bg-background border-border/40 hover:border-primary/40 hover:shadow-xl hover:-translate-y-0.5"
-              )}
+              className="w-full flex items-center gap-3 p-3 ux-card-container text-left group cursor-pointer"
             >
               <div className={cn(
-                "h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all bg-gradient-to-br shadow-sm group-hover:shadow-md",
+                "h-10 w-10 ux-icon-box flex items-center justify-center flex-shrink-0 bg-gradient-to-br shadow-sm group-hover:shadow-md",
                 style.bg,
                 style.accent
               )}>

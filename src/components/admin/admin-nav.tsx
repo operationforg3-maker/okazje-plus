@@ -19,6 +19,7 @@ import {
   Wrench,
   Rocket,
   ShieldCheck,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -104,6 +105,8 @@ const navStructure: (NavItem | NavGroup)[] = [
     title: 'Konfiguracja',
     icon: Settings,
     items: [
+      { title: 'Warianty UX & Audyt', href: '/admin/ux-preview/variants', icon: Sparkles, badge: 'New', badgeVariant: 'default' },
+      { title: 'Prototypy Nowego UX', href: '/new-ux', icon: Rocket, badge: 'Beta', badgeVariant: 'secondary' },
       { title: 'Ustawienia', href: '/admin/settings', icon: Settings },
       { title: 'OAuth', href: '/admin/settings/oauth', icon: Settings },
     ],

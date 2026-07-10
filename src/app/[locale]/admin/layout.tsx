@@ -32,6 +32,7 @@ const pathNames: Record<string, string> = {
   '/admin/harvester-presets': 'Presety harvestera',
   '/admin/social-media': 'Automatyzacja social mediów',
   '/admin/database': 'Zarządzanie Bazą Danych',
+  '/admin/ux-preview/variants': 'Warianty UX & Audyt',
   // DevTools (dostępne przez URL):
   '/admin/m6-import-dashboard': 'M6 Import Dashboard',
   '/admin/m6-pipeline-visualizer': 'M6 Pipeline Visualizer',

@@ -88,6 +88,14 @@ export const UXProvider = ({ children }: { children: ReactNode }) => {
     const root = document.documentElement;
     root.setAttribute('data-theme', themeFamily === 'classic' ? 'default' : themeFamily);
     root.setAttribute('data-mode', themeMode);
+    
+    // Map themeFamily to visual style (data-ux-style)
+    let uxStyle = 'classic';
+    if (themeFamily === 'v4') uxStyle = 'playful';
+    else if (themeFamily === 'v5') uxStyle = 'neo-brutalist';
+    else if (themeFamily === 'neon') uxStyle = 'minimalist';
+    root.setAttribute('data-ux-style', uxStyle);
+
     root.classList.toggle('dark', themeMode === 'dark');
     root.style.colorScheme = themeMode;
 

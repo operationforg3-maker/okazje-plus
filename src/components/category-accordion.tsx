@@ -58,7 +58,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                 "transition-all duration-300 flex flex-col group relative",
                 isActive
                   ? "col-span-full bg-background border border-primary/20 shadow-2xl rounded-3xl p-5 sm:p-6"
-                  : "bg-background/60 backdrop-blur-md hover:bg-background border border-border/40 hover:border-primary/40 hover:shadow-xl hover:-translate-y-0.5 rounded-2xl cursor-pointer p-3"
+                  : "ux-card-container cursor-pointer p-3"
               )}
               onClick={!isActive ? () => handleCategoryClick(category) : undefined}
             >
@@ -66,7 +66,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
               <div className="flex items-center justify-between w-full min-w-0">
                 <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
                   <div className={cn(
-                    "rounded-xl flex items-center justify-center flex-shrink-0 transition-all bg-gradient-to-br shadow-sm",
+                    "ux-icon-box flex items-center justify-center flex-shrink-0 bg-gradient-to-br shadow-sm",
                     isActive ? "p-2.5 shadow-lg w-12 h-12" : "h-10 w-10",
                     style.bg,
                     style.accent
@@ -124,7 +124,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                       {category.subcategories.map((sub) => (
                         <div 
                           key={sub.id} 
-                          className="space-y-3 p-4 rounded-2xl bg-background/55 border border-border/40 hover:border-primary/20 hover:bg-background/80 transition-all duration-300 shadow-sm hover:shadow-md"
+                          className="space-y-3 p-4 ux-card-container"
                         >
                           {/* Level 2: Subcategory Link */}
                           <Link

@@ -421,7 +421,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
   // --------------------------------------------------------------------------
   return (
     <div 
-      className="group relative flex h-full flex-col overflow-hidden cursor-pointer rounded-2xl border border-border/30 bg-background/50 backdrop-blur-md shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-1 hover:border-primary/20"
+      className="group relative flex h-full flex-col overflow-hidden cursor-pointer ux-card-container"
       onClick={() => {
         router.push(productUrl);
       }}
