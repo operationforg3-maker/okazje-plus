@@ -114,7 +114,69 @@ const MOCK_CATEGORIES = [
   { name: 'Dla Dzieci', slug: 'dla-dzieci', count: 54, icon: '🧸', subcats: ['Zabawki', 'Wózki', 'Ubranka'] },
 ];
 
-export function UXVariantsPlayground() {
+export function UXVariantsPlayground({
+  realDeals = [],
+  realProducts = [],
+  realCategories = [],
+  realCounts = { products: 120, deals: 340, users: 1800 }
+}: {
+  realDeals?: any[];
+  realProducts?: any[];
+  realCategories?: any[];
+  realCounts?: { products: number; deals: number; users: number };
+}) {
+  // Mapping helpers for real data integration
+  const getDealData = (index: number) => {
+    if (realDeals && realDeals[index]) {
+      const deal = realDeals[index];
+      const origPrice = deal.originalPrice || null;
+      const priceVal = typeof deal.price === 'number' ? deal.price : (deal.price?.amount || deal.price?.pln || 0);
+      return {
+        id: deal.id,
+        title: deal.title?.pl || deal.title?.en || deal.title || 'Brak tytułu',
+        price: priceVal,
+        originalPrice: origPrice,
+        temperature: deal.temperature || 0,
+        commentsCount: deal.commentsCount || 0,
+        imageUrl: deal.image || deal.imageUrl || '/images/placeholder.png',
+        storeName: deal.merchant || 'Sklep',
+        postedAt: deal.postedAt || new Date().toISOString(),
+        discount: typeof deal.discount === 'number' ? deal.discount : (origPrice && priceVal ? Math.round(((origPrice - priceVal) / origPrice) * 100) : 0),
+      };
+    }
+    return index === 0 ? MOCK_DEAL : MOCK_DEAL_2;
+  };
+
+  const getProductData = (index: number) => {
+    if (realProducts && realProducts[index]) {
+      const prod = realProducts[index];
+      const priceVal = typeof prod.price === 'number' ? prod.price : (prod.price?.amount || prod.bestPrice?.amount || 0);
+      const origPrice = prod.originalPrice || (priceVal * 1.3);
+      return {
+        id: prod.id,
+        title: prod.title?.pl || prod.title?.en || prod.title || 'Brak tytułu',
+        price: priceVal,
+        originalPrice: origPrice,
+        rating: prod.rating?.score || prod.ratingCard?.rating || 4.5,
+        reviewsCount: prod.rating?.count || prod.ratingCard?.count || 0,
+        imageUrl: prod.imageUrl || prod.image || (prod.images && prod.images[0]) || '/images/placeholder.png',
+        storeName: prod.brand || prod.merchant || 'Okazje+',
+        specs: prod.specs || { 'Kategoria': prod.mainCategorySlug || 'Ogólna' },
+        discount: prod.discount || Math.round(((origPrice - priceVal) / origPrice) * 100),
+        temperature: prod.temperature || 0,
+        commentsCount: prod.commentsCount || 0,
+      };
+    }
+    return index === 0 ? MOCK_PRODUCT : MOCK_PRODUCT_2;
+  };
+
+  const getCategoriesList = () => {
+    if (realCategories && realCategories.length > 0) {
+      return realCategories;
+    }
+    return MOCK_CATEGORIES;
+  };
+
   const [activeModule, setActiveModule] = useState<'hero' | 'card' | 'category' | 'stats' | 'nav'>('hero');
   const [selectedVariants, setSelectedVariants] = useState<Record<string, number>>({
     hero: 1,
@@ -333,7 +395,7 @@ export function UXVariantsPlayground() {
                     hoverReveal={hoverReveal}
                     styleFamily="neo-brutalist"
                     cardIndex={0}
-                    data={cardType === 'deal' ? MOCK_DEAL : MOCK_PRODUCT} 
+                    data={cardType === 'deal' ? getDealData(0) : getProductData(0)} 
                   />
                   <CardVariantUniversal 
                     type={cardType}
@@ -342,7 +404,7 @@ export function UXVariantsPlayground() {
                     hoverReveal={hoverReveal}
                     styleFamily="neo-brutalist"
                     cardIndex={1}
-                    data={cardType === 'deal' ? MOCK_DEAL_2 : MOCK_PRODUCT_2} 
+                    data={cardType === 'deal' ? getDealData(1) : getProductData(1)} 
                   />
                 </div>
               </div>
@@ -358,7 +420,7 @@ export function UXVariantsPlayground() {
                     hoverReveal={hoverReveal}
                     styleFamily="classic"
                     cardIndex={0}
-                    data={cardType === 'deal' ? MOCK_DEAL : MOCK_PRODUCT} 
+                    data={cardType === 'deal' ? getDealData(0) : getProductData(0)} 
                   />
                   <CardVariantUniversal 
                     type={cardType}
@@ -367,7 +429,7 @@ export function UXVariantsPlayground() {
                     hoverReveal={hoverReveal}
                     styleFamily="classic"
                     cardIndex={1}
-                    data={cardType === 'deal' ? MOCK_DEAL_2 : MOCK_PRODUCT_2} 
+                    data={cardType === 'deal' ? getDealData(1) : getProductData(1)} 
                   />
                 </div>
               </div>
@@ -383,7 +445,7 @@ export function UXVariantsPlayground() {
                     hoverReveal={hoverReveal}
                     styleFamily="playful"
                     cardIndex={0}
-                    data={cardType === 'deal' ? MOCK_DEAL : MOCK_PRODUCT} 
+                    data={cardType === 'deal' ? getDealData(0) : getProductData(0)} 
                   />
                   <CardVariantUniversal 
                     type={cardType}
@@ -392,7 +454,7 @@ export function UXVariantsPlayground() {
                     hoverReveal={hoverReveal}
                     styleFamily="playful"
                     cardIndex={1}
-                    data={cardType === 'deal' ? MOCK_DEAL_2 : MOCK_PRODUCT_2} 
+                    data={cardType === 'deal' ? getDealData(1) : getProductData(1)} 
                   />
                 </div>
               </div>
@@ -408,7 +470,7 @@ export function UXVariantsPlayground() {
                     hoverReveal={hoverReveal}
                     styleFamily="minimalist"
                     cardIndex={0}
-                    data={cardType === 'deal' ? MOCK_DEAL : MOCK_PRODUCT} 
+                    data={cardType === 'deal' ? getDealData(0) : getProductData(0)} 
                   />
                   <CardVariantUniversal 
                     type={cardType}
@@ -417,7 +479,7 @@ export function UXVariantsPlayground() {
                     hoverReveal={hoverReveal}
                     styleFamily="minimalist"
                     cardIndex={1}
-                    data={cardType === 'deal' ? MOCK_DEAL_2 : MOCK_PRODUCT_2} 
+                    data={cardType === 'deal' ? getDealData(1) : getProductData(1)} 
                   />
                 </div>
               </div>
@@ -447,10 +509,10 @@ export function UXVariantsPlayground() {
             </div>
 
             <div className="border border-border/20 rounded-3xl overflow-hidden bg-muted/10 p-4">
-              {selectedVariants.category === 1 && <CategoryVariantNeoBrutalist />}
-              {selectedVariants.category === 2 && <CategoryVariantGlassmorphism />}
-              {selectedVariants.category === 3 && <CategoryVariantGamified />}
-              {selectedVariants.category === 4 && <CategoryVariantMinimalist />}
+              {selectedVariants.category === 1 && <CategoryVariantNeoBrutalist categories={getCategoriesList()} />}
+              {selectedVariants.category === 2 && <CategoryVariantGlassmorphism categories={getCategoriesList()} />}
+              {selectedVariants.category === 3 && <CategoryVariantGamified categories={getCategoriesList()} />}
+              {selectedVariants.category === 4 && <CategoryVariantMinimalist categories={getCategoriesList()} />}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -484,10 +546,10 @@ export function UXVariantsPlayground() {
             </div>
 
             <div className="border border-border/20 rounded-3xl overflow-hidden bg-muted/10 p-4">
-              {selectedVariants.stats === 1 && <StatsVariantNeoBrutalist />}
-              {selectedVariants.stats === 2 && <StatsVariantGlassmorphism />}
-              {selectedVariants.stats === 3 && <StatsVariantGamified />}
-              {selectedVariants.stats === 4 && <StatsVariantMinimalist />}
+              {selectedVariants.stats === 1 && <StatsVariantNeoBrutalist counts={realCounts} />}
+              {selectedVariants.stats === 2 && <StatsVariantGlassmorphism counts={realCounts} />}
+              {selectedVariants.stats === 3 && <StatsVariantGamified counts={realCounts} />}
+              {selectedVariants.stats === 4 && <StatsVariantMinimalist counts={realCounts} />}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -774,7 +836,7 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
     <div className={cn(
       "ux-card-container p-4 w-full relative min-w-0 text-left group flex",
       isList ? "flex-row items-center gap-6 h-auto" : "flex-col justify-between",
-      !isList && !isMasonry ? (details === 'compact' ? "h-[350px]" : "h-[420px]") : "",
+      !isList && !isMasonry ? (details === 'compact' ? "h-[360px]" : "h-[440px]") : "",
       isMasonry ? "h-auto" : "",
       !isList && "max-w-[280px]"
     )}>
@@ -809,12 +871,20 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
       </div>
 
       {/* Text Info Section */}
-      <div className="flex-grow space-y-2.5 min-w-0 flex flex-col justify-between pt-1 relative z-10">
+      <div className={cn(
+        "flex-grow min-w-0 pt-1 relative z-10",
+        isList ? "flex flex-row items-center justify-between gap-6" : "flex flex-col justify-between space-y-2.5"
+      )}>
         {/* Upper Part: Store name, Title, Specs/Description (Translates upwards on hover to cover image) */}
         <div className={cn(
-          "transition-all duration-300 ease-out relative z-10 bg-[var(--ux-image-hover-bg)] pb-1",
-          hoverReveal && !isList ? "transform group-hover:-translate-y-12 group-hover:pb-12" : ""
+          "transition-all duration-300 ease-out relative z-10 pb-1",
+          hoverReveal && !isList ? "transform group-hover:-translate-y-12" : ""
         )}>
+          {/* Absolute background mask that extends downwards without affecting layout height */}
+          <div className={cn(
+            "absolute inset-0 z-[-1] bg-[var(--ux-image-hover-bg)] backdrop-blur-md transition-all duration-300 rounded-t-lg",
+            hoverReveal && !isList ? "group-hover:-bottom-12" : ""
+          )} />
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-[11px] text-muted-foreground">
               <span>{data.storeName}</span>
@@ -891,94 +961,103 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
           </div>
         </div>
 
-        {/* Lower Part: Price & Footer (Always stationary at the bottom) */}
-        <div className="space-y-2.5 bg-[var(--ux-card-bg)] z-20 pt-1">
+        {/* Lower Part: Price & Footer (Always stationary at the bottom, split into right column in List layout) */}
+        <div className={cn(
+          "bg-[var(--ux-card-bg)] z-20",
+          isList ? "flex flex-col justify-between shrink-0 text-right min-w-[150px] self-stretch pl-4 border-l border-border/10" : "space-y-2.5 pt-1"
+        )}>
           {/* Price & Savings (Enlarged) */}
           <div className="space-y-0.5">
-            <div className="flex items-baseline gap-2">
+            <div className={cn("flex items-baseline gap-2", isList && "justify-end")}>
               <span className="text-xl font-black text-foreground">{data.price.toFixed(2)} zł</span>
               {data.originalPrice && (
                 <span className="text-xs text-muted-foreground line-through font-bold">{data.originalPrice.toFixed(2)} zł</span>
               )}
             </div>
             {data.originalPrice && (
-              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1.5 leading-none">
+              <div className={cn(
+                "text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1.5 leading-none",
+                isList && "justify-end"
+              )}>
                 <span>Zaoszczędź {(data.originalPrice - data.price).toFixed(2)} zł</span>
                 <span className="bg-emerald-500/10 px-1 py-0.5 rounded text-[8px] font-black">-{data.discount}%</span>
               </div>
             )}
           </div>
 
-        {/* Stable Footer Section - No size jumping */}
-        <div className="border-t border-border/10 pt-2 flex items-center justify-between">
-          {/* Left: Voting Widget with Temperature (Styled with theme variables) */}
-          <div className="flex items-center">
-            <div className="ux-vote-pill">
+          {/* Stable Footer Section - No size jumping */}
+          <div className={cn(
+            "flex items-center justify-between",
+            isList ? "pt-0 border-t-0 flex-col-reverse items-end gap-2.5 mt-auto" : "border-t border-border/10 pt-2"
+          )}>
+            {/* Left: Voting Widget with Temperature (Styled with theme variables) */}
+            <div className="flex items-center">
+              <div className="ux-vote-pill">
+                <button 
+                  className={cn(
+                    "flex items-center justify-center transition-all duration-200 font-black text-xs h-5 w-5",
+                    hoverReveal ? "w-0 opacity-0 scale-0 group-hover:w-5 group-hover:opacity-100 group-hover:scale-100" : "bg-[var(--ux-vote-btn-bg)] text-[var(--ux-vote-btn-color)]"
+                  )}
+                  style={{ borderRadius: 'var(--ux-radius-btn)' }}
+                  onClick={(e) => { e.stopPropagation(); alert('Głos na +'); }}
+                  title="Głosuj na plus"
+                >
+                  +
+                </button>
+                <span className="px-1.5 flex items-center gap-0.5 font-extrabold">
+                  <Flame className="h-3 w-3 shrink-0 animate-pulse text-orange-500" />
+                  +{data.temperature}°
+                </span>
+                <button 
+                  className={cn(
+                    "flex items-center justify-center transition-all duration-200 font-black text-xs h-5 w-5",
+                    hoverReveal ? "w-0 opacity-0 scale-0 group-hover:w-5 group-hover:opacity-100 group-hover:scale-100" : "bg-[var(--ux-vote-btn-bg)] text-[var(--ux-vote-btn-color)]"
+                  )}
+                  style={{ borderRadius: 'var(--ux-radius-btn)' }}
+                  onClick={(e) => { e.stopPropagation(); alert('Głos na -'); }}
+                  title="Głosuj na minus"
+                >
+                  -
+                </button>
+              </div>
+            </div>
+
+            {/* Right: Function Buttons (Slide / Fade in on hover conditionally) */}
+            <div className={cn(
+              "flex items-center gap-1 transition-all duration-300",
+              hoverReveal ? "opacity-0 translate-x-4 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto" : ""
+            )}>
               <button 
-                className={cn(
-                  "flex items-center justify-center transition-all duration-200 font-black text-xs h-5 w-5",
-                  hoverReveal ? "w-0 opacity-0 scale-0 group-hover:w-5 group-hover:opacity-100 group-hover:scale-100" : "bg-[var(--ux-vote-btn-bg)] text-[var(--ux-vote-btn-color)]"
-                )}
-                style={{ borderRadius: 'var(--ux-radius-btn)' }}
-                onClick={(e) => { e.stopPropagation(); alert('Głos na +'); }}
-                title="Głosuj na plus"
+                title="Dodaj do koszyka" 
+                className="ux-action-btn flex items-center justify-center"
+                onClick={(e) => { e.stopPropagation(); alert('Dodano do koszyka'); }}
               >
-                +
+                <ShoppingBag className="h-3.5 w-3.5" />
               </button>
-              <span className="px-1.5 flex items-center gap-0.5 font-extrabold">
-                <Flame className="h-3 w-3 shrink-0 animate-pulse text-orange-500" />
-                +{data.temperature}°
-              </span>
               <button 
-                className={cn(
-                  "flex items-center justify-center transition-all duration-200 font-black text-xs h-5 w-5",
-                  hoverReveal ? "w-0 opacity-0 scale-0 group-hover:w-5 group-hover:opacity-100 group-hover:scale-100" : "bg-[var(--ux-vote-btn-bg)] text-[var(--ux-vote-btn-color)]"
-                )}
-                style={{ borderRadius: 'var(--ux-radius-btn)' }}
-                onClick={(e) => { e.stopPropagation(); alert('Głos na -'); }}
-                title="Głosuj na minus"
+                title="Dodaj do ulubionych" 
+                className="ux-action-btn flex items-center justify-center"
+                onClick={(e) => { e.stopPropagation(); alert('Dodano do ulubionych'); }}
               >
-                -
+                <Heart className="h-3.5 w-3.5" />
+              </button>
+              <button 
+                title="Porównaj" 
+                className="ux-action-btn flex items-center justify-center"
+                onClick={(e) => { e.stopPropagation(); alert('Dodano do porównania'); }}
+              >
+                <Layers className="h-3.5 w-3.5" />
+              </button>
+              <button 
+                title="Udostępnij" 
+                className="ux-action-btn flex items-center justify-center"
+                onClick={(e) => { e.stopPropagation(); alert('Udostępniono link'); }}
+              >
+                <Share2 className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
-
-          {/* Right: Function Buttons (Slide / Fade in on hover conditionally) */}
-          <div className={cn(
-            "flex items-center gap-1 transition-all duration-300",
-            hoverReveal ? "opacity-0 translate-x-4 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto" : ""
-          )}>
-            <button 
-              title="Dodaj do koszyka" 
-              className="ux-action-btn flex items-center justify-center"
-              onClick={(e) => { e.stopPropagation(); alert('Dodano do koszyka'); }}
-            >
-              <ShoppingBag className="h-3.5 w-3.5" />
-            </button>
-            <button 
-              title="Dodaj do ulubionych" 
-              className="ux-action-btn flex items-center justify-center"
-              onClick={(e) => { e.stopPropagation(); alert('Dodano do ulubionych'); }}
-            >
-              <Heart className="h-3.5 w-3.5" />
-            </button>
-            <button 
-              title="Porównaj" 
-              className="ux-action-btn flex items-center justify-center"
-              onClick={(e) => { e.stopPropagation(); alert('Dodano do porównania'); }}
-            >
-              <Layers className="h-3.5 w-3.5" />
-            </button>
-            <button 
-              title="Udostępnij" 
-              className="ux-action-btn flex items-center justify-center"
-              onClick={(e) => { e.stopPropagation(); alert('Udostępniono link'); }}
-            >
-              <Share2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
         </div>
-      </div>
     </div>
   </div>
   );
@@ -988,14 +1067,14 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
    MODULE 3: CATEGORY PANEL VARIANTS
    ========================================================================== */
 
-function CategoryVariantNeoBrutalist() {
+function CategoryVariantNeoBrutalist({ categories }: { categories: any[] }) {
   return (
     <div className="space-y-4">
       <div className="bg-black text-white font-mono text-xs font-black px-4 py-2 uppercase w-fit border-2 border-black rotate-1">
         RETRO DIRECTORY
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        {MOCK_CATEGORIES.map(cat => (
+        {categories.map(cat => (
           <div key={cat.slug} className="bg-[#FAF7F0] dark:bg-[#1E1E1E] border-4 border-black p-4 rounded-none shadow-[4px_4px_0_0_#000] cursor-pointer hover:translate-x-0.5 hover:translate-y-0.5 active:translate-x-0 active:translate-y-0 transition-transform text-black dark:text-white">
             <div className="font-mono text-2xl mb-1">{cat.icon}</div>
             <div className="font-mono text-sm font-black uppercase">{cat.name}</div>
@@ -1007,11 +1086,11 @@ function CategoryVariantNeoBrutalist() {
   );
 }
 
-function CategoryVariantGlassmorphism() {
+function CategoryVariantGlassmorphism({ categories }: { categories: any[] }) {
   return (
     <div className="space-y-4">
       <div className="flex overflow-x-auto gap-2.5 pb-2 scrollbar-thin">
-        {MOCK_CATEGORIES.map(cat => (
+        {categories.map(cat => (
           <button
             key={cat.slug}
             className="flex-shrink-0 flex items-center gap-2 bg-white/5 dark:bg-black/25 border border-white/10 rounded-full px-4 py-2 text-xs font-bold text-foreground hover:bg-white/15 hover:border-cyan-500/30 transition-all backdrop-blur-md"
@@ -1028,10 +1107,10 @@ function CategoryVariantGlassmorphism() {
   );
 }
 
-function CategoryVariantGamified() {
+function CategoryVariantGamified({ categories }: { categories: any[] }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-      {MOCK_CATEGORIES.map(cat => (
+      {categories.map(cat => (
         <div 
           key={cat.slug} 
           className="bg-background border-2 border-orange-500/10 hover:border-orange-500/50 rounded-[28px] p-4 text-center cursor-pointer hover:scale-105 active:scale-95 transition-all duration-300 group shadow-sm hover:shadow-md"
@@ -1051,12 +1130,12 @@ function CategoryVariantGamified() {
   );
 }
 
-function CategoryVariantMinimalist() {
+function CategoryVariantMinimalist({ categories }: { categories: any[] }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div className="md:col-span-1 border-r border-border/20 pr-4 space-y-1">
         <span className="text-[10px] uppercase font-bold text-muted-foreground block mb-2 px-2">Kategorie Główne</span>
-        {MOCK_CATEGORIES.map((cat, idx) => (
+        {categories.map((cat, idx) => (
           <button
             key={cat.slug}
             className={cn(
@@ -1073,9 +1152,9 @@ function CategoryVariantMinimalist() {
       </div>
 
       <div className="md:col-span-2 space-y-4">
-        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Podkategorie ({MOCK_CATEGORIES[0].name})</span>
+        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Podkategorie ({categories[0]?.name || 'Ogólna'})</span>
         <div className="grid grid-cols-2 gap-2">
-          {MOCK_CATEGORIES[0].subcats.map(sub => (
+          {(categories[0]?.subcats || []).map(sub => (
             <div key={sub} className="p-3 bg-muted/20 border border-border/10 rounded-xl hover:border-primary/40 cursor-pointer transition-colors flex items-center justify-between group">
               <span className="text-xs font-medium text-foreground">{sub}</span>
               <ChevronRight className="h-3 w-3 text-muted-foreground opacity-50 group-hover:opacity-100" />
@@ -1091,7 +1170,7 @@ function CategoryVariantMinimalist() {
    MODULE 4: STATISTICS & TICKER VARIANTS
    ========================================================================== */
 
-function StatsVariantNeoBrutalist() {
+function StatsVariantNeoBrutalist({ counts }: { counts: { products: number; deals: number; users: number } }) {
   return (
     <div className="bg-[#FAF7F0] dark:bg-[#1E1E1E] text-black dark:text-white border-4 border-black p-4 rounded-none font-mono">
       <div className="flex items-center gap-2 border-b-2 border-black pb-2 mb-3">
@@ -1100,10 +1179,10 @@ function StatsVariantNeoBrutalist() {
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'ONLINE_USERS', val: '1,421' },
-          { label: 'ACTIVE_DEALS', val: '8,924' },
-          { label: 'VOTES_24H', val: '+45,392' },
-          { label: 'COMMENTS_24H', val: '12,981' },
+          { label: 'ONLINE_USERS', val: String(Math.round((counts.users || 1800) * 0.12)) },
+          { label: 'ACTIVE_DEALS', val: String(counts.deals || 340) },
+          { label: 'ACTIVE_PRODUCTS', val: String(counts.products || 120) },
+          { label: 'TOTAL_USERS', val: String(counts.users || 1800) },
         ].map(item => (
           <div key={item.label} className="border-2 border-black p-3 bg-white text-black">
             <div className="text-[9px] text-slate-500 font-extrabold">{item.label}</div>
@@ -1115,7 +1194,7 @@ function StatsVariantNeoBrutalist() {
   );
 }
 
-function StatsVariantGlassmorphism() {
+function StatsVariantGlassmorphism({ counts }: { counts: { products: number; deals: number; users: number } }) {
   return (
     <div className="relative rounded-2xl border border-white/10 bg-slate-950/20 p-5 overflow-hidden">
       {/* Background neon light blob */}
@@ -1123,10 +1202,10 @@ function StatsVariantGlassmorphism() {
       
       <div className="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
         {[
-          { label: 'Użytkownicy online', val: '1 421', desc: '12m temu', icon: Users },
-          { label: 'Aktywne okazje', val: '8 924', desc: '+12 dziś', icon: Flame },
-          { label: 'Oddane głosy', val: '45 392', desc: '+4.2k dziś', icon: ThumbsUp },
-          { label: 'Dyskusje (24h)', val: '12 981', desc: '+2.1k postów', icon: MessageSquare },
+          { label: 'Użytkownicy online', val: String(Math.round((counts.users || 1800) * 0.12)), desc: '12m temu', icon: Users },
+          { label: 'Aktywne okazje', val: String(counts.deals || 340), desc: '+12 dziś', icon: Flame },
+          { label: 'Produkty w bazie', val: String(counts.products || 120), desc: '+4 dziś', icon: ThumbsUp },
+          { label: 'Wszyscy zarejestrowani', val: String(counts.users || 1800), desc: 'Stan konta', icon: Users },
         ].map((item, idx) => (
           <div key={idx} className="space-y-1">
             <div className="w-8 h-8 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center mx-auto mb-2">
@@ -1142,14 +1221,14 @@ function StatsVariantGlassmorphism() {
   );
 }
 
-function StatsVariantGamified() {
+function StatsVariantGamified({ counts }: { counts: { products: number; deals: number; users: number } }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {[
-        { label: 'Hunterów Online', val: '1 421', bg: 'from-orange-500/10 to-red-500/10 border-orange-500/20 text-orange-500', icon: Users },
-        { label: 'Gorących Okazji', val: '8 924', bg: 'from-amber-500/10 to-yellow-500/10 border-amber-500/20 text-amber-500', icon: Flame },
-        { label: 'Punktów Reputacji', val: '45 392', bg: 'from-green-500/10 to-emerald-500/10 border-green-500/20 text-emerald-500', icon: Award },
-        { label: 'Komentarzy Społeczności', val: '12 981', bg: 'from-blue-500/10 to-cyan-500/10 border-blue-500/20 text-blue-500', icon: MessageSquare },
+        { label: 'Hunterów Online', val: String(Math.round((counts.users || 1800) * 0.12)), bg: 'from-orange-500/10 to-red-500/10 border-orange-500/20 text-orange-500', icon: Users },
+        { label: 'Gorących Okazji', val: String(counts.deals || 340), bg: 'from-amber-500/10 to-yellow-500/10 border-amber-500/20 text-amber-500', icon: Flame },
+        { label: 'Katalog Produktów', val: String(counts.products || 120), bg: 'from-green-500/10 to-emerald-500/10 border-green-500/20 text-emerald-500', icon: Award },
+        { label: 'Zarejestrowani Hunterzy', val: String(counts.users || 1800), bg: 'from-blue-500/10 to-cyan-500/10 border-blue-500/20 text-blue-500', icon: MessageSquare },
       ].map((item, idx) => (
         <div 
           key={idx} 
@@ -1171,15 +1250,15 @@ function StatsVariantGamified() {
   );
 }
 
-function StatsVariantMinimalist() {
+function StatsVariantMinimalist({ counts }: { counts: { products: number; deals: number; users: number } }) {
   return (
     <div className="border border-border/40 rounded-xl p-6 bg-background">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 divide-y sm:divide-y-0 sm:divide-x divide-border/20">
         {[
-          { label: 'online users', val: '1.4K' },
-          { label: 'active deals', val: '8.9K' },
-          { label: 'reputation score', val: '45.3K' },
-          { label: 'discussions', val: '12.9K' },
+          { label: 'online users', val: String(Math.round((counts.users || 1800) * 0.12)) },
+          { label: 'active deals', val: String(counts.deals || 340) },
+          { label: 'products catalog', val: String(counts.products || 120) },
+          { label: 'registered users', val: String(counts.users || 1800) },
         ].map((item, idx) => (
           <div key={idx} className={cn("space-y-1", idx > 0 && "sm:pl-8 pt-4 sm:pt-0")}>
             <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold">

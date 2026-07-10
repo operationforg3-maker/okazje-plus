@@ -1098,7 +1098,7 @@
   --ux-badge-overlay-border: 1px solid rgba(0, 0, 0, 0.05);
 
   /* Hover Reveal Slide-up Drawer Variables */
-  --ux-image-hover-bg: rgba(255, 255, 255, 0.98);
+  --ux-image-hover-bg: hsl(var(--card) / 0.92);
   --ux-image-hover-border: 1px solid rgba(0, 0, 0, 0.08);
   --ux-image-hover-radius: 12px 12px 0 0;
   --ux-image-hover-color: #0f172a;
@@ -1196,7 +1196,7 @@
   --ux-badge-overlay-border: 2px solid #fdba74;
 
   /* Hover Reveal Slide-up Drawer Variables */
-  --ux-image-hover-bg: #fffbeb;
+  --ux-image-hover-bg: hsl(var(--card) / 0.92);
   --ux-image-hover-border: 2px solid #fdba74;
   --ux-image-hover-radius: 20px 20px 0 0;
   --ux-image-hover-color: #451a03;
@@ -1297,7 +1297,7 @@
   --ux-btn-color: #ffedd5;
   --ux-btn-border: 2px solid #ea580c;
 
-  --ux-image-hover-bg: #1c1917;
+  --ux-image-hover-bg: hsl(var(--card) / 0.92);
   --ux-image-hover-border: 2px solid #ea580c;
   --ux-image-hover-color: #ffedd5;
 
@@ -1331,7 +1331,7 @@
   --ux-btn-color: #ffffff;
   --ux-btn-border: 1px solid rgba(255, 255, 255, 0.1);
 
-  --ux-image-hover-bg: rgba(30, 30, 30, 0.98);
+  --ux-image-hover-bg: hsl(var(--card) / 0.92);
   --ux-image-hover-border: 1px solid rgba(255, 255, 255, 0.1);
   --ux-image-hover-color: #ffffff;
 
