@@ -11,7 +11,17 @@ export const dynamic = 'force-dynamic';
 export default async function UXVariantsPage() {
   // Fetch real data on the server side
   const realDeals = await searchDealsTypesense("", { limit: 4, sortBy: 'newest' });
-  const realProducts = await searchProductsTypesense("", { limit: 4, sortBy: 'newest' });
+  let realProducts = await searchProductsTypesense("", { limit: 4, sortBy: 'newest' });
+  
+  if (!realProducts || realProducts.length === 0) {
+    try {
+      const snap = await adminDb.collection('products').limit(4).get();
+      realProducts = snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    } catch (e) {
+      console.warn('Failed to query fallback products collection', e);
+    }
+  }
+
   const categoriesData = await getAllCategories();
   
   const realCategories = await Promise.all(

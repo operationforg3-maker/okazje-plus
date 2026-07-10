@@ -836,7 +836,7 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
     <div className={cn(
       "ux-card-container p-4 w-full relative min-w-0 text-left group flex",
       isList ? "flex-row items-center gap-6 h-auto" : "flex-col justify-between",
-      !isList && !isMasonry ? (details === 'compact' ? "h-[360px]" : "h-[440px]") : "",
+      !isList && !isMasonry ? (details === 'compact' ? "h-[370px]" : "h-[440px]") : "",
       isMasonry ? "h-auto" : "",
       !isList && "max-w-[280px]"
     )}>
@@ -851,8 +851,8 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
       {/* Image container with Slide-up Details Overlay (Hover Reveal for Grid/Masonry only) */}
       <div className={cn(
         "ux-image-wrapper relative bg-muted/10 dark:bg-zinc-800/20 shrink-0 flex items-center justify-center overflow-hidden w-full transition-all duration-300",
-        isList ? "w-28 h-28" : "mb-3",
-        !isList && !isMasonry ? "h-44 aspect-square" : "",
+        isList ? "w-36 h-36" : "mb-3",
+        !isList && !isMasonry ? (details === 'compact' ? "h-32" : "h-44 aspect-square") : "",
         isMasonry ? (cardIndex % 2 === 0 ? "h-56" : "h-72") : "",
         // Colorful Masonry backgrounds
         isMasonry && styleFamily === 'playful' && "bg-gradient-to-tr from-orange-500/10 to-amber-500/10 dark:from-orange-500/5 dark:to-amber-500/5",
@@ -889,12 +889,15 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
             <div className="flex items-center justify-between text-[11px] text-muted-foreground">
               <span>{data.storeName}</span>
               {type === 'deal' ? (
-                <span className="flex items-center gap-1 font-semibold text-slate-500">
-                  <MessageSquare className="h-3.5 w-3.5" /> {data.commentsCount}
+                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-black text-slate-600 dark:text-slate-300 border border-slate-200/50 dark:border-zinc-700/50 hover:bg-slate-200/80 dark:hover:bg-zinc-700 transition-colors">
+                  <MessageSquare className="h-3 w-3 shrink-0 text-slate-400 dark:text-slate-500" />
+                  <span>{data.commentsCount}</span>
                 </span>
               ) : (
-                <span className="text-amber-500 font-extrabold flex items-center gap-0.5">
-                  ★ {data.rating} <span className="text-muted-foreground font-normal">({data.reviewsCount})</span>
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 dark:bg-amber-500/5 text-[10px] font-black text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/15 transition-colors">
+                  <span className="text-amber-500">★</span>
+                  <span>{typeof data.rating === 'number' ? data.rating.toFixed(1) : '4.5'}</span>
+                  <span className="text-muted-foreground/80 font-medium">({data.reviewsCount})</span>
                 </span>
               )}
             </div>
@@ -988,7 +991,7 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
           {/* Stable Footer Section - No size jumping */}
           <div className={cn(
             "flex items-center justify-between",
-            isList ? "pt-0 border-t-0 flex-col-reverse items-end gap-2.5 mt-auto" : "border-t border-border/10 pt-2"
+            isList ? "pt-0 border-t-0 flex-row-reverse items-center justify-end gap-3.5 mt-auto w-full" : "border-t border-border/10 pt-2"
           )}>
             {/* Left: Voting Widget with Temperature (Styled with theme variables) */}
             <div className="flex items-center">
