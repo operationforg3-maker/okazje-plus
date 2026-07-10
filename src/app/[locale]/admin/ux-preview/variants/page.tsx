@@ -1,5 +1,7 @@
 import React from 'react';
 import { UXVariantsPlayground } from '@/components/admin/ux-variants-playground';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +17,9 @@ export default function UXVariantsPage() {
             Laboratorium testowe i audytor nowych stylów wizualnych dla Okazje+
           </p>
         </div>
+        <Button asChild>
+          <Link href="/new-ux">Uruchom Prototypy Nowego UX</Link>
+        </Button>
       </div>
 
       <UXVariantsPlayground />

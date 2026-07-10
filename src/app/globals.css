@@ -1081,6 +1081,37 @@
   --ux-spec-color: hsl(var(--muted-foreground));
   --ux-spec-radius: 0.375rem;
   --ux-spec-border: 1px solid hsl(var(--border) / 0.3);
+
+  /* Hover Reveal Overlay Variables */
+  --ux-overlay-bg: rgba(15, 23, 42, 0.25);
+  --ux-overlay-blur: blur(2px);
+  --ux-btn-bg: rgba(255, 255, 255, 0.95);
+  --ux-btn-color: #0f172a;
+  --ux-btn-border: 1px solid rgba(0, 0, 0, 0.05);
+  --ux-btn-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  --ux-radius-btn: 9999px;
+
+  --ux-badge-overlay-bg: rgba(255, 255, 255, 0.85);
+  --ux-badge-overlay-color: #0f172a;
+  --ux-badge-overlay-blur: blur(8px);
+  --ux-badge-overlay-radius: 12px;
+  --ux-badge-overlay-border: 1px solid rgba(0, 0, 0, 0.05);
+
+  /* Hover Reveal Slide-up Drawer Variables */
+  --ux-image-hover-bg: rgba(255, 255, 255, 0.98);
+  --ux-image-hover-border: 1px solid rgba(0, 0, 0, 0.08);
+  --ux-image-hover-radius: 12px 12px 0 0;
+  --ux-image-hover-color: #0f172a;
+
+  /* Voting Widget Custom Variables */
+  --ux-vote-bg: hsl(var(--muted) / 0.5);
+  --ux-vote-color: hsl(var(--foreground));
+  --ux-vote-border: 1px solid hsl(var(--border) / 0.4);
+  --ux-vote-radius: 9999px;
+  --ux-vote-shadow: none;
+  --ux-vote-btn-hover-bg: hsl(var(--primary));
+  --ux-vote-btn-hover-color: hsl(var(--primary-foreground));
+  --ux-vote-btn-bg: transparent;
 }
 
 [data-ux-style="neo-brutalist"] {
@@ -1099,6 +1130,37 @@
   --ux-spec-color: inherit;
   --ux-spec-radius: 0px;
   --ux-spec-border: 1px dashed rgba(0, 0, 0, 0.3);
+
+  /* Hover Reveal Overlay Variables */
+  --ux-overlay-bg: rgba(0, 0, 0, 0.15);
+  --ux-overlay-blur: none;
+  --ux-btn-bg: #ffffff;
+  --ux-btn-color: #000000;
+  --ux-btn-border: 3px solid #000000;
+  --ux-btn-shadow: 3px 3px 0px 0px #000000;
+  --ux-radius-btn: 0px;
+
+  --ux-badge-overlay-bg: #f3f4f6;
+  --ux-badge-overlay-color: #000000;
+  --ux-badge-overlay-blur: none;
+  --ux-badge-overlay-radius: 0px;
+  --ux-badge-overlay-border: 3px solid #000000;
+
+  /* Hover Reveal Slide-up Drawer Variables */
+  --ux-image-hover-bg: #FAF7F0;
+  --ux-image-hover-border: 4px solid #000000;
+  --ux-image-hover-radius: 0px;
+  --ux-image-hover-color: #000000;
+
+  /* Voting Widget Custom Variables */
+  --ux-vote-bg: #FFE4E6;
+  --ux-vote-color: #000000;
+  --ux-vote-border: 3px solid #000000;
+  --ux-vote-radius: 0px;
+  --ux-vote-shadow: 3px 3px 0px 0px #000000;
+  --ux-vote-btn-hover-bg: #EF4444;
+  --ux-vote-btn-hover-color: #ffffff;
+  --ux-vote-btn-bg: transparent;
 }
 
 [data-ux-style="playful"] {
@@ -1117,6 +1179,37 @@
   --ux-spec-color: rgb(194, 65, 12); /* text-orange-700 */
   --ux-spec-radius: 9999px;
   --ux-spec-border: 1px solid rgba(249, 115, 22, 0.1);
+
+  /* Hover Reveal Overlay Variables */
+  --ux-overlay-bg: rgba(251, 146, 60, 0.15);
+  --ux-overlay-blur: none;
+  --ux-btn-bg: #ffedd5;
+  --ux-btn-color: #ea580c;
+  --ux-btn-border: 2px solid #fdba74;
+  --ux-btn-shadow: 0 4px 8px -2px rgba(234, 88, 12, 0.15);
+  --ux-radius-btn: 14px;
+
+  --ux-badge-overlay-bg: #ffedd5;
+  --ux-badge-overlay-color: #ea580c;
+  --ux-badge-overlay-blur: none;
+  --ux-badge-overlay-radius: 16px;
+  --ux-badge-overlay-border: 2px solid #fdba74;
+
+  /* Hover Reveal Slide-up Drawer Variables */
+  --ux-image-hover-bg: #fffbeb;
+  --ux-image-hover-border: 2px solid #fdba74;
+  --ux-image-hover-radius: 20px 20px 0 0;
+  --ux-image-hover-color: #451a03;
+
+  /* Voting Widget Custom Variables */
+  --ux-vote-bg: #ffedd5;
+  --ux-vote-color: #ea580c;
+  --ux-vote-border: 2px solid #fdba74;
+  --ux-vote-radius: 9999px;
+  --ux-vote-shadow: 0 4px 6px -1px rgba(234, 88, 12, 0.1);
+  --ux-vote-btn-hover-bg: #ea580c;
+  --ux-vote-btn-hover-color: #ffffff;
+  --ux-vote-btn-bg: transparent;
 }
 
 [data-ux-style="minimalist"] {
@@ -1135,6 +1228,37 @@
   --ux-spec-color: hsl(var(--muted-foreground));
   --ux-spec-radius: 0px;
   --ux-spec-border: 1px solid hsl(var(--border) / 0.1);
+
+  /* Hover Reveal Overlay Variables */
+  --ux-overlay-bg: rgba(0, 0, 0, 0.05);
+  --ux-overlay-blur: none;
+  --ux-btn-bg: #ffffff;
+  --ux-btn-color: #000000;
+  --ux-btn-border: 1px solid #e2e8f0;
+  --ux-btn-shadow: none;
+  --ux-radius-btn: 0px;
+
+  --ux-badge-overlay-bg: #ffffff;
+  --ux-badge-overlay-color: #000000;
+  --ux-badge-overlay-blur: none;
+  --ux-badge-overlay-radius: 0px;
+  --ux-badge-overlay-border: 1px solid #e2e8f0;
+
+  /* Hover Reveal Slide-up Drawer Variables */
+  --ux-image-hover-bg: #ffffff;
+  --ux-image-hover-border: 1px solid #e2e8f0;
+  --ux-image-hover-radius: 0px;
+  --ux-image-hover-color: #000000;
+
+  /* Voting Widget Custom Variables */
+  --ux-vote-bg: transparent;
+  --ux-vote-color: hsl(var(--foreground));
+  --ux-vote-border: 1px solid hsl(var(--border) / 0.2);
+  --ux-vote-radius: 0.375rem;
+  --ux-vote-shadow: none;
+  --ux-vote-btn-hover-bg: hsl(var(--foreground));
+  --ux-vote-btn-hover-color: hsl(var(--background));
+  --ux-vote-btn-bg: transparent;
 }
 
 /* Dark mode overrides for data-ux-style */
@@ -1145,6 +1269,22 @@
   --ux-shadow-hover: 10px 10px 0 0 #ffffff;
   --ux-card-bg: #1E1E1E;
   --ux-spec-border: 1px dashed rgba(255, 255, 255, 0.3);
+
+  --ux-btn-border: 3px solid #ffffff;
+  --ux-btn-shadow: 3px 3px 0px 0px #ffffff;
+  --ux-btn-bg: #1e1e1e;
+  --ux-btn-color: #ffffff;
+
+  --ux-image-hover-bg: #1e1e1e;
+  --ux-image-hover-border: 4px solid #ffffff;
+  --ux-image-hover-color: #ffffff;
+
+  --ux-vote-bg: #4c0519;
+  --ux-vote-color: #ffffff;
+  --ux-vote-border: 3px solid #ffffff;
+  --ux-vote-shadow: 3px 3px 0px 0px #ffffff;
+  --ux-vote-btn-hover-bg: #EF4444;
+  --ux-vote-btn-hover-color: #ffffff;
 }
 
 .dark[data-ux-style="playful"],
@@ -1152,6 +1292,54 @@
   --ux-border-color: rgba(249, 115, 22, 0.1);
   --ux-spec-bg: rgb(69, 26, 3); /* dark orange bg */
   --ux-spec-color: rgb(253, 186, 116); /* light orange text */
+
+  --ux-btn-bg: #451a03;
+  --ux-btn-color: #ffedd5;
+  --ux-btn-border: 2px solid #ea580c;
+
+  --ux-image-hover-bg: #1c1917;
+  --ux-image-hover-border: 2px solid #ea580c;
+  --ux-image-hover-color: #ffedd5;
+
+  --ux-vote-bg: #451a03;
+  --ux-vote-color: #ffedd5;
+  --ux-vote-border: 2px solid #ea580c;
+  --ux-vote-btn-hover-bg: #ea580c;
+  --ux-vote-btn-hover-color: #ffffff;
+}
+
+.dark[data-ux-style="minimalist"],
+.dark [data-ux-style="minimalist"] {
+  --ux-btn-bg: #18181b;
+  --ux-btn-color: #ffffff;
+  --ux-btn-border: 1px solid #27272a;
+
+  --ux-image-hover-bg: #18181b;
+  --ux-image-hover-border: 1px solid #27272a;
+  --ux-image-hover-color: #ffffff;
+
+  --ux-vote-bg: transparent;
+  --ux-vote-color: #ffffff;
+  --ux-vote-border: 1px solid #27272a;
+  --ux-vote-btn-hover-bg: #ffffff;
+  --ux-vote-btn-hover-color: #000000;
+}
+
+.dark[data-ux-style="classic"],
+.dark [data-ux-style="classic"] {
+  --ux-btn-bg: rgba(30, 30, 30, 0.95);
+  --ux-btn-color: #ffffff;
+  --ux-btn-border: 1px solid rgba(255, 255, 255, 0.1);
+
+  --ux-image-hover-bg: rgba(30, 30, 30, 0.98);
+  --ux-image-hover-border: 1px solid rgba(255, 255, 255, 0.1);
+  --ux-image-hover-color: #ffffff;
+
+  --ux-vote-bg: rgba(30, 30, 30, 0.95);
+  --ux-vote-color: #ffffff;
+  --ux-vote-border: 1px solid rgba(255, 255, 255, 0.1);
+  --ux-vote-btn-hover-bg: hsl(var(--primary));
+  --ux-vote-btn-hover-color: hsl(var(--primary-foreground));
 }
 
 @layer utilities {
@@ -1192,10 +1380,69 @@
     font-family: var(--ux-font) !important;
   }
 
+  .ux-vote-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    background-color: var(--ux-vote-bg) !important;
+    color: var(--ux-vote-color) !important;
+    border: var(--ux-vote-border) !important;
+    border-radius: var(--ux-vote-radius) !important;
+    box-shadow: var(--ux-vote-shadow) !important;
+    font-family: var(--ux-font) !important;
+    padding: 0.125rem !important;
+    transition: all 0.25s ease-in-out !important;
+  }
+
+  .ux-vote-pill button:hover {
+    background-color: var(--ux-vote-btn-hover-bg) !important;
+    color: var(--ux-vote-btn-hover-color) !important;
+  }
+
   .ux-icon-box {
     border-radius: var(--ux-radius-image) !important;
     border: var(--ux-border-width) solid var(--ux-border-color) !important;
     transition: all 0.3s ease-out;
+  }
+
+  /* Hover Reveal Image Overlay and Action Buttons */
+  .ux-image-overlay {
+    background-color: var(--ux-overlay-bg) !important;
+    backdrop-filter: var(--ux-overlay-blur) !important;
+    transition: all 0.3s ease-in-out;
+  }
+
+  .ux-action-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 1.85rem !important;  /* ~30px */
+    height: 1.85rem !important; /* ~30px */
+    border-radius: var(--ux-radius-btn) !important;
+    background-color: var(--ux-btn-bg) !important;
+    color: var(--ux-btn-color) !important;
+    border: var(--ux-btn-border) !important;
+    box-shadow: var(--ux-btn-shadow) !important;
+    opacity: 0.65;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  }
+
+  .ux-card-container:hover .ux-action-btn {
+    opacity: 0.9 !important;
+  }
+
+  .ux-action-btn:hover {
+    opacity: 1 !important;
+    transform: scale(1.15) !important;
+  }
+
+  /* Slide-up details overlay on top of the card image on hover */
+  .ux-image-hover-info {
+    background-color: var(--ux-image-hover-bg) !important;
+    border-top: var(--ux-image-hover-border) !important;
+    border-radius: var(--ux-image-hover-radius) !important;
+    color: var(--ux-image-hover-color) !important;
+    font-family: var(--ux-font) !important;
+    box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.08) !important;
   }
 }
 

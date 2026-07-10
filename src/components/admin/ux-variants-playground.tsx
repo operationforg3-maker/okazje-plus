@@ -71,6 +71,41 @@ const MOCK_PRODUCT = {
   commentsCount: 24,
 };
 
+const MOCK_DEAL_2 = {
+  id: 'mock-deal-456',
+  title: 'Roborock Q7 Max+ Robot sprzątający ze stacją opróżniania, moc ssania 4200Pa, nawigacja LiDAR',
+  price: 1899.00,
+  originalPrice: 2499.00,
+  temperature: 185,
+  commentsCount: 42,
+  votesCount: 56,
+  imageUrl: 'https://ae-pic-a1.aliexpress-media.com/kf/S8cf46e9dfd1045239922e3fbf4f2f458M.jpg',
+  storeName: 'Roborock Store',
+  postedAt: '2026-07-09T19:00:00Z',
+  discount: 24,
+};
+
+const MOCK_PRODUCT_2 = {
+  id: 'mock-product-456',
+  title: 'Roborock Q7 Max+ (Produkt)',
+  price: 1899.00,
+  originalPrice: 2499.00,
+  rating: 4.9,
+  reviewsCount: 382,
+  imageUrl: 'https://ae-pic-a1.aliexpress-media.com/kf/S8cf46e9dfd1045239922e3fbf4f2f458M.jpg',
+  storeName: 'Roborock Official Store',
+  specs: {
+    'Moc ssania': '4200 Pa',
+    'Pojemność': '470ml (kurz) / 350ml (woda)',
+    'Czas pracy': 'Do 180 min'
+  },
+  lowestPriceIn30Days: 1799.00,
+  freeShipping: true,
+  discount: 24,
+  temperature: 185,
+  commentsCount: 42,
+};
+
 const MOCK_CATEGORIES = [
   { name: 'Elektronika', slug: 'elektronika', count: 142, icon: '📱', subcats: ['Smartfony', 'Komputery', 'Akcesoria'] },
   { name: 'Dom i Ogród', slug: 'dom-i-ogrod', count: 98, icon: '🏡', subcats: ['Meble', 'Kuchnia', 'Narzędzia'] },
@@ -290,13 +325,24 @@ export function UXVariantsPlayground() {
               {/* Card 1: Neo-Brutalist */}
               <div className="space-y-3">
                 <span className="text-xs font-extrabold text-primary uppercase tracking-wider block text-center">V1: Neo-Brutalist</span>
-                <div className="h-full flex items-start justify-center p-2 w-full" data-ux-style="neo-brutalist">
+                <div className="flex flex-col gap-6 items-center p-2 w-full" data-ux-style="neo-brutalist">
                   <CardVariantUniversal 
                     type={cardType}
                     details={cardDetails}
                     layout={cardLayout}
                     hoverReveal={hoverReveal}
+                    styleFamily="neo-brutalist"
+                    cardIndex={0}
                     data={cardType === 'deal' ? MOCK_DEAL : MOCK_PRODUCT} 
+                  />
+                  <CardVariantUniversal 
+                    type={cardType}
+                    details={cardDetails}
+                    layout={cardLayout}
+                    hoverReveal={hoverReveal}
+                    styleFamily="neo-brutalist"
+                    cardIndex={1}
+                    data={cardType === 'deal' ? MOCK_DEAL_2 : MOCK_PRODUCT_2} 
                   />
                 </div>
               </div>
@@ -304,13 +350,24 @@ export function UXVariantsPlayground() {
               {/* Card 2: Obecny Styl (Classic) */}
               <div className="space-y-3">
                 <span className="text-xs font-extrabold text-primary uppercase tracking-wider block text-center">V2: Obecny Styl (Classic)</span>
-                <div className="h-full flex items-start justify-center p-2 w-full" data-ux-style="classic">
+                <div className="flex flex-col gap-6 items-center p-2 w-full" data-ux-style="classic">
                   <CardVariantUniversal 
                     type={cardType}
                     details={cardDetails}
                     layout={cardLayout}
                     hoverReveal={hoverReveal}
+                    styleFamily="classic"
+                    cardIndex={0}
                     data={cardType === 'deal' ? MOCK_DEAL : MOCK_PRODUCT} 
+                  />
+                  <CardVariantUniversal 
+                    type={cardType}
+                    details={cardDetails}
+                    layout={cardLayout}
+                    hoverReveal={hoverReveal}
+                    styleFamily="classic"
+                    cardIndex={1}
+                    data={cardType === 'deal' ? MOCK_DEAL_2 : MOCK_PRODUCT_2} 
                   />
                 </div>
               </div>
@@ -318,13 +375,24 @@ export function UXVariantsPlayground() {
               {/* Card 3: Playful / Bouncy */}
               <div className="space-y-3">
                 <span className="text-xs font-extrabold text-primary uppercase tracking-wider block text-center">V3: Playful / Bouncy</span>
-                <div className="h-full flex items-start justify-center p-2 w-full" data-ux-style="playful">
+                <div className="flex flex-col gap-6 items-center p-2 w-full" data-ux-style="playful">
                   <CardVariantUniversal 
                     type={cardType}
                     details={cardDetails}
                     layout={cardLayout}
                     hoverReveal={hoverReveal}
+                    styleFamily="playful"
+                    cardIndex={0}
                     data={cardType === 'deal' ? MOCK_DEAL : MOCK_PRODUCT} 
+                  />
+                  <CardVariantUniversal 
+                    type={cardType}
+                    details={cardDetails}
+                    layout={cardLayout}
+                    hoverReveal={hoverReveal}
+                    styleFamily="playful"
+                    cardIndex={1}
+                    data={cardType === 'deal' ? MOCK_DEAL_2 : MOCK_PRODUCT_2} 
                   />
                 </div>
               </div>
@@ -332,13 +400,24 @@ export function UXVariantsPlayground() {
               {/* Card 4: Immersive Minimalist */}
               <div className="space-y-3">
                 <span className="text-xs font-extrabold text-primary uppercase tracking-wider block text-center">V4: Immersive Minimalist</span>
-                <div className="h-full flex items-start justify-center p-2 w-full" data-ux-style="minimalist">
+                <div className="flex flex-col gap-6 items-center p-2 w-full" data-ux-style="minimalist">
                   <CardVariantUniversal 
                     type={cardType}
                     details={cardDetails}
                     layout={cardLayout}
                     hoverReveal={hoverReveal}
+                    styleFamily="minimalist"
+                    cardIndex={0}
                     data={cardType === 'deal' ? MOCK_DEAL : MOCK_PRODUCT} 
+                  />
+                  <CardVariantUniversal 
+                    type={cardType}
+                    details={cardDetails}
+                    layout={cardLayout}
+                    hoverReveal={hoverReveal}
+                    styleFamily="minimalist"
+                    cardIndex={1}
+                    data={cardType === 'deal' ? MOCK_DEAL_2 : MOCK_PRODUCT_2} 
                   />
                 </div>
               </div>
@@ -679,11 +758,13 @@ function HeroVariantMinimalist() {
    MODULE 2: DEAL/PRODUCT CARD VARIANTS
    ========================================================================== */
 
-function CardVariantUniversal({ type, details, layout, hoverReveal, data }: {
+function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily, cardIndex = 0, data }: {
   type: 'deal' | 'product';
   details: 'compact' | 'expanded';
   layout: 'grid' | 'masonry' | 'list';
   hoverReveal: boolean;
+  styleFamily: 'neo-brutalist' | 'classic' | 'playful' | 'minimalist';
+  cardIndex?: number;
   data: any;
 }) {
   const isList = layout === 'list';
@@ -691,106 +772,215 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, data }: {
   
   return (
     <div className={cn(
-      "ux-card-container p-4 w-full relative min-w-0 text-left group",
-      isList ? "flex flex-row items-center gap-6" : "flex flex-col max-w-[280px]"
+      "ux-card-container p-4 w-full relative min-w-0 text-left group flex",
+      isList ? "flex-row items-center gap-6 h-auto" : "flex-col justify-between",
+      !isList && !isMasonry ? (details === 'compact' ? "h-[350px]" : "h-[420px]") : "",
+      isMasonry ? "h-auto" : "",
+      !isList && "max-w-[280px]"
     )}>
       {type === 'deal' && typeof data.discount === 'number' && (
-        <div className="absolute top-3 left-3 z-10">
+        <div className="absolute top-3 left-3 z-30">
           <span className="ux-badge text-white text-[9px] font-black px-2.5 py-1 shadow-md">
             -{data.discount}%
           </span>
         </div>
       )}
 
+      {/* Image container with Slide-up Details Overlay (Hover Reveal for Grid/Masonry only) */}
       <div className={cn(
-        "ux-image-wrapper relative bg-muted/10 dark:bg-zinc-800/20 p-3 shrink-0 flex items-center justify-center overflow-hidden",
-        isList ? "w-28 h-28" : "w-full mb-3",
-        !isList && !isMasonry ? "aspect-square" : "",
-        isMasonry ? "min-h-[140px] max-h-[220px]" : ""
+        "ux-image-wrapper relative bg-muted/10 dark:bg-zinc-800/20 shrink-0 flex items-center justify-center overflow-hidden w-full transition-all duration-300",
+        isList ? "w-28 h-28" : "mb-3",
+        !isList && !isMasonry ? "h-44 aspect-square" : "",
+        isMasonry ? (cardIndex % 2 === 0 ? "h-56" : "h-72") : "",
+        // Colorful Masonry backgrounds
+        isMasonry && styleFamily === 'playful' && "bg-gradient-to-tr from-orange-500/10 to-amber-500/10 dark:from-orange-500/5 dark:to-amber-500/5",
+        isMasonry && styleFamily === 'neo-brutalist' && "bg-yellow-500/10 dark:bg-yellow-500/5",
+        isMasonry && styleFamily === 'classic' && "bg-sky-500/10 dark:bg-sky-500/5",
+        isMasonry && styleFamily === 'minimalist' && "bg-zinc-100 dark:bg-zinc-900"
       )}>
-        <img src={data.imageUrl} alt={data.title} className="w-full h-full object-contain" />
+        <img 
+          src={data.imageUrl} 
+          alt={data.title} 
+          className={cn(
+            "w-full h-full transition-transform duration-500",
+            isMasonry ? "object-cover scale-[1.03] group-hover:scale-105" : "object-contain p-2"
+          )} 
+        />
       </div>
 
-      <div className="flex-grow space-y-2 min-w-0">
-        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-          <span>{data.storeName}</span>
-          {type === 'product' && data.freeShipping && (
-            <span className="text-emerald-600 font-bold">Darmowa dostawa</span>
-          )}
+      {/* Text Info Section */}
+      <div className="flex-grow space-y-2.5 min-w-0 flex flex-col justify-between pt-1 relative z-10">
+        {/* Upper Part: Store name, Title, Specs/Description (Translates upwards on hover to cover image) */}
+        <div className={cn(
+          "transition-all duration-300 ease-out relative z-10 bg-[var(--ux-image-hover-bg)] pb-1",
+          hoverReveal && !isList ? "transform group-hover:-translate-y-12 group-hover:pb-12" : ""
+        )}>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>{data.storeName}</span>
+              {type === 'deal' ? (
+                <span className="flex items-center gap-1 font-semibold text-slate-500">
+                  <MessageSquare className="h-3.5 w-3.5" /> {data.commentsCount}
+                </span>
+              ) : (
+                <span className="text-amber-500 font-extrabold flex items-center gap-0.5">
+                  ★ {data.rating} <span className="text-muted-foreground font-normal">({data.reviewsCount})</span>
+                </span>
+              )}
+            </div>
+
+            <h4 className="text-xs font-bold line-clamp-2 leading-tight transition-colors group-hover:text-primary">
+              {data.title}
+            </h4>
+
+            {/* List layout extra details reveal on hover */}
+            {isList && hoverReveal && (
+              <div className="max-h-0 opacity-0 overflow-hidden group-hover:max-h-20 group-hover:opacity-100 transition-all duration-300 ease-in-out text-[11px] text-muted-foreground border-t border-border/5 pt-1.5 mt-1">
+                {type === 'deal' ? (
+                  <p className="line-clamp-2 leading-relaxed">
+                    Rewelacyjna oferta! Szybka dostawa z magazynu oficjalnego dystrybutora. Sprawdź historię ceny i kup zanim wyprzedadzą zapasy!
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {data.specs && Object.entries(data.specs).map(([key, val]) => (
+                      <span key={key} className="ux-spec-pill px-1.5 py-0.5 text-[9px] font-bold">{key}: {String(val)}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Grid/Masonry Hover Reveal: Specs/Description inside the drawer sliding up */}
+            {!isList && hoverReveal && (
+              <div className="max-h-0 opacity-0 overflow-hidden group-hover:max-h-24 group-hover:opacity-100 transition-all duration-300 ease-in-out text-[10px] text-muted-foreground border-t border-border/5 pt-1.5 mt-1">
+                {type === 'deal' ? (
+                  <p className="line-clamp-3 leading-snug">
+                    Rewelacyjna oferta! Szybka dostawa z magazynu oficjalnego dystrybutora. Sprawdź historię ceny i kup zanim wyprzedadzą zapasy!
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    {data.specs && Object.entries(data.specs).map(([key, val]) => (
+                      <div key={key} className="flex justify-between text-[9px] pb-0.5">
+                        <span className="text-muted-foreground">{key}</span>
+                        <span className="font-bold text-foreground">{String(val)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Specs / Price history (Only when hoverReveal is disabled, stable and no size shifts) */}
+            {details === 'expanded' && !hoverReveal && (
+              <div className="space-y-1.5 pt-1.5 border-t border-border/5">
+                {type === 'product' && data.specs && (
+                  <div className="flex flex-wrap gap-x-1.5 gap-y-0.5">
+                    {Object.entries(data.specs).slice(0, 2).map(([key, val]) => (
+                      <span key={key} className="ux-spec-pill px-1.5 py-0.5 text-[9px] font-bold">{key}: {String(val)}</span>
+                    ))}
+                  </div>
+                )}
+                {data.priceHistory && (
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <span>Trend:</span>
+                    <span className="inline-block w-8 h-1.5 bg-gradient-to-r from-emerald-500 to-transparent rounded" />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
-        <h4 className="text-xs font-bold line-clamp-2 leading-tight transition-colors group-hover:text-primary">
-          {data.title}
-        </h4>
+        {/* Lower Part: Price & Footer (Always stationary at the bottom) */}
+        <div className="space-y-2.5 bg-[var(--ux-card-bg)] z-20 pt-1">
+          {/* Price & Savings (Enlarged) */}
+          <div className="space-y-0.5">
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl font-black text-foreground">{data.price.toFixed(2)} zł</span>
+              {data.originalPrice && (
+                <span className="text-xs text-muted-foreground line-through font-bold">{data.originalPrice.toFixed(2)} zł</span>
+              )}
+            </div>
+            {data.originalPrice && (
+              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1.5 leading-none">
+                <span>Zaoszczędź {(data.originalPrice - data.price).toFixed(2)} zł</span>
+                <span className="bg-emerald-500/10 px-1 py-0.5 rounded text-[8px] font-black">-{data.discount}%</span>
+              </div>
+            )}
+          </div>
 
-        {/* Specs, price trend - collapses on hoverReveal unless hovered */}
-        {details === 'expanded' && (
+        {/* Stable Footer Section - No size jumping */}
+        <div className="border-t border-border/10 pt-2 flex items-center justify-between">
+          {/* Left: Voting Widget with Temperature (Styled with theme variables) */}
+          <div className="flex items-center">
+            <div className="ux-vote-pill">
+              <button 
+                className={cn(
+                  "flex items-center justify-center transition-all duration-200 font-black text-xs h-5 w-5",
+                  hoverReveal ? "w-0 opacity-0 scale-0 group-hover:w-5 group-hover:opacity-100 group-hover:scale-100" : "bg-[var(--ux-vote-btn-bg)] text-[var(--ux-vote-btn-color)]"
+                )}
+                style={{ borderRadius: 'var(--ux-radius-btn)' }}
+                onClick={(e) => { e.stopPropagation(); alert('Głos na +'); }}
+                title="Głosuj na plus"
+              >
+                +
+              </button>
+              <span className="px-1.5 flex items-center gap-0.5 font-extrabold">
+                <Flame className="h-3 w-3 shrink-0 animate-pulse text-orange-500" />
+                +{data.temperature}°
+              </span>
+              <button 
+                className={cn(
+                  "flex items-center justify-center transition-all duration-200 font-black text-xs h-5 w-5",
+                  hoverReveal ? "w-0 opacity-0 scale-0 group-hover:w-5 group-hover:opacity-100 group-hover:scale-100" : "bg-[var(--ux-vote-btn-bg)] text-[var(--ux-vote-btn-color)]"
+                )}
+                style={{ borderRadius: 'var(--ux-radius-btn)' }}
+                onClick={(e) => { e.stopPropagation(); alert('Głos na -'); }}
+                title="Głosuj na minus"
+              >
+                -
+              </button>
+            </div>
+          </div>
+
+          {/* Right: Function Buttons (Slide / Fade in on hover conditionally) */}
           <div className={cn(
-            "space-y-1.5 pt-1 transition-all duration-300 ease-out origin-top",
-            hoverReveal ? "max-h-0 opacity-0 overflow-hidden group-hover:max-h-[80px] group-hover:opacity-100 group-hover:pt-1" : ""
+            "flex items-center gap-1 transition-all duration-300",
+            hoverReveal ? "opacity-0 translate-x-4 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto" : ""
           )}>
-            {type === 'product' && data.specs && (
-              <div className="flex flex-wrap gap-x-2 gap-y-1 border-t border-border/10 pt-1.5">
-                {Object.entries(data.specs).slice(0, 2).map(([key, val]) => (
-                  <span key={key} className="ux-spec-pill px-1.5 py-0.5 text-[9px] font-bold">{key}: {String(val)}</span>
-                ))}
-              </div>
-            )}
-            {data.priceHistory && (
-              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                <span>Trend ceny:</span>
-                <span className="inline-block w-8 h-2 bg-gradient-to-r from-emerald-500 to-transparent rounded" />
-              </div>
-            )}
+            <button 
+              title="Dodaj do koszyka" 
+              className="ux-action-btn flex items-center justify-center"
+              onClick={(e) => { e.stopPropagation(); alert('Dodano do koszyka'); }}
+            >
+              <ShoppingBag className="h-3.5 w-3.5" />
+            </button>
+            <button 
+              title="Dodaj do ulubionych" 
+              className="ux-action-btn flex items-center justify-center"
+              onClick={(e) => { e.stopPropagation(); alert('Dodano do ulubionych'); }}
+            >
+              <Heart className="h-3.5 w-3.5" />
+            </button>
+            <button 
+              title="Porównaj" 
+              className="ux-action-btn flex items-center justify-center"
+              onClick={(e) => { e.stopPropagation(); alert('Dodano do porównania'); }}
+            >
+              <Layers className="h-3.5 w-3.5" />
+            </button>
+            <button 
+              title="Udostępnij" 
+              className="ux-action-btn flex items-center justify-center"
+              onClick={(e) => { e.stopPropagation(); alert('Udostępniono link'); }}
+            >
+              <Share2 className="h-3.5 w-3.5" />
+            </button>
           </div>
-        )}
-
-        <div className="flex items-baseline gap-2 pt-1">
-          <span className="text-lg font-black text-foreground">{data.price.toFixed(2)} zł</span>
-          {data.originalPrice && (
-            <span className="text-xs text-muted-foreground line-through">{data.originalPrice.toFixed(2)} zł</span>
-          )}
-        </div>
-
-        {/* Static stats footer */}
-        <div className={cn(
-          "flex items-center justify-between pt-2 border-t border-border/10 text-xs text-muted-foreground transition-all duration-200",
-          hoverReveal ? "opacity-100 group-hover:opacity-0 group-hover:h-0 group-hover:py-0 group-hover:border-none overflow-hidden" : ""
-        )}>
-          {type === 'deal' ? (
-            <>
-              <span className="text-orange-500 font-extrabold flex items-center gap-0.5">
-                <Flame className="h-3.5 w-3.5 animate-pulse" /> +{data.temperature}°
-              </span>
-              <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" /> {data.commentsCount}</span>
-            </>
-          ) : (
-            <>
-              <span className="text-amber-500 font-extrabold flex items-center gap-0.5">
-                ★ {data.rating}
-              </span>
-              <span>{data.reviewsCount} opinii</span>
-            </>
-          )}
-        </div>
-
-        {/* Interactive Action Bar - Voting, Share */}
-        <div className={cn(
-          "flex items-center justify-between pt-2 border-t border-border/10 transition-all duration-300 ease-out origin-top",
-          hoverReveal ? "max-h-0 opacity-0 overflow-hidden group-hover:max-h-[50px] group-hover:opacity-100" : ""
-        )}>
-          <div className="flex items-center bg-muted dark:bg-zinc-800 rounded-full p-0.5 text-[10px] font-bold">
-            <button className="px-1.5 py-0.5 hover:bg-background dark:hover:bg-zinc-700 rounded-full transition text-muted-foreground hover:text-foreground font-bold">+</button>
-            <span className="px-2 font-black text-foreground">+{data.temperature}°</span>
-            <button className="px-1.5 py-0.5 hover:bg-background dark:hover:bg-zinc-700 rounded-full transition text-muted-foreground hover:text-foreground font-bold">-</button>
-          </div>
-          <button className="flex items-center gap-1 text-[11px] font-bold text-muted-foreground hover:text-foreground transition bg-muted/50 dark:bg-zinc-800/50 hover:bg-muted dark:hover:bg-zinc-800 px-3 py-1 rounded-full">
-            <Share2 className="h-3 w-3" />
-            <span>Udostępnij</span>
-          </button>
         </div>
       </div>
     </div>
+  </div>
   );
 }
 
