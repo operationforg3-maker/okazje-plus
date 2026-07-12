@@ -1,32 +1,39 @@
 import { genkit } from 'genkit';
-import { vertexAI } from '@genkit-ai/vertexai';
+// NOTE: Switched from Vertex AI to Google AI (Gemini API key) due to
+// GCloud billing dunning block — Vertex AI returns 403 PERMISSION_DENIED.
+// Vertex AI can be re-enabled once billing is settled:
+//   import { vertexAI } from '@genkit-ai/vertexai';
+//   plugins: [vertexAI({ projectId, location })]
+import { googleAI } from '@genkit-ai/googleai';
 
-const projectId = process.env.GOOGLE_CLOUD_PROJECT || 'okazje-plus';
-const location = process.env.VERTEX_AI_LOCATION || process.env.VERTEX_LOCATION || 'us-central1';
+const googleGenAIKey = process.env.GOOGLE_GENAI_API_KEY || '';
 
 if (process.env.NODE_ENV !== 'production' || process.env.GENKIT_DEBUG) {
-  console.log(`✅ Vertex AI initialized for project ${projectId} in region ${location}`);
+  console.log(`✅ Google AI (Gemini API key) initialized. Key configured: ${Boolean(googleGenAIKey)}`);
 }
 
 export const ai = genkit({
   plugins: [
-    vertexAI({ projectId, location })
+    googleAI({ apiKey: googleGenAIKey }),
   ],
-  model: 'refine-model',
+  model: 'googleai/gemini-2.5-flash',
 });
 
-// Alias model mapping to route Genkit model calls to Vertex AI
+// Alias model mapping — all redirect to Google AI plugin models
 const modelMapping: Record<string, string> = {
-  'refine-model': 'vertexai/gemini-2.5-flash',
-  'googleai/gemini-2.5-flash': 'vertexai/gemini-2.5-flash',
-  'vertexai/gemini-2.0-flash-exp': 'vertexai/gemini-2.5-flash',
-  'vertexai/gemini-2.0-flash': 'vertexai/gemini-2.5-flash',
-  'vertexai/gemini-1.5-flash': 'vertexai/gemini-2.5-flash',
-  'vertexai/gemini-1.5-pro': 'vertexai/gemini-2.5-pro',
-  'gemini-2.0-flash-exp': 'vertexai/gemini-2.5-flash',
-  'gemini-1.5-flash': 'vertexai/gemini-2.5-flash',
-  'gemini-1.5-pro': 'vertexai/gemini-2.5-pro',
-  'gemini-2.0-flash': 'vertexai/gemini-2.5-flash'
+  'refine-model': 'googleai/gemini-2.5-flash',
+  'googleai/gemini-2.5-flash': 'googleai/gemini-2.5-flash',
+  'googleai/gemini-2.5-pro': 'googleai/gemini-2.5-pro',
+  'vertexai/gemini-2.5-flash': 'googleai/gemini-2.5-flash',
+  'vertexai/gemini-2.5-pro': 'googleai/gemini-2.5-pro',
+  'vertexai/gemini-2.0-flash-exp': 'googleai/gemini-2.5-flash',
+  'vertexai/gemini-2.0-flash': 'googleai/gemini-2.5-flash',
+  'vertexai/gemini-1.5-flash': 'googleai/gemini-2.5-flash',
+  'vertexai/gemini-1.5-pro': 'googleai/gemini-2.5-pro',
+  'gemini-2.0-flash-exp': 'googleai/gemini-2.5-flash',
+  'gemini-1.5-flash': 'googleai/gemini-2.5-flash',
+  'gemini-1.5-pro': 'googleai/gemini-2.5-pro',
+  'gemini-2.0-flash': 'googleai/gemini-2.5-flash',
 };
 
 for (const [alias, target] of Object.entries(modelMapping)) {
