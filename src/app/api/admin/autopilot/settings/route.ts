@@ -15,6 +15,10 @@ export type AliExpressAutopilotSettings = {
   pageSize: number;
   maxPages: number;
   defaultProfileMaxItems: number;
+  // Hot Stream
+  hotStreamEnabled: boolean;
+  hotStreamGlobalLimit: number;
+  hotStreamPerCategoryLimit: number;
   updatedAt?: string;
   updatedBy?: string;
 };
@@ -29,6 +33,10 @@ const DEFAULT_SETTINGS: AliExpressAutopilotSettings = {
   pageSize: 50,
   maxPages: 100,
   defaultProfileMaxItems: 20,
+  // Hot Stream
+  hotStreamEnabled: false,
+  hotStreamGlobalLimit: 50,
+  hotStreamPerCategoryLimit: 0,
 };
 
 function normalizeNumeric(value: unknown, fallback: number, min: number, max: number): number {
@@ -47,6 +55,10 @@ function normalizeSettings(input: Partial<AliExpressAutopilotSettings>): AliExpr
     pageSize: normalizeNumeric(input.pageSize, DEFAULT_SETTINGS.pageSize, 10, 50),
     maxPages: normalizeNumeric(input.maxPages, DEFAULT_SETTINGS.maxPages, 1, 1000),
     defaultProfileMaxItems: normalizeNumeric(input.defaultProfileMaxItems, DEFAULT_SETTINGS.defaultProfileMaxItems, 10, 5000),
+    // Hot Stream
+    hotStreamEnabled: typeof input.hotStreamEnabled === 'boolean' ? input.hotStreamEnabled : DEFAULT_SETTINGS.hotStreamEnabled,
+    hotStreamGlobalLimit: normalizeNumeric(input.hotStreamGlobalLimit, DEFAULT_SETTINGS.hotStreamGlobalLimit, 0, 500),
+    hotStreamPerCategoryLimit: normalizeNumeric(input.hotStreamPerCategoryLimit, DEFAULT_SETTINGS.hotStreamPerCategoryLimit, 0, 500),
   };
 }
 

@@ -342,6 +342,80 @@ async function runAliExpressSync(request: NextRequest) {
       }
     }
 
+    // ─── Phase B: Hot Stream (globalny + per AliExpress category IDs) ────────
+    // Runs after keyword search profiles. Uses aliexpress.affiliate.hotproduct.query
+    // (no keyword needed) — AI then assigns each product to the correct site category.
+    const hotStreamEnabled = settings?.hotStreamEnabled === true;
+    const hotStreamGlobalLimit = Number(settings?.hotStreamGlobalLimit ?? 0);
+    const hotStreamPerCategoryLimit = Number(settings?.hotStreamPerCategoryLimit ?? 0);
+    const hotStreamLimit = Math.max(hotStreamGlobalLimit, hotStreamPerCategoryLimit, 0);
+
+    let hotStreamResult: {
+      success: boolean;
+      productsCreated: number;
+      dealsCreated: number;
+      durationMs: number;
+      error?: string;
+    } | null = null;
+
+    if (hotStreamEnabled && hotStreamLimit > 0) {
+      const hotStreamStartedAt = Date.now();
+      logger.info('Phase B: Starting AliExpress hot stream', {
+        hotStreamGlobalLimit,
+        hotStreamPerCategoryLimit,
+        hotStreamLimit,
+      });
+
+      try {
+        const hotJobId = `cron_hotstream_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const hotHarvester = new SmartHarvester(hotJobId);
+
+        // autoBrowse=true → fetchFromAliExpressAutoBrowse:
+        //   1. getHotProducts(categoryChunks) per all AliExpress category IDs from Firestore
+        //   2. getHotProducts(undefined) as global fallback
+        //   → AI batchAssignCategories assigns each product to site category tree
+        const hotJob = await hotHarvester.harvestProducts(
+          'aliexpress',
+          '__AUTO_BROWSE__',
+          hotStreamLimit,
+          undefined,
+          false,
+          undefined,
+          true,         // autoBrowse = true
+          importStrategy
+        );
+
+        const hotDurationMs = Date.now() - hotStreamStartedAt;
+        hotStreamResult = {
+          success: hotJob.status === 'completed',
+          productsCreated: hotJob.productsCreated,
+          dealsCreated: hotJob.dealsCreated,
+          durationMs: hotDurationMs,
+          error: hotJob.status !== 'completed' ? `Harvester status: ${hotJob.status}` : undefined,
+        };
+
+        logger.info('Phase B: Hot stream completed', {
+          status: hotJob.status,
+          productsCreated: hotJob.productsCreated,
+          dealsCreated: hotJob.dealsCreated,
+          durationMs: hotDurationMs,
+        });
+      } catch (hotErr) {
+        const hotDurationMs = Date.now() - hotStreamStartedAt;
+        const hotErrMsg = hotErr instanceof Error ? hotErr.message : String(hotErr);
+        logger.error('Phase B: Hot stream failed', { error: hotErrMsg, durationMs: hotDurationMs });
+        hotStreamResult = {
+          success: false,
+          productsCreated: 0,
+          dealsCreated: 0,
+          durationMs: hotDurationMs,
+          error: hotErrMsg,
+        };
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+
     const successCount = results.filter(r => r.success).length;
     const totalCount = results.length;
     runTelemetry.totalMs = Date.now() - runStartedAt;
@@ -373,6 +447,7 @@ async function runAliExpressSync(request: NextRequest) {
           totalMs: runTelemetry.totalMs,
           processedProfiles: selectedProfileDocs.length,
           availableProfiles: orderedProfileDocs.length,
+          hotStream: hotStreamResult ?? undefined,
         },
         updatedAt: new Date().toISOString(),
       },
@@ -397,6 +472,7 @@ async function runAliExpressSync(request: NextRequest) {
       availableProfiles: orderedProfileDocs.length,
       processedProfiles: selectedProfileDocs.length,
       nextProfileCursor,
+      hotStream: hotStreamResult,
       telemetry: {
         ensureProfilesMs: runTelemetry.ensureProfilesMs,
         loadProfilesMs: runTelemetry.loadProfilesMs,

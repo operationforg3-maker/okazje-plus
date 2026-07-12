@@ -20,6 +20,10 @@ type Settings = {
   pageSize: number;
   maxPages: number;
   defaultProfileMaxItems: number;
+  // Hot Stream
+  hotStreamEnabled: boolean;
+  hotStreamGlobalLimit: number;
+  hotStreamPerCategoryLimit: number;
   updatedAt?: string;
   updatedBy?: string;
 };
@@ -34,6 +38,10 @@ const DEFAULTS: Settings = {
   pageSize: 50,
   maxPages: 100,
   defaultProfileMaxItems: 20,
+  // Hot Stream
+  hotStreamEnabled: false,
+  hotStreamGlobalLimit: 50,
+  hotStreamPerCategoryLimit: 0,
 };
 
 type HealthIssue = {
@@ -693,6 +701,56 @@ export function AliExpressAutopilotControl({
             <Input type="number" value={settings.maxPages} onChange={(e) => updateNumber('maxPages', e.target.value)} />
           </div>
         </div>
+
+        {/* Hot Stream */}
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4 text-amber-600" />
+            <p className="font-semibold text-amber-800 text-sm">Hot Stream AliExpress</p>
+            <Badge variant="outline" className="text-amber-700 border-amber-300 text-xs">Beta</Badge>
+          </div>
+          <p className="text-xs text-amber-700">
+            Po keyword search cron pobiera bestsellery AliExpress (bez słów kluczowych)
+            i AI automatycznie przydziela produkty do kategorii serwisu.
+          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">Włącz Hot Stream</p>
+              <p className="text-xs text-slate-500">Uruchamia Phase B po każdym keyword search runie.</p>
+            </div>
+            <Switch
+              checked={settings.hotStreamEnabled}
+              onCheckedChange={(value) => setSettings((prev) => ({ ...prev, hotStreamEnabled: value }))}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">hotStreamGlobalLimit</Label>
+              <Input
+                type="number"
+                min={0}
+                max={500}
+                value={settings.hotStreamGlobalLimit}
+                onChange={(e) => updateNumber('hotStreamGlobalLimit', e.target.value)}
+                disabled={!settings.hotStreamEnabled}
+              />
+              <p className="text-xs text-slate-500">Max produktów globalnych (0 = wyłącz globalny)</p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">hotStreamPerCategoryLimit</Label>
+              <Input
+                type="number"
+                min={0}
+                max={500}
+                value={settings.hotStreamPerCategoryLimit}
+                onChange={(e) => updateNumber('hotStreamPerCategoryLimit', e.target.value)}
+                disabled={!settings.hotStreamEnabled}
+              />
+              <p className="text-xs text-slate-500">Max produktów per AliExpress category ID (0 = wyłącz)</p>
+            </div>
+          </div>
+        </div>
+
 
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={loadSettings} disabled={!canAct || loading} className="gap-2">
