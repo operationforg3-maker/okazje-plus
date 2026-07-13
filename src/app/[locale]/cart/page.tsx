@@ -62,6 +62,8 @@ export default function CartPage() {
   } = useSmartCart();
 
   const [isFinalizing, setIsFinalizing] = useState(false);
+  const [finalizedLinks, setFinalizedLinks] = useState<Array<{ name: string; url: string; opened: boolean }>>([]);
+  const [showLinksFallback, setShowLinksFallback] = useState(false);
 
   const handleFinalize = async () => {
     if (items.length === 0) return;
@@ -69,21 +71,47 @@ export default function CartPage() {
     setIsFinalizing(true);
     try {
       const { links } = await finalizeCart();
-      
-      // Open all affiliate links in new tabs
-      links.forEach(({ affiliateLink }) => {
-        window.open(affiliateLink, '_blank', 'noopener,noreferrer');
-      });
+      const validLinks = links.filter(({ affiliateLink }) => Boolean(affiliateLink));
 
-      toast.success(`Otwarto ${links.length} linków afiliacyjnych!`, {
-        description: 'Sprawdź nowe karty w przeglądarce aby dokończyć zakupy.',
-      });
+      if (validLinks.length === 0) {
+        toast.error('Nie znaleziono linków do sklepów.', {
+          description: 'Spróbuj ponownie lub otwórz produkty ręcznie.',
+        });
+        return;
+      }
 
-      // Clear cart after finalize
-      setTimeout(() => {
-        clearCart();
-        router.push(`${prefix}/`);
-      }, 2000);
+      // Open links sequentially with 300ms delay between each (avoids popup blockers)
+      let openedCount = 0;
+      for (let i = 0; i < validLinks.length; i++) {
+        const { affiliateLink } = validLinks[i];
+        const win = window.open(affiliateLink, '_blank', 'noopener,noreferrer');
+        if (win !== null) {
+          openedCount++;
+        }
+        if (i < validLinks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 350));
+        }
+      }
+
+      // Always show link list as fallback (for popup blockers)
+      setFinalizedLinks(validLinks.map(({ product, affiliateLink }) => ({
+        name: typeof (product as any)?.title === 'object'
+          ? ((product as any)?.title?.pl || (product as any)?.title?.en || product?.name || 'Produkt')
+          : ((product as any)?.title || product?.name || 'Produkt'),
+        url: affiliateLink,
+        opened: true,
+      })));
+      setShowLinksFallback(true);
+
+      if (openedCount === validLinks.length) {
+        toast.success(`Otwarto ${openedCount} sklepów w nowych kartach.`, {
+          description: 'Poniżej znajdziesz też listę linków — możesz kliknąć ręcznie.',
+        });
+      } else {
+        toast.warning('Część kart mogła zostać zablokowana przez przeglądarkę.', {
+          description: 'Kliknij linki poniżej ręcznie lub zezwól na wyskakujące okienka.',
+        });
+      }
     } catch (error) {
       console.error('Failed to finalize cart:', error);
       toast.error('Nie udało się wygenerować linków', {
@@ -93,6 +121,7 @@ export default function CartPage() {
       setIsFinalizing(false);
     }
   };
+
 
   if (isLoading) {
     return (
@@ -376,6 +405,36 @@ export default function CartPage() {
           </Card>
         </div>
       </div>
+
+      {/* Fallback links after finalize — shown below cart for manual click */}
+      {showLinksFallback && finalizedLinks.length > 0 && (
+        <div className="mt-8 p-6 rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800">
+          <h2 className="text-lg font-bold text-green-800 dark:text-green-300 mb-1">✅ Linki do zakupów</h2>
+          <p className="text-sm text-green-700 dark:text-green-400 mb-4">
+            Jeśli karta nie otworzyła się automatycznie — kliknij link ręcznie:
+          </p>
+          <div className="space-y-2">
+            {finalizedLinks.map(({ name, url }, idx) => (
+              <a
+                key={idx}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-3 rounded-lg border border-green-300 bg-white dark:bg-green-900/30 dark:border-green-700 px-4 py-3 text-sm font-medium hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors"
+              >
+                <span className="truncate">{name || `Produkt ${idx + 1}`}</span>
+                <ExternalLink className="h-4 w-4 flex-shrink-0 text-green-700 dark:text-green-400" />
+              </a>
+            ))}
+          </div>
+          <button
+            className="mt-4 text-xs text-muted-foreground underline"
+            onClick={() => { setShowLinksFallback(false); setFinalizedLinks([]); }}
+          >
+            Ukryj listę
+          </button>
+        </div>
+      )}
     </div>
   );
 }

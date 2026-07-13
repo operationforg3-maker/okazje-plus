@@ -10,17 +10,28 @@ export const dynamic = 'force-dynamic';
 
 export default async function UXVariantsPage() {
   // Fetch real data on the server side
-  const realDeals = await searchDealsTypesense("", { limit: 4, sortBy: 'newest' });
-  let realProducts = await searchProductsTypesense("", { limit: 4, sortBy: 'newest' });
+  let fetchedDeals = await searchDealsTypesense("", { limit: 25, sortBy: 'newest' });
+  const realDeals = fetchedDeals
+    .filter((d: any) => d.image && d.image !== '/icon_okazjeplus.svg' && !d.image.includes('placeholder'))
+    .slice(0, 4);
+
+  let fetchedProducts = await searchProductsTypesense("", { limit: 25, sortBy: 'newest' });
   
-  if (!realProducts || realProducts.length === 0) {
+  if (!fetchedProducts || fetchedProducts.length === 0) {
     try {
-      const snap = await adminDb.collection('products').limit(4).get();
-      realProducts = snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+      const snap = await adminDb.collection('products').limit(25).get();
+      fetchedProducts = snap.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
     } catch (e) {
       console.warn('Failed to query fallback products collection', e);
     }
   }
+
+  const realProducts = fetchedProducts
+    .filter((p: any) => {
+      const img = p.imageUrl || p.image || (p.images && p.images[0]);
+      return img && img !== '/icon_okazjeplus.svg' && !img.includes('placeholder');
+    })
+    .slice(0, 4);
 
   const categoriesData = await getAllCategories();
   

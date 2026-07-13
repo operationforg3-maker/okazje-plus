@@ -9,7 +9,8 @@ import { withImageProxy } from '@/lib/image-proxy';
 import { 
   Star, Tag, ExternalLink, Heart, MessageSquare, Truck, Package, 
   Zap, AlertTriangle, ShieldCheck, Info, Share2, ShoppingCart, 
-  TrendingDown, Award, Clock, Check, Plus, Eye, Scale, Flame, TrendingUp, Sparkles
+  TrendingDown, Award, Clock, Check, Plus, Eye, Scale, Flame, TrendingUp, Sparkles,
+  ArrowUp
 } from 'lucide-react';
 import { RatingBar } from '../rating-bar';
 import { useCommentsCount } from '@/hooks/use-comments-count';
@@ -37,6 +38,7 @@ import { cn } from '@/lib/utils';
 import { useCardBaseState } from '@/hooks/use-card-base-state';
 import { CardHeader } from '@/components/ui/card-header';
 import { getExternalUrl } from '@/lib/external-url';
+import { useUX } from '@/context/UXContext';
 
 interface ProductCardProps {
   product: Product;
@@ -52,7 +54,9 @@ const safeText = (value: unknown, fallback = ''): string => {
   return fallback;
 };
 
-function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetchBestDeal = false }: ProductCardProps) {
+function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layoutMode = 'grid', fetchBestDeal = false }: ProductCardProps & { layoutMode?: 'grid' | 'masonry' | 'list' }) {
+  const { cardDensity } = useUX();
+  const details = cardDensity === 'compact' ? 'compact' : 'expanded';
   const params = useParams();
   const router = useRouter();
   const localeFromParams = (params?.locale as string) || 'pl';
@@ -419,223 +423,212 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', fetc
   // --------------------------------------------------------------------------
   // GRID VIEW (Copied & Adapted from DealCard)
   // --------------------------------------------------------------------------
+  const isList = layoutMode === 'list' || viewMode === 'list';
+  const isMasonry = layoutMode === 'masonry';
+
   return (
     <div 
-      className="group relative flex h-full flex-col overflow-hidden cursor-pointer ux-card-container"
+      className={cn(
+        "ux-card-container p-4 w-full relative min-w-0 text-left group flex cursor-pointer overflow-hidden",
+        isList ? "flex-row items-center gap-6 h-auto" : "flex-col justify-between",
+        !isList && !isMasonry ? (details === 'compact' ? "h-[370px]" : "h-[440px]") : "",
+        isMasonry ? "h-auto" : "",
+        !isList && "max-w-[280px]"
+      )}
       onClick={() => {
         router.push(productUrl);
       }}
       role="link"
       tabIndex={0}
     >
-      {/* Clean Apple-style Product Image Container */}
-      <div className="relative aspect-[4/3] sm:aspect-square bg-muted/5 border-b border-border/20 overflow-hidden transition-all duration-300">
-        <Image
-          src={withImageProxy(primaryImageSrc)}
-          alt={displayTitle || 'Produkt'}
-          fill
-          sizes="(max-width: 768px) 100vw, 300px"
-          className="object-contain p-6 transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
-        />
-
-        {/* Minimalist Top Bar Overlays */}
-        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1">
-          {galleryImages.length > 1 && (
-            <span className="bg-background/90 text-foreground text-[10px] font-bold px-2 py-0.5 rounded-md border border-border/20 shadow-sm">
-              {galleryImages.length} zdj.
-            </span>
-          )}
-          {typeof priceData.discount === 'number' && priceData.discount > 0 && (
-            <span className="bg-green-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm">
-              -{priceData.discount}%
-            </span>
-          )}
-        </div>
-
-        {/* Simple Favorite trigger */}
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleFavorite();
-          }}
-          disabled={isFavoriteLoading}
-          className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-background/80 hover:bg-background shadow-sm border border-border/20 transition-all"
-          aria-label="Polub"
-        >
-          <Heart className={`h-4 w-4 ${isFavorited ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
-        </button>
-
-        {/* Admin actions overlay */}
-        <div className="absolute right-3 bottom-3 z-10">
-          <AdminQuickActions
-            productId={product.id}
-            onEdit={() => setEditDialogOpen(true)}
-          />
-        </div>
-      </div>
-
-      {/* Content Body */}
-      <div className="flex-grow space-y-2.5 p-4 sm:p-5 min-w-0">
-        
-        {/* Rating Row */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-          <div className="flex items-center gap-1">
-             {productRating > 0 ? (
-               <>
-                 <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
-                 <span className="font-bold text-foreground text-xs">{productRating.toFixed(1)}</span>
-                 <span className="text-[11px]">({ratingCount})</span>
-               </>
-             ) : (
-               <span className="text-[11px]">Brak ocen</span>
-             )}
-          </div>
-          {merchantRating > 0 && (
-            <div className="flex items-center gap-1 font-medium" title="Ocena sprzedawcy">
-              <ShieldCheck className="w-3.5 h-3.5 text-green-600" />
-              <span className="text-foreground text-xs">{merchantRating.toFixed(0)}%</span>
-            </div>
-          )}
-        </div>
-
-        <h3 className="font-headline text-base sm:text-lg font-bold leading-tight transition-colors group-hover:text-primary line-clamp-2">
-          {displayTitle}
-        </h3>
-
-        {/* Price Row (Big) */}
-        <div className="flex items-baseline gap-2 pt-2 border-t border-border/10 flex-wrap">
-          <span className="text-2xl font-black text-foreground tracking-tight">
-            {priceData.formattedPrice || 'N/A'}
+      {typeof priceData.discount === 'number' && priceData.discount > 0 && (
+        <div className="absolute top-3 left-3 z-30">
+          <span className="ux-badge text-white text-[9px] font-black px-2.5 py-1 shadow-md">
+            -{priceData.discount}%
           </span>
-          {priceData.formattedOriginal && (
-             <span className="text-sm text-muted-foreground line-through decoration-muted-foreground/50">
-               {priceData.formattedOriginal}
-             </span>
-          )}
-          {priceData.savings && (
-            <span className="ml-auto text-xs font-bold text-green-600 bg-green-500/10 px-2 py-0.5 rounded-md border border-green-500/10">
-              Oszczędzasz {priceData.savings}
-            </span>
-          )}
         </div>
+      )}
 
-        {/* Info/Tags Row */}
-        <div className="flex flex-wrap gap-1.5 pt-1">
-           {packageInfo?.weight && (
-             <Badge variant="outline" className="text-[10px] font-medium border-border/80 bg-background/50">
-               <Package className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
-               {packageInfo.weight}kg
-             </Badge>
-           )}
-           {hasVariants && (
-             <Badge variant="outline" className="text-[10px] font-medium border-border/80 bg-background/50">
-               {variants.length} wariantów
-             </Badge>
-           )}
-           {warrantyInfo?.available && (
-              <Badge variant="outline" className="text-[10px] font-medium border-border/80 bg-background/50">
-                <ShieldCheck className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
-                Gwarancja
-              </Badge>
-           )}
-        </div>
-
+      {/* Image container with Slide-up Details Overlay (Hover Reveal for Grid/Masonry only) */}
+      <div className={cn(
+        "ux-image-wrapper relative bg-muted/10 dark:bg-zinc-800/20 shrink-0 flex items-center justify-center overflow-hidden w-full transition-all duration-300",
+        isList ? "w-36 h-36" : (details === 'compact' ? "mb-1.5" : "mb-3"),
+        !isList && !isMasonry ? (details === 'compact' ? "h-32" : "h-44 aspect-square") : "",
+        isMasonry ? "h-64" : ""
+      )}>
+        {layoutMode === 'masonry' ? (
+          <img 
+            src={withImageProxy(primaryImageSrc)} 
+            alt={displayTitle || 'Produkt'} 
+            className="w-full h-full object-cover scale-[1.03] group-hover:scale-105 transition-transform duration-500" 
+          />
+        ) : (
+          <Image 
+            src={withImageProxy(primaryImageSrc)} 
+            alt={displayTitle || 'Produkt'} 
+            fill
+            sizes="(max-width: 768px) 100vw, 300px"
+            className="object-contain p-2 transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+          />
+        )}
       </div>
 
-      {/* Footer Actions */}
-      <div className="flex flex-col gap-2 p-4 mt-auto pt-0">
-        {/* Main Action: Buy Now */}
-        {productExternalUrl ? (
-          <Button
-            asChild
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm h-10 shadow-sm hover:shadow-md transition-all duration-300 rounded-xl"
-          >
+      {/* Text Info Section */}
+      <div className={cn(
+        "flex-grow min-w-0 pt-1 relative z-10 flex flex-col justify-between",
+        isList ? "flex-row items-center gap-6" : 
+          (details === 'compact' ? "space-y-1" : "space-y-2.5")
+      )}>
+        {/* Upper Part: Store name, Title, Specs/Description (Translates upwards on hover to cover image) */}
+        <div className={cn(
+          "transition-all duration-300 ease-out relative z-10 pb-1 w-full",
+          !isList ? "transform group-hover:-translate-y-12" : ""
+        )}>
+          {/* Absolute background mask that extends downwards without affecting layout height */}
+          <div className={cn(
+            "absolute inset-0 z-[-1] bg-[var(--ux-image-hover-bg)] backdrop-blur-md transition-all duration-300 rounded-t-lg",
+            !isList ? "group-hover:-bottom-12" : ""
+          )} />
+          <div className={details === 'compact' ? "space-y-1" : "space-y-1.5"}>
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>{product.merchant || product.source || 'Sklep'}</span>
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 dark:bg-amber-500/5 text-[10px] font-black text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:bg-amber-500/15 transition-colors">
+                <span className="text-amber-500">★</span>
+                <span>{productRating > 0 ? productRating.toFixed(1) : '4.5'}</span>
+                <span className="text-muted-foreground/80 font-medium">({ratingCount || commentsCount || 0})</span>
+              </span>
+            </div>
 
-            <a 
-              href={productExternalUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              onClick={(e) => {
-                e.stopPropagation();
-                trackFirestoreClick(product.id, 'product', 'buy_now_button');
-              }}
-            >
-              <ExternalLink className="w-4 h-4 mr-2" />
-              Kup teraz
-            </a>
-          </Button>
-        ) : (
-          <Button
-            asChild
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm h-10 shadow-sm rounded-xl"
-          >
-            <Link href={productUrl}>
-              <ExternalLink className="w-4 h-4 mr-2 opacity-70" />
-              Kup teraz
-            </Link>
-          </Button>
-        )}
+            <h4 className="text-xs font-bold line-clamp-2 leading-tight transition-colors group-hover:text-primary">
+              {displayTitle}
+            </h4>
 
-        {/* Secondary Actions Row - Icon Only */}
-        <div className="flex gap-1.5 justify-center">
-          <Button
-            onClick={handleAddToCart}
-            disabled={isAddingToCart || inCart}
-            variant={inCart ? "default" : "outline"}
-            size="icon"
-            className={cn(
-              "h-8 w-8 transition-all",
-              inCart && "bg-green-600 hover:bg-green-700 text-white"
+            {/* List layout extra details reveal on hover */}
+            {isList && (
+              <div className="max-h-0 opacity-0 overflow-hidden group-hover:max-h-20 group-hover:opacity-100 transition-all duration-300 ease-in-out text-[11px] text-muted-foreground border-t border-border/5 pt-1.5 mt-1">
+                <div className="flex flex-wrap gap-2">
+                  {specifications && specifications.map((spec: any, idx: number) => (
+                    <span key={idx} className="ux-spec-pill px-1.5 py-0.5 text-[9px] font-bold">{spec.name}: {String(spec.value)}</span>
+                  ))}
+                </div>
+              </div>
             )}
-            title={inCart ? t('cart.inCart') : t('cart.addToCart')}
-          >
-            {isAddingToCart ? (
-               <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-current border-t-transparent" />
-            ) : inCart ? (
-               <Check className="w-4 h-4" />
-             ) : (
-               <ShoppingCart className="w-4 h-4" />
+
+            {/* Grid/Masonry Hover Reveal: Specs inside the drawer sliding up */}
+            {!isList && (
+              <div className="max-h-0 opacity-0 overflow-hidden group-hover:max-h-24 group-hover:opacity-100 transition-all duration-300 ease-in-out text-[10px] text-muted-foreground border-t border-border/5 pt-1.5 mt-1">
+                <div className="space-y-1">
+                  {specifications && specifications.slice(0, details === 'compact' ? 2 : 4).map((spec: any, idx: number) => (
+                    <div key={idx} className="flex justify-between text-[9px] pb-0.5">
+                      <span className="text-muted-foreground">{spec.name}</span>
+                      <span className="font-bold text-foreground">{String(spec.value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
-          </Button>
+          </div>
+        </div>
 
-          <Button 
-            variant={isFavorited ? "default" : "outline"}
-            size="icon"
-            className={cn("h-8 w-8", isFavorited && "bg-red-500 hover:bg-red-600")}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleFavorite();
-            }}
-            title={isFavorited ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
-          >
-            <Heart className={cn("w-4 h-4", isFavorited && "fill-current")} />
-          </Button>
+        {/* Lower Part: Price & Footer (Always stationary at the bottom, split into right column in List layout) */}
+        <div className={cn(
+          "bg-[var(--ux-card-bg)] z-20 w-full",
+          isList ? "flex flex-col justify-between shrink-0 text-right min-w-[150px] self-stretch pl-4 border-l border-border/10" : 
+            (details === 'compact' ? "space-y-1 pt-0.5" : "space-y-2.5 pt-1")
+        )}>
+          {/* Price & Savings */}
+          <div className="space-y-0.5">
+            <div className={cn("flex items-baseline gap-2", isList && "justify-end")}>
+              <span className="text-xl font-black text-foreground">{priceData.formattedPrice || 'N/A'}</span>
+              {priceData.formattedOriginal && (
+                <span className="text-xs text-muted-foreground line-through font-bold">{priceData.formattedOriginal}</span>
+              )}
+            </div>
+            {priceData.savings && (
+              <div className={cn(
+                "text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1.5 leading-none",
+                isList && "justify-end"
+              )}>
+                <span>Zaoszczędź {priceData.savings}</span>
+                {typeof priceData.discount === 'number' && priceData.discount > 0 && (
+                  <span className="bg-emerald-500/10 px-1 py-0.5 rounded text-[8px] font-black">-{priceData.discount}%</span>
+                )}
+              </div>
+            )}
+          </div>
 
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              addToComparison({...product, type: 'product'});
-            }}
-            aria-label="Porównaj"
-          >
-            <Scale className="w-4 h-4" />
-          </Button>
+          {/* Footer Section */}
+          <div className={cn(
+            "flex items-center justify-between w-full",
+            isList ? "pt-0 border-t-0 flex-row-reverse items-center justify-end gap-3.5 mt-auto" : 
+              (details === 'compact' ? "border-t border-border/10 pt-1.5" : "border-t border-border/10 pt-2")
+          )}>
+            {/* Left: Star Rating Badge */}
+            <div className="flex items-center">
+              <span className="flex items-center gap-1 text-[11px] font-extrabold text-foreground px-2 py-0.5 rounded-full border border-border/40 bg-background/50">
+                <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
+                <span>{productRating > 0 ? productRating.toFixed(1) : '4.5'}</span>
+              </span>
+            </div>
 
-          <ShareButton 
-            type="product" 
-            itemId={product.id} 
-            title={displayTitle} 
-            url={`${typeof window !== 'undefined' ? window.location.origin : ''}${productUrl}`}
-            variant="outline" 
-            size="icon"
-            onShared={(platform) => handleShare(platform)} 
-          />
+            {/* Right: Actions */}
+            <div className={cn(
+              "flex items-center gap-1 transition-all duration-300",
+              !isList && "translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100"
+            )} onClick={(e) => e.stopPropagation()}>
+              <button 
+                className={cn("ux-action-btn", isFavorited && "text-red-500 bg-red-500/10 opacity-100")}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(); }}
+                disabled={isFavoriteLoading}
+                title={isFavorited ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
+              >
+                <Heart className={cn("h-3.5 w-3.5", isFavorited && "fill-current")} />
+              </button>
+              <button 
+                className="ux-action-btn"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToComparison({ ...product, type: 'product' }); }}
+                title="Porównaj"
+              >
+                <Scale className="h-3.5 w-3.5" />
+              </button>
+              <button 
+                className={cn("ux-action-btn", inCart && "text-emerald-500 bg-emerald-500/10 opacity-100")}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleAddToCart(e);
+                }}
+                disabled={isAddingToCart || inCart}
+                title={inCart ? 'W koszyku' : 'Dodaj do koszyka'}
+              >
+                <ShoppingCart className="h-3.5 w-3.5" />
+              </button>
+              {productExternalUrl ? (
+                <button 
+                  className="ux-action-btn bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-md opacity-90 hover:opacity-100 hover:scale-110 animate-bounce"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(productExternalUrl, '_blank', 'noopener,noreferrer');
+                  }}
+                  title="Kup teraz"
+                >
+                  <ArrowUp className="h-3.5 w-3.5 rotate-90" />
+                </button>
+              ) : (
+                <button 
+                  className="ux-action-btn bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-md opacity-90 hover:opacity-100 hover:scale-110 animate-bounce"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(productUrl);
+                  }}
+                  title="Zobacz produkt"
+                >
+                  <ArrowUp className="h-3.5 w-3.5 rotate-90" />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

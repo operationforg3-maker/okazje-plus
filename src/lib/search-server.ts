@@ -283,8 +283,10 @@ async function searchProductsFirestoreFallback(
     page = 1,
   } = opts;
 
+  const query = q.trim().length > 0 ? q : '*';
+
   try {
-    if (q !== '*') {
+    if (query !== '*') {
       const { adminDb, FieldValue } = await import('@/lib/firebase-admin');
       const targetStatus = statusFilter === 'waiting_room' ? 'pending' : 'approved';
       

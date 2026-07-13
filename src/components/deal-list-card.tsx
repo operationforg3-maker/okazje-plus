@@ -7,7 +7,7 @@ import { useCategoryName } from '@/hooks/use-category-name';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { VoteControls } from '@/components/vote-controls';
-import { Flame, Tag, MessageSquare, Clock, ArrowUp, Sparkles, ShoppingCart, Heart, AlertTriangle, Scale, Package } from 'lucide-react';
+import { Flame, Tag, MessageSquare, Clock, ArrowUp, Sparkles, ShoppingCart, Check, Heart, AlertTriangle, Scale, Package } from 'lucide-react';
 import { useSmartCart } from '@/lib/cart-context';
 import { useState, useEffect } from 'react';
 import { useFormatter } from 'next-intl';
@@ -215,7 +215,8 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
   const { formatPrice, convertToPLN, currency } = useCurrency();
 
   const isHot = deal.temperature >= 300;
-  const { addDeal } = useSmartCart();
+  const { addDeal, isInCart } = useSmartCart();
+  const inCart = isInCart(deal?.id || '');
 
   const temperatureColor = deal.temperature >= 500 ? 'from-red-500 to-orange-500' 
     : deal.temperature >= 300 ? 'from-orange-500 to-amber-500'
@@ -520,19 +521,21 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
           </div>
           <Button 
             size="sm" 
-            variant="outline" 
-            className="w-full gap-1"
+            variant={inCart ? "secondary" : "outline"}
+            className={`w-full gap-1 ${inCart ? 'text-green-700 border-green-300 bg-green-50' : ''}`}
             onClick={() => {
+              if (inCart) return;
               try { 
                 addDeal(deal, 1);
-                toast.success(t('messages.dealAddedToCart'));
+                const title = typeof deal.title === 'object' ? (deal.title?.pl || deal.title?.en || '') : (deal.title || '');
+                toast.success(`Dodano do koszyka${title ? ': ' + title.substring(0, 40) : ''}`);
               } catch {
                 toast.error(t('cart.addToCartError'));
               }
             }}
           >
-            <ShoppingCart className="h-4 w-4" />
-            {t('cart.addToCart')}
+            {inCart ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
+            {inCart ? 'W koszyku' : t('cart.addToCart')}
           </Button>
         </div>
     </div>

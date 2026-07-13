@@ -11,7 +11,7 @@ import { useCategoryName } from '@/hooks/use-category-name';
 import { auth } from '@/lib/firebase';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package, Zap, AlertTriangle, ShieldCheck, Star, Info, Scale, Share2, DollarSign, Video, ShoppingCart } from "lucide-react";
+import { ArrowDown, ArrowUp, Flame, MessageSquare, Tag, TrendingUp, Sparkles, Clock, Heart, Truck, Package, Zap, AlertTriangle, ShieldCheck, Star, Info, Scale, Share2, DollarSign, Video, ShoppingCart, Check } from "lucide-react";
 import React, { useEffect, useState } from 'react';
 import { useFormatter } from 'next-intl';
 import { toast } from 'sonner';
@@ -36,6 +36,7 @@ import { CardHeader } from '@/components/ui/card-header';
 import { getExternalUrl } from '@/lib/external-url';
 import { Sparkline, generateSmartBadges } from '@/components/product/Sparkline';
 import { SpecsTeaserInline } from '@/components/product/SpecificationsTable';
+import { useUX } from '@/context/UXContext';
 
 interface DealCardProps {
   deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
@@ -191,7 +192,9 @@ function getRelativeTime(when: any): string {
   return `${Math.floor(diffDays / 30)} mies. temu`;
 }
 
-function DealCard({ deal, product, priority = false }: DealCardProps) {
+function DealCard({ deal, product, priority = false, layoutMode = 'grid' }: DealCardProps) {
+  const { cardDensity } = useUX();
+  const details = cardDensity === 'compact' ? 'compact' : 'expanded';
   // Używaj przekazanego ProductCore jeśli dostępny (spójność z ProductCard)
   const resolvedProduct = product || null;
   const params = useParams();
@@ -217,7 +220,8 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
   const [isNew, setIsNew] = useState(false); // Will be calculated in useEffect
   const [relativeTime, setRelativeTime] = useState(''); // Will be calculated in useEffect
   const { currency, formatPrice, convertToPLN } = useCurrency();
-  const { addDeal } = useSmartCart();
+  const { addDeal, isInCart } = useSmartCart();
+  const inCart = isInCart(deal?.id || '');
   const isPromotionDeal = deal?.dealType === 'coupon' || deal?.metadata?.promotionType === 'offer';
   const offerPreviewUrl = deal?.metadata?.offerPreviewUrl || deal?.metadata?.previewUrl || deal?.sourceUrl || deal?.link;
   
@@ -577,10 +581,18 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
     }
   }, [deal.postedAt, formatter]);
 
+  const isList = layoutMode === 'list';
+  const isMasonry = layoutMode === 'masonry';
 
   return (
     <div 
-      className="group relative flex h-full flex-col overflow-hidden cursor-pointer ux-card-container"
+      className={cn(
+        "ux-card-container p-4 w-full relative min-w-0 text-left group flex cursor-pointer overflow-hidden",
+        isList ? "flex-row items-center gap-6 h-auto" : "flex-col justify-between",
+        !isList && !isMasonry ? (details === 'compact' ? "h-[370px]" : "h-[440px]") : "",
+        isMasonry ? "h-auto" : "",
+        !isList && "max-w-[280px]"
+      )}
       onClick={() => {
         router.push(`${prefix}/new-ux/deals/${deal.id}`);
       }}
@@ -592,410 +604,216 @@ function DealCard({ deal, product, priority = false }: DealCardProps) {
       role="link"
       tabIndex={0}
     >
-      {/* Image container & overlay badge details for Hot Deal style */}
-      <div className="relative aspect-[4/3] sm:aspect-square bg-muted/10 border-b border-border/30 overflow-hidden group-hover:bg-muted/20 transition-all duration-300">
-        <Image
-          src={withImageProxy(coverImage || '/icon_okazjeplus.svg')}
-          alt={dealTitle || 'Okazja'}
-          fill
-          sizes="(max-width: 768px) 100vw, 300px"
-          className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
-          loading={priority ? 'eager' : 'lazy'}
-        />
-
-        {/* Dynamic float temperature tag on image */}
-        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
-          {isHot && (
-            <div className="flex items-center gap-1 bg-gradient-to-r from-orange-500 to-red-500 text-white font-black text-xs px-3 py-1.5 rounded-2xl shadow-md border border-orange-400/20">
-              <Flame className="h-4 w-4 animate-bounce" />
-              <span>{temperature}°</span>
-            </div>
-          )}
-          {typeof priceData.discount === 'number' && priceData.discount > 0 && (
-            <div className="bg-red-500 text-white font-black text-xs px-2.5 py-1 rounded-xl shadow-md w-fit">
-              -{priceData.discount}%
-            </div>
-          )}
+      {typeof priceData.discount === 'number' && priceData.discount > 0 && (
+        <div className="absolute top-3 left-3 z-30">
+          <span className="ux-badge text-white text-[9px] font-black px-2.5 py-1 shadow-md">
+            -{priceData.discount}%
+          </span>
         </div>
+      )}
 
-        {/* Favorite overlay button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-3 right-3 z-10 bg-background/80 backdrop-blur-md hover:bg-background shadow-md h-9 w-9 rounded-full border border-border/40"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            toggleFavorite();
-          }}
-          disabled={isFavoriteLoading}
-        >
-          <Heart className={`h-4.5 w-4.5 transition-colors ${isFavorited ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
-        </Button>
-
-        {/* Extra indicators */}
-        <div className="absolute bottom-3 left-3 flex flex-wrap gap-1">
-          {deal.freeShipping && (
-            <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white text-[9px] font-bold py-0.5 px-2 rounded-lg">
-              Darmowa dostawa
-            </Badge>
-          )}
-        </div>
-
-        {/* Admin Quick Actions */}
-        <div className="absolute right-3 bottom-3 z-10">
-          <AdminQuickActions
-            productId={deal.product?.id || deal.id} 
-            itemType="deal"
-            onEdit={() => setEditDialogOpen(true)}
+      {/* Image container with Slide-up Details Overlay (Hover Reveal for Grid/Masonry only) */}
+      <div className={cn(
+        "ux-image-wrapper relative bg-muted/10 dark:bg-zinc-800/20 shrink-0 flex items-center justify-center overflow-hidden w-full transition-all duration-300",
+        isList ? "w-36 h-36" : (details === 'compact' ? "mb-1.5" : "mb-3"),
+        !isList && !isMasonry ? (details === 'compact' ? "h-32" : "h-44 aspect-square") : "",
+        isMasonry ? "h-64" : ""
+      )}>
+        {layoutMode === 'masonry' ? (
+          <img 
+            src={withImageProxy(coverImage || '/icon_okazjeplus.svg')} 
+            alt={dealTitle || 'Okazja'} 
+            className="w-full h-full object-cover scale-[1.03] group-hover:scale-105 transition-transform duration-500" 
           />
-        </div>
+        ) : (
+          <Image 
+            src={withImageProxy(coverImage || '/icon_okazjeplus.svg')} 
+            alt={dealTitle || 'Okazja'} 
+            fill
+            sizes="(max-width: 768px) 100vw, 300px"
+            className="object-contain p-2 transition-transform duration-500 group-hover:scale-105"
+            loading={priority ? 'eager' : 'lazy'}
+          />
+        )}
       </div>
-      
-      <div className="flex-grow space-y-2.5 p-4 sm:p-5 min-w-0">
-        {/* Category Breadcrumb & Time */}
-        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-          <CategoryBreadcrumb
-            mainCategorySlug={deal.mainCategorySlug}
-            subCategorySlug={deal.subCategorySlug}
-            subSubCategorySlug={deal.subSubCategorySlug}
-            className="flex-grow"
-          />
-          <div className="flex items-center gap-1 flex-shrink-0 text-muted-foreground/80">
-            <Clock className="h-3.5 w-3.5" />
-            <span className="text-[10px] sm:text-xs font-medium">{relativeTime}</span>
+
+      {/* Text Info Section */}
+      <div className={cn(
+        "flex-grow min-w-0 pt-1 relative z-10 flex flex-col justify-between",
+        isList ? "flex-row items-center gap-6" : 
+          (details === 'compact' ? "space-y-1" : "space-y-2.5")
+      )}>
+        {/* Upper Part: Store name, Title, Specs/Description (Translates upwards on hover to cover image) */}
+        <div className={cn(
+          "transition-all duration-300 ease-out relative z-10 pb-1 w-full",
+          !isList ? "transform group-hover:-translate-y-12" : ""
+        )}>
+          {/* Absolute background mask that extends downwards without affecting layout height */}
+          <div className={cn(
+            "absolute inset-0 z-[-1] bg-[var(--ux-image-hover-bg)] backdrop-blur-md transition-all duration-300 rounded-t-lg",
+            !isList ? "group-hover:-bottom-12" : ""
+          )} />
+          <div className={details === 'compact' ? "space-y-1" : "space-y-1.5"}>
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>{deal.merchant || deal.metadata?.merchant || deal.source || 'Sklep'}</span>
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-black text-slate-600 dark:text-slate-300 border border-slate-200/50 dark:border-zinc-700/50 hover:bg-slate-200/80 dark:hover:bg-zinc-700 transition-colors">
+                <MessageSquare className="h-3 w-3 shrink-0 text-slate-400 dark:text-slate-500" />
+                <span>{liveComments.count ?? 0}</span>
+              </span>
+            </div>
+
+            <h4 className="text-xs font-bold line-clamp-2 leading-tight transition-colors group-hover:text-primary">
+              {dealTitle}
+            </h4>
+
+            {/* List layout extra details reveal on hover */}
+            {isList && (
+              <div className="max-h-0 opacity-0 overflow-hidden group-hover:max-h-20 group-hover:opacity-100 transition-all duration-300 ease-in-out text-[11px] text-muted-foreground border-t border-border/5 pt-1.5 mt-1">
+                <p className="line-clamp-2 leading-relaxed">
+                  {decodeHtmlEntities(stripHtmlTags(dealDescription))}
+                </p>
+              </div>
+            )}
+
+            {/* Grid/Masonry Hover Reveal: Description inside the drawer sliding up */}
+            {!isList && (
+              <div className="max-h-0 opacity-0 overflow-hidden group-hover:max-h-24 group-hover:opacity-100 transition-all duration-300 ease-in-out text-[10px] text-muted-foreground border-t border-border/5 pt-1.5 mt-1">
+                <p className={cn("leading-snug", details === 'compact' ? "line-clamp-2" : "line-clamp-3")}>
+                  {decodeHtmlEntities(stripHtmlTags(dealDescription))}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        <h3 className="font-headline text-base sm:text-lg font-bold leading-tight transition-colors group-hover:text-primary line-clamp-2">
-          {dealTitle}
-        </h3>
-        
-        {/* Specs Teaser */}
-        {resolvedProduct?.specificationsStructured && resolvedProduct.specificationsStructured.length > 0 && (
-          <SpecsTeaserInline specifications={resolvedProduct.specificationsStructured} maxSpecs={2} />
-        )}
-        
-        {/* Smart Badges */}
-        {deepDataBadges && deepDataBadges.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-1">
-            {deepDataBadges.filter(badge => badge && badge.text).map((badge, idx) => {
-              const getBadgeColor = (colorClass: string) => {
-                if (colorClass.includes('red')) return '#ef4444';
-                if (colorClass.includes('green')) return '#10b981';
-                if (colorClass.includes('blue')) return '#3b82f6';
-                if (colorClass.includes('purple')) return '#a855f7';
-                return '#6b7280';
-              };
-              return (
-                <Badge
-                  key={idx}
-                  className="text-white text-[10px] px-2 py-0.5 font-bold"
-                  style={{ backgroundColor: getBadgeColor(badge.color) }}
-                >
-                  {String(badge.text)}
-                </Badge>
-              );
-            })}
-          </div>
-        )}
-        
-        <p className="mt-1 text-xs sm:text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-          {dealDescription}
-        </p>
-        
-        {/* Sparkline Price Trend */}
-        {deal.priceHistory && Array.isArray(deal.priceHistory) && deal.priceHistory.length > 1 && (
-          <div className="mt-1.5 flex items-center gap-2">
-            <span className="text-xs text-muted-foreground font-medium">Trend ceny:</span>
-            <Sparkline data={deal.priceHistory} width={80} height={16} />
-          </div>
-        )}
-
-        {/* Enhanced Metadata Row */}
-        {(hasRealShipping || warrantyInfo.available || specifications.length > 0) && (
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {hasRealShipping && shippingInfo.cost > 0 && (
-              <Badge variant="outline" className="text-[10px] font-medium border-border/80 bg-background/50">
-                <Truck className="w-3 h-3 mr-1 text-muted-foreground" />
-                Dostawa: {formatPrice(shippingInfo.cost)}
-              </Badge>
-            )}
-            {hasRealShipping && shippingInfo.estimatedDays && (
-              <Badge variant="outline" className="text-[10px] font-medium border-border/80 bg-background/50">
-                <Clock className="w-3 h-3 mr-1 text-muted-foreground" />
-                ~{shippingInfo.estimatedDays} dni
-              </Badge>
-            )}
-            {warrantyInfo.available && (
-              <Badge variant="outline" className="text-[10px] font-medium border-border/80 bg-background/50">
-                <ShieldCheck className="w-3 h-3 mr-1 text-muted-foreground" />
-                Gwarancja
-              </Badge>
-            )}
-            {specifications.length > 0 && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge variant="outline" className="text-[10px] font-medium border-border/80 bg-background/50 cursor-help">
-                      <Info className="w-3 h-3 mr-1 text-muted-foreground" />
-                      {specifications.length} spec.
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <div className="space-y-1 text-xs">
-                      {specifications.slice(0, 3).map((spec: any, idx: number) => (
-                        <div key={idx}>
-                          <span className="font-medium">{spec.name}:</span> {spec.value}
-                        </div>
-                      ))}
-                      {specifications.length > 3 && (
-                        <div className="text-muted-foreground">+{specifications.length - 3} więcej...</div>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
-        )}
-
-        {/* Commission Info */}
-        {commission && user?.role === 'admin' && (
-          <Badge variant="secondary" className="text-[10px] w-fit gap-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold">
-            <DollarSign className="h-3 w-3" />
-            Prowizja: {commission}%
-          </Badge>
-        )}
-
-        {/* Szczegóły dostawy */}
-        <div className="pt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-          {deal.metadata?.dealTags && deal.metadata.dealTags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {deal.metadata.dealTags.slice(0, 2).map((tag: string, idx: number) => (
-                <Badge key={idx} variant="outline" className="text-[9px] px-1.5 py-0">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
-          
-          {deal.metadata?.flashSale?.active && (
-            <Badge variant="destructive" className="bg-orange-600 animate-pulse text-[10px] px-2 py-0">
-              <Zap className="h-3 w-3 mr-1" />
-              Flash Sale
-            </Badge>
-          )}
-          {promotionAppPrice !== undefined && promotionAppPrice > 0 && (
-            <Badge variant="outline" className="text-[10px] border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700 px-1.5 py-0">
-              W app: {formatPrice(promotionAppPrice)}
-            </Badge>
-          )}
-          {promotionEndsAt && (
-            <span className="flex items-center gap-1 font-medium">
-              <Clock className="h-3 w-3" />
-              Do: {new Date(promotionEndsAt).toLocaleDateString('pl-PL')}
-            </span>
-          )}
-        </div>
-
-        {/* Sekcja ceny */}
-        <div className="pt-2 border-t border-border/20">
-          {isPromotionDeal ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className="text-xs px-2 py-0.5 font-bold">{t('labels.promoCoupon')}</Badge>
-              {deal?.metadata?.hasCoupons && (
-                <Badge variant="outline" className="text-[10px] px-2 py-0.5">{t('labels.couponsAvailable')}</Badge>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <span className="text-2xl font-black text-foreground tracking-tight">{priceData.formattedPrice || 'N/A'}</span>
+        {/* Lower Part: Price & Footer (Always stationary at the bottom, split into right column in List layout) */}
+        <div className={cn(
+          "bg-[var(--ux-card-bg)] z-20 w-full",
+          isList ? "flex flex-col justify-between shrink-0 text-right min-w-[150px] self-stretch pl-4 border-l border-border/10" : 
+            (details === 'compact' ? "space-y-1 pt-0.5" : "space-y-2.5 pt-1")
+        )}>
+          {/* Price & Savings */}
+          <div className="space-y-0.5">
+            <div className={cn("flex items-baseline gap-2", isList && "justify-end")}>
+              <span className="text-xl font-black text-foreground">{priceData.formattedPrice || 'N/A'}</span>
               {priceData.formattedOriginal && (
-                <span className="text-sm text-muted-foreground line-through decoration-muted-foreground/50">{priceData.formattedOriginal}</span>
-              )}
-              {typeof priceData.discount === 'number' && priceData.discount > 0 && (
-                <span className="text-xs font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-md border border-red-500/10">
-                  -{priceData.discount}%
-                </span>
-              )}
-              {priceData.formattedSavings ? (
-                <span className="ml-auto text-xs font-bold text-green-600">{t('labels.youSave', { amount: priceData.formattedSavings })}</span>
-              ) : (
-                typeof priceData.discount === 'number' && priceData.discount > 0 && (
-                  <span className="ml-auto text-xs font-bold text-green-600">{t('labels.discount', { percent: priceData.discount })}</span>
-                )
+                <span className="text-xs text-muted-foreground line-through font-bold">{priceData.formattedOriginal}</span>
               )}
             </div>
-          )}
-        </div>
+            {priceData.formattedSavings && (
+              <div className={cn(
+                "text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1.5 leading-none",
+                isList && "justify-end"
+              )}>
+                <span>Zaoszczędź {priceData.formattedSavings}</span>
+                {typeof priceData.discount === 'number' && priceData.discount > 0 && (
+                  <span className="bg-emerald-500/10 px-1 py-0.5 rounded text-[8px] font-black">-{priceData.discount}%</span>
+                )}
+              </div>
+            )}
+          </div>
 
-        {/* Temperature bar */}
-        <div className="space-y-1 pt-1">
-          <div className="flex items-center justify-between text-xs font-medium">
-            <span className="flex items-center gap-1 text-muted-foreground">
-              <Flame className="h-3.5 w-3.5" />
-              {t('labels.temperature')}
-            </span>
-            <span className="font-bold text-foreground">{temperature} pkt</span>
-          </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted/50">
-            <div 
-              className={`h-full bg-gradient-to-r ${temperatureColor} transition-all duration-500`}
-              style={{ width: `${temperaturePercent}%` }}
-            />
-          </div>
-        </div>
-      </div>
-      
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 p-4 pt-0">
-        <div className="flex items-center gap-1 justify-center sm:justify-start">
-          <Button 
-            variant={userVote === 1 ? "default" : "outline"} 
-            size="icon"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleVote('up');
-            }} 
-            aria-label={t('auth.voteUp')}
-            disabled={isVoting}
-          >
-            <ArrowUp className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant={userVote === -1 ? "default" : "outline"} 
-            size="icon"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleVote('down');
-            }} 
-            aria-label={t('auth.voteDown')}
-            disabled={isVoting}
-          >
-            <ArrowDown className="h-4 w-4" />
-          </Button>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-1 justify-center sm:justify-end">
-          {isPromotionDeal && offerPreviewUrl && (
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-            >
-              <a
-                href={offerPreviewUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
+          {/* Footer Section */}
+          <div className={cn(
+            "flex items-center justify-between w-full",
+            isList ? "pt-0 border-t-0 flex-row-reverse items-center justify-end gap-3.5 mt-auto" : 
+              (details === 'compact' ? "border-t border-border/10 pt-1.5" : "border-t border-border/10 pt-2")
+          )}>
+            {/* Left: Voting Widget */}
+            <div className="flex items-center">
+              <div className="ux-vote-pill" onClick={(e) => e.stopPropagation()}>
+                <button 
+                  className={cn(
+                    "flex items-center justify-center transition-all duration-200 font-black text-xs h-5 w-5",
+                    userVote === 1 ? "bg-primary text-primary-foreground font-black" : "",
+                    "opacity-75 hover:opacity-100 disabled:opacity-50"
+                  )}
+                  style={{ borderRadius: 'var(--ux-radius-btn)' }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleVote('up'); }}
+                  disabled={isVoting}
+                  title={t('auth.voteUp')}
+                >
+                  +
+                </button>
+                <span className="px-1.5 flex items-center gap-0.5 font-extrabold text-xs">
+                  <Flame className="h-3.5 w-3.5 shrink-0 animate-pulse text-orange-500" />
+                  <span>{temperature}°</span>
+                </span>
+                <button 
+                  className={cn(
+                    "flex items-center justify-center transition-all duration-200 font-black text-xs h-5 w-5",
+                    userVote === -1 ? "bg-primary text-primary-foreground font-black" : "",
+                    "opacity-75 hover:opacity-100 disabled:opacity-50"
+                  )}
+                  style={{ borderRadius: 'var(--ux-radius-btn)' }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleVote('down'); }}
+                  disabled={isVoting}
+                  title={t('auth.voteDown')}
+                >
+                  -
+                </button>
+              </div>
+            </div>
+
+            {/* Right: Actions */}
+            <div className={cn(
+              "flex items-center gap-1 transition-all duration-300",
+              !isList && "translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100"
+            )} onClick={(e) => e.stopPropagation()}>
+              <button 
+                className={cn("ux-action-btn", isFavorited && "text-red-500 bg-red-500/10 opacity-100")}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(); }}
+                disabled={isFavoriteLoading}
+                title={isFavorited ? 'Usuń z ulubionych' : 'Dodaj do ulubionych'}
               >
-                {t('labels.dealPreview')}
-              </a>
-            </Button>
-          )}
-          <Button 
-            variant={isFavorited ? "default" : "outline"} 
-            size="icon"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleFavorite();
-            }}
-            aria-label={isFavorited ? t('auth.removeFromFavorites') : t('auth.addToFavorites')}
-            disabled={isFavoriteLoading}
-            className={isFavorited ? "bg-red-500 hover:bg-red-600" : ""}
-          >
-            <Heart className={`h-4 w-4 ${isFavorited ? 'fill-current' : ''}`} />
-          </Button>
-          <ShareButton 
-            type="deal" 
-            itemId={deal.id} 
-            title={dealTitle || t('labels.deal')} 
-            url={`/new-ux/deals/${deal.id}`} 
-            variant="outline" 
-            size="icon"
-            onShared={(platform) => handleShareTrack(platform)} 
-          />
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toast.success(t('messages.priceAlertEnabled'));
-            }}
-            aria-label={t('auth.priceAlert')}
-          >
-            <AlertTriangle className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              addToComparison({ ...deal, type: 'deal' });
-            }}
-            aria-label={t('comparison.addToComparison')}
-          >
-            <Scale className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="default" 
-            size="icon"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              try {
-                addDeal(deal, 1);
-                toast.success(t('messages.dealAddedToCart'));
-              } catch (err) {
-                console.error('addDeal failed', err);
-                toast.error(t('cart.addToCartError'));
-              }
-            }}
-            aria-label={t('cart.addToCart')}
-            className="h-11 w-11"
-          >
-            <ShoppingCart className="h-4 w-4" />
-          </Button>
-          {deal.metadata?.isExpired ? (
-            <ExpiredDealBadge 
-              isExpired={true}
-              reason={deal.metadata?.expiryReason || t('messages.dealExpired')}
-              checkedAt={deal.metadata?.expiryCheckedAt}
-              variant="button"
-            />
-          ) : dealExternalUrl ? (
-            <Button asChild size="icon" className="h-11 w-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl" aria-label={t('actions.goTo')}>
-              <a href={dealExternalUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                <ArrowUp className="h-4 w-4 rotate-90" />
-              </a>
-            </Button>
-          ) : (
-            <Button size="icon" className="h-11 w-11 bg-primary hover:bg-primary/90 text-primary-foreground opacity-80 rounded-xl" aria-label={t('actions.goTo')} disabled>
-              <ArrowUp className="h-4 w-4 rotate-90" />
-            </Button>
-          )}
-          {productPageUrl && (
-            <Button
-              asChild
-              variant="outline"
-              size="icon"
-              className="h-11 w-11"
-              aria-label={t('labels.viewProduct')}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-            >
-              <Link href={productPageUrl}>
-                <Package className="h-4 w-4" />
-              </Link>
-            </Button>
-          )}
+                <Heart className={cn("h-3.5 w-3.5", isFavorited && "fill-current")} />
+              </button>
+              <button 
+                className="ux-action-btn"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToComparison({ ...deal, type: 'deal' }); }}
+                title="Porównaj"
+              >
+                <Scale className="h-3.5 w-3.5" />
+              </button>
+              <button 
+                className={cn("ux-action-btn", inCart && "text-green-600 bg-green-50")}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (inCart) return;
+                  try {
+                    addDeal(deal, 1);
+                    const title = typeof deal.title === 'object' ? (deal.title?.pl || deal.title?.en || '') : (deal.title || '');
+                    toast.success(`Dodano do koszyka${title ? ': ' + title.substring(0, 40) : ''}`);
+                  } catch (err) {
+                    toast.error(t('cart.addToCartError'));
+                  }
+                }}
+                title={inCart ? 'Już w koszyku' : 'Dodaj do koszyka'}
+              >
+                {inCart ? <Check className="h-3.5 w-3.5" /> : <ShoppingCart className="h-3.5 w-3.5" />}
+              </button>
+              {deal.metadata?.isExpired ? (
+                <ExpiredDealBadge 
+                  isExpired={true}
+                  reason={deal.metadata?.expiryReason || t('messages.dealExpired')}
+                  checkedAt={deal.metadata?.expiryCheckedAt}
+                  variant="button"
+                />
+              ) : dealExternalUrl ? (
+                <button 
+                  className="ux-action-btn bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-md opacity-90 hover:opacity-100 hover:scale-110 animate-bounce"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(dealExternalUrl, '_blank', 'noopener,noreferrer');
+                  }}
+                  title={t('actions.goTo')}
+                >
+                  <ArrowUp className="h-3.5 w-3.5 rotate-90" />
+                </button>
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
     </div>

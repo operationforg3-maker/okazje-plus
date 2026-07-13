@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useParams } from 'next/navigation';
 
 // Mock data representing a typical product/deal to ensure self-contained rendering
 const MOCK_DEAL = {
@@ -48,6 +49,7 @@ const MOCK_DEAL = {
   storeName: 'Aliexpress Super Store',
   postedAt: '2026-07-09T18:00:00Z',
   discount: 30,
+  description: 'Rewelacyjna cena za najnowszą opaskę sportową Xiaomi Smart Band 8! Jasny ekran AMOLED, masa trybów sportowych i długa żywotność baterii.',
 };
 
 const MOCK_PRODUCT = {
@@ -83,6 +85,7 @@ const MOCK_DEAL_2 = {
   storeName: 'Roborock Store',
   postedAt: '2026-07-09T19:00:00Z',
   discount: 24,
+  description: 'Odkurzacz automatyczny ze stacją samoopróżniającą. Doskonała nawigacja laserowa LiDAR i potężna moc ssania 4200Pa.',
 };
 
 const MOCK_PRODUCT_2 = {
@@ -125,6 +128,27 @@ export function UXVariantsPlayground({
   realCategories?: any[];
   realCounts?: { products: number; deals: number; users: number };
 }) {
+  const params = useParams();
+  const locale = (params?.locale as string) || 'pl';
+  const stripHtml = (html: any): string => {
+    if (!html) return '';
+    let val = '';
+    if (typeof html === 'string') {
+      val = html;
+    } else if (typeof html === 'object') {
+      val = html.pl || html.en || html.de || '';
+    } else {
+      val = String(html);
+    }
+    return val
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .trim();
+  };
+
   // Mapping helpers for real data integration
   const getDealData = (index: number) => {
     if (realDeals && realDeals[index]) {
@@ -142,6 +166,7 @@ export function UXVariantsPlayground({
         storeName: deal.merchant || 'Sklep',
         postedAt: deal.postedAt || new Date().toISOString(),
         discount: typeof deal.discount === 'number' ? deal.discount : (origPrice && priceVal ? Math.round(((origPrice - priceVal) / origPrice) * 100) : 0),
+        description: stripHtml(deal.description?.pl || deal.description?.en || deal.description || 'Kupuj taniej już teraz! Sprawdź szczegóły tej rewelacyjnej okazji.'),
       };
     }
     return index === 0 ? MOCK_DEAL : MOCK_DEAL_2;
@@ -213,13 +238,19 @@ export function UXVariantsPlayground({
             </div>
             <div className="flex gap-2">
               <Button variant="default" size="sm" asChild className="bg-primary hover:bg-primary/90 text-white font-bold">
-                <a href="/pl/new-ux" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
+                <a href={`/${locale}/new-ux`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
                   <Zap className="h-3.5 w-3.5" />
                   <span>Uruchom Prototypy Nowego UX</span>
                 </a>
               </Button>
+              <Button variant="default" size="sm" asChild className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:opacity-90 text-white font-bold">
+                <a href={`/${locale}/admin/ux-preview/variants/full-page`} className="flex items-center gap-1.5">
+                  <Grid className="h-3.5 w-3.5" />
+                  <span>Podgląd Pełnej Strony (V1-V4)</span>
+                </a>
+              </Button>
               <Button variant="outline" size="sm" asChild>
-                <a href="/pl/admin/ux-preview" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                <a href={`/${locale}/admin/ux-preview`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
                   <span>Otwórz stary Preview UX</span>
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
@@ -739,7 +770,7 @@ function HeroVariantCurrent() {
             
             <div className="space-y-2">
               <h4 className="font-bold text-sm text-foreground line-clamp-2">
-                Xiaomi Smart Band 8 – Ekran AMOLED 60Hz, Pomiar natlenienia krwi, Bateria do 16 dni
+                Xiaomi Smart Band 8 - Ekran AMOLED 60Hz, Pomiar natlenienia krwi, Bateria do 16 dni
               </h4>
               <div className="flex items-baseline gap-2">
                 <span className="text-lg font-black text-foreground">139,99 zł</span>
@@ -820,7 +851,7 @@ function HeroVariantMinimalist() {
    MODULE 2: DEAL/PRODUCT CARD VARIANTS
    ========================================================================== */
 
-function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily, cardIndex = 0, data }: {
+export function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily, cardIndex = 0, data }: {
   type: 'deal' | 'product';
   details: 'compact' | 'expanded';
   layout: 'grid' | 'masonry' | 'list';
@@ -830,8 +861,36 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
   data: any;
 }) {
   const isList = layout === 'list';
-  const isMasonry = layout === 'masonry';
+  const isMasonry = layout === 'masonry'; // Invalidate SWC cache
   
+  // Safe price extraction helper
+  const getSafePrice = (priceVal: any): number => {
+    if (typeof priceVal === 'number') return priceVal;
+    if (typeof priceVal === 'string') return parseFloat(priceVal) || 0;
+    if (priceVal && typeof priceVal === 'object') {
+      return priceVal.amount || priceVal.pln || parseFloat(priceVal.value) || 0;
+    }
+    return 0;
+  };
+
+  const priceNum = getSafePrice(data.price);
+  const originalNum = data.originalPrice ? getSafePrice(data.originalPrice) : 0;
+  const discountVal = typeof data.discount === 'number' ? data.discount : (originalNum > priceNum ? Math.round(((originalNum - priceNum) / originalNum) * 100) : 0);
+
+  // Safe localization extraction helpers
+  const getSafeString = (val: any): string => {
+    if (!val) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'object') {
+      return val.pl || val.en || val.de || val.uk || val.es || val.fr || '';
+    }
+    return String(val);
+  };
+
+  const titleStr = getSafeString(data.title || data.name);
+  const descriptionStr = getSafeString(data.description);
+  const storeNameStr = getSafeString(data.storeName);
+
   return (
     <div className={cn(
       "ux-card-container p-4 w-full relative min-w-0 text-left group flex",
@@ -840,10 +899,10 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
       isMasonry ? "h-auto" : "",
       !isList && "max-w-[280px]"
     )}>
-      {type === 'deal' && typeof data.discount === 'number' && (
+      {type === 'deal' && discountVal > 0 && (
         <div className="absolute top-3 left-3 z-30">
           <span className="ux-badge text-white text-[9px] font-black px-2.5 py-1 shadow-md">
-            -{data.discount}%
+            -{discountVal}%
           </span>
         </div>
       )}
@@ -851,7 +910,7 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
       {/* Image container with Slide-up Details Overlay (Hover Reveal for Grid/Masonry only) */}
       <div className={cn(
         "ux-image-wrapper relative bg-muted/10 dark:bg-zinc-800/20 shrink-0 flex items-center justify-center overflow-hidden w-full transition-all duration-300",
-        isList ? "w-36 h-36" : "mb-3",
+        isList ? "w-36 h-36" : (details === 'compact' ? "mb-1.5" : "mb-3"),
         !isList && !isMasonry ? (details === 'compact' ? "h-32" : "h-44 aspect-square") : "",
         isMasonry ? (cardIndex % 2 === 0 ? "h-56" : "h-72") : "",
         // Colorful Masonry backgrounds
@@ -861,8 +920,8 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
         isMasonry && styleFamily === 'minimalist' && "bg-zinc-100 dark:bg-zinc-900"
       )}>
         <img 
-          src={data.imageUrl} 
-          alt={data.title} 
+          src={data.imageUrl || data.image} 
+          alt={titleStr} 
           className={cn(
             "w-full h-full transition-transform duration-500",
             isMasonry ? "object-cover scale-[1.03] group-hover:scale-105" : "object-contain p-2"
@@ -873,7 +932,8 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
       {/* Text Info Section */}
       <div className={cn(
         "flex-grow min-w-0 pt-1 relative z-10",
-        isList ? "flex flex-row items-center justify-between gap-6" : "flex flex-col justify-between space-y-2.5"
+        isList ? "flex flex-row items-center justify-between gap-6" : 
+          (details === 'compact' ? "flex flex-col justify-between space-y-1" : "flex flex-col justify-between space-y-2.5")
       )}>
         {/* Upper Part: Store name, Title, Specs/Description (Translates upwards on hover to cover image) */}
         <div className={cn(
@@ -885,9 +945,9 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
             "absolute inset-0 z-[-1] bg-[var(--ux-image-hover-bg)] backdrop-blur-md transition-all duration-300 rounded-t-lg",
             hoverReveal && !isList ? "group-hover:-bottom-12" : ""
           )} />
-          <div className="space-y-1.5">
+          <div className={details === 'compact' ? "space-y-1" : "space-y-1.5"}>
             <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>{data.storeName}</span>
+              <span>{storeNameStr}</span>
               {type === 'deal' ? (
                 <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-[10px] font-black text-slate-600 dark:text-slate-300 border border-slate-200/50 dark:border-zinc-700/50 hover:bg-slate-200/80 dark:hover:bg-zinc-700 transition-colors">
                   <MessageSquare className="h-3 w-3 shrink-0 text-slate-400 dark:text-slate-500" />
@@ -903,7 +963,7 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
             </div>
 
             <h4 className="text-xs font-bold line-clamp-2 leading-tight transition-colors group-hover:text-primary">
-              {data.title}
+              {titleStr}
             </h4>
 
             {/* List layout extra details reveal on hover */}
@@ -911,13 +971,13 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
               <div className="max-h-0 opacity-0 overflow-hidden group-hover:max-h-20 group-hover:opacity-100 transition-all duration-300 ease-in-out text-[11px] text-muted-foreground border-t border-border/5 pt-1.5 mt-1">
                 {type === 'deal' ? (
                   <p className="line-clamp-2 leading-relaxed">
-                    Rewelacyjna oferta! Szybka dostawa z magazynu oficjalnego dystrybutora. Sprawdź historię ceny i kup zanim wyprzedadzą zapasy!
+                    {descriptionStr}
                   </p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
-                    {data.specs && Object.entries(data.specs).map(([key, val]) => (
-                      <span key={key} className="ux-spec-pill px-1.5 py-0.5 text-[9px] font-bold">{key}: {String(val)}</span>
-                    ))}
+                     {data.specs && Object.entries(data.specs).map(([key, val]) => (
+                       <span key={key} className="ux-spec-pill px-1.5 py-0.5 text-[9px] font-bold">{key}: {getSafeString(val)}</span>
+                     ))}
                   </div>
                 )}
               </div>
@@ -927,15 +987,15 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
             {!isList && hoverReveal && (
               <div className="max-h-0 opacity-0 overflow-hidden group-hover:max-h-24 group-hover:opacity-100 transition-all duration-300 ease-in-out text-[10px] text-muted-foreground border-t border-border/5 pt-1.5 mt-1">
                 {type === 'deal' ? (
-                  <p className="line-clamp-3 leading-snug">
-                    Rewelacyjna oferta! Szybka dostawa z magazynu oficjalnego dystrybutora. Sprawdź historię ceny i kup zanim wyprzedadzą zapasy!
+                  <p className={cn("leading-snug", details === 'compact' ? "line-clamp-2" : "line-clamp-3")}>
+                    {descriptionStr}
                   </p>
                 ) : (
                   <div className="space-y-1">
-                    {data.specs && Object.entries(data.specs).map(([key, val]) => (
+                    {data.specs && Object.entries(data.specs).slice(0, details === 'compact' ? 2 : 4).map(([key, val]) => (
                       <div key={key} className="flex justify-between text-[9px] pb-0.5">
                         <span className="text-muted-foreground">{key}</span>
-                        <span className="font-bold text-foreground">{String(val)}</span>
+                        <span className="font-bold text-foreground">{getSafeString(val)}</span>
                       </div>
                     ))}
                   </div>
@@ -949,7 +1009,7 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
                 {type === 'product' && data.specs && (
                   <div className="flex flex-wrap gap-x-1.5 gap-y-0.5">
                     {Object.entries(data.specs).slice(0, 2).map(([key, val]) => (
-                      <span key={key} className="ux-spec-pill px-1.5 py-0.5 text-[9px] font-bold">{key}: {String(val)}</span>
+                      <span key={key} className="ux-spec-pill px-1.5 py-0.5 text-[9px] font-bold">{key}: {getSafeString(val)}</span>
                     ))}
                   </div>
                 )}
@@ -967,23 +1027,24 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
         {/* Lower Part: Price & Footer (Always stationary at the bottom, split into right column in List layout) */}
         <div className={cn(
           "bg-[var(--ux-card-bg)] z-20",
-          isList ? "flex flex-col justify-between shrink-0 text-right min-w-[150px] self-stretch pl-4 border-l border-border/10" : "space-y-2.5 pt-1"
+          isList ? "flex flex-col justify-between shrink-0 text-right min-w-[150px] self-stretch pl-4 border-l border-border/10" : 
+            (details === 'compact' ? "space-y-1 pt-0.5" : "space-y-2.5 pt-1")
         )}>
           {/* Price & Savings (Enlarged) */}
           <div className="space-y-0.5">
             <div className={cn("flex items-baseline gap-2", isList && "justify-end")}>
-              <span className="text-xl font-black text-foreground">{data.price.toFixed(2)} zł</span>
-              {data.originalPrice && (
-                <span className="text-xs text-muted-foreground line-through font-bold">{data.originalPrice.toFixed(2)} zł</span>
+              <span className="text-xl font-black text-foreground">{priceNum.toFixed(2)} zł</span>
+              {originalNum > 0 && (
+                <span className="text-xs text-muted-foreground line-through font-bold">{originalNum.toFixed(2)} zł</span>
               )}
             </div>
-            {data.originalPrice && (
+            {originalNum > 0 && (
               <div className={cn(
                 "text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1.5 leading-none",
                 isList && "justify-end"
               )}>
-                <span>Zaoszczędź {(data.originalPrice - data.price).toFixed(2)} zł</span>
-                <span className="bg-emerald-500/10 px-1 py-0.5 rounded text-[8px] font-black">-{data.discount}%</span>
+                <span>Zaoszczędź {(originalNum - priceNum).toFixed(2)} zł</span>
+                <span className="bg-emerald-500/10 px-1 py-0.5 rounded text-[8px] font-black">-{discountVal}%</span>
               </div>
             )}
           </div>
@@ -991,7 +1052,8 @@ function CardVariantUniversal({ type, details, layout, hoverReveal, styleFamily,
           {/* Stable Footer Section - No size jumping */}
           <div className={cn(
             "flex items-center justify-between",
-            isList ? "pt-0 border-t-0 flex-row-reverse items-center justify-end gap-3.5 mt-auto w-full" : "border-t border-border/10 pt-2"
+            isList ? "pt-0 border-t-0 flex-row-reverse items-center justify-end gap-3.5 mt-auto w-full" : 
+              (details === 'compact' ? "border-t border-border/10 pt-1.5" : "border-t border-border/10 pt-2")
           )}>
             {/* Left: Voting Widget with Temperature (Styled with theme variables) */}
             <div className="flex items-center">
