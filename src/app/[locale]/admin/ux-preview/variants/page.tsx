@@ -2,7 +2,7 @@ import React from 'react';
 import { UXVariantsPlayground } from '@/components/admin/ux-variants-playground';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { searchDealsTypesense, searchProductsTypesense } from '@/lib/search-server';
+import { searchDeals, searchProducts } from '@/lib/search-server';
 import { getAllCategories, getSubcategories } from '@/lib/data-admin';
 import { adminDb } from '@/lib/firebase-admin';
 
@@ -10,12 +10,12 @@ export const dynamic = 'force-dynamic';
 
 export default async function UXVariantsPage() {
   // Fetch real data on the server side
-  let fetchedDeals = await searchDealsTypesense("", { limit: 25, sortBy: 'newest' });
+  let fetchedDeals = await searchDeals("", { limit: 25, sortBy: 'newest' });
   const realDeals = fetchedDeals
     .filter((d: any) => d.image && d.image !== '/icon_okazjeplus.svg' && !d.image.includes('placeholder'))
     .slice(0, 4);
 
-  let fetchedProducts = await searchProductsTypesense("", { limit: 25, sortBy: 'newest' });
+  let fetchedProducts = await searchProducts("", { limit: 25, sortBy: 'newest' });
   
   if (!fetchedProducts || fetchedProducts.length === 0) {
     try {

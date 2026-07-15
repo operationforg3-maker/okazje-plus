@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { searchProductsTypesense, searchDealsTypesense } from '@/lib/search';
+import { searchProducts, searchDeals } from '@/lib/search';
 import ProductCard from '@/components/new-ux/product-card';
 import DealCard from '@/components/new-ux/deal-card';
 import DealListCard from '@/components/new-ux/deal-list-card';
@@ -78,14 +78,14 @@ function SearchPageContent() {
         setLoading(true);
         try {
           const [productResults, dealResults] = await Promise.all([
-            searchProductsTypesense(q, {
+            searchProducts(q, {
               limit: 50,
               minPrice: filters.minPrice,
               maxPrice: filters.maxPrice,
               minRating: filters.minRating,
               sortBy: filters.sortBy as any,
             }),
-            searchDealsTypesense(q, {
+            searchDeals(q, {
               limit: 50,
               minPrice: filters.minPrice,
               maxPrice: filters.maxPrice,

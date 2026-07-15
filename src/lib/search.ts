@@ -33,7 +33,7 @@ export type DealSearchOptions = {
   statusFilter?: 'approved' | 'waiting_room';
 };
 
-export async function searchProductsTypesense(
+export async function searchProducts(
   q: string,
   opts: ProductSearchOptions = {}
 ): Promise<ProductCore[]> {
@@ -57,12 +57,12 @@ export async function searchProductsTypesense(
     const body = await res.json();
     return body.products || [];
   } catch (e) {
-    console.warn('searchProductsTypesense proxy fetch failed:', e);
+    console.warn('searchProducts proxy fetch failed:', e);
     return [];
   }
 }
 
-export async function searchDealsTypesense(
+export async function searchDeals(
   q: string,
   opts: DealSearchOptions = {}
 ): Promise<Deal[]> {
@@ -88,7 +88,7 @@ export async function searchDealsTypesense(
     const body = await res.json();
     return body.deals || [];
   } catch (e) {
-    console.warn('searchDealsTypesense proxy fetch failed:', e);
+    console.warn('searchDeals proxy fetch failed:', e);
     return [];
   }
 }
@@ -109,7 +109,7 @@ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<
   }
 }
 
-export async function getDealByIdTypesense(dealId: string): Promise<Deal | null> {
+export async function getDealById(dealId: string): Promise<Deal | null> {
   if (!dealId) return null;
   try {
     const params = new URLSearchParams();
@@ -124,7 +124,7 @@ export async function getDealByIdTypesense(dealId: string): Promise<Deal | null>
     const body = await res.json();
     return Array.isArray(body.deals) && body.deals.length > 0 ? (body.deals[0] as Deal) : null;
   } catch (e) {
-    console.warn('getDealByIdTypesense proxy fetch failed:', e);
+    console.warn('getDealById proxy fetch failed:', e);
     return null;
   }
 }

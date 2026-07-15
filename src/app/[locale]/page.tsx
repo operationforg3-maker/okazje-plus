@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import HomeClient from './home-client';
 import { getRecommendedProducts, getCategories } from '@/lib/data';
-import { searchDealsTypesense } from '@/lib/search-server';
+import { searchDeals } from '@/lib/search-server';
 import { generateHomePageJsonLd } from '@/lib/json-ld-generators';
 
 // Cache home page more aggressively for better performance
@@ -137,7 +137,7 @@ export async function generateMetadata({
 export default async function HomePage() {
   // Pobieramy więcej dealów jednocześnie — 40 do karuzeli + hot deals grid
   const [allHotDeals, topProducts, categories] = await Promise.all([
-    searchDealsTypesense('*', {
+    searchDeals('*', {
       limit: 40,  // więcej żeby wybrać najlepiej przecenione do karuzeli
       sortBy: 'hot',
       statusFilter: 'approved',

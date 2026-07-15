@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { Deal, LocalizedText } from '@/lib/types';
 import { getProductCore } from '@/lib/data';
 import { getExternalUrl } from '@/lib/external-url';
-import { getDealByIdTypesense, searchDealsTypesense } from '@/lib/search-server';
+import { getDealById, searchDeals } from '@/lib/search-server';
 import { generateDealJsonLd, generateBreadcrumbJsonLd } from '@/lib/json-ld-generators';
 import { buildCategoryPath, humanizeCategorySlug } from '@/lib/category-routes';
 import DealDetailClient from './deal-detail-client';
@@ -154,7 +154,7 @@ function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
 
 // Server-side data fetching
 async function getDealData(id: string) {
-  const dealDoc = await getDealByIdTypesense(id);
+  const dealDoc = await getDealById(id);
   // Block only truly hidden statuses (drafts / rejected).
   // 'pending' and 'pending_approval' are visible in search/waiting-room feeds.
   const hiddenDealStatuses = ['draft', 'rejected'];
@@ -173,7 +173,7 @@ async function getDealData(id: string) {
   let relatedDeals: Deal[] = [];
 
   if (relatedDeals.length === 0) {
-    const hotDeals = await searchDealsTypesense('*', {
+    const hotDeals = await searchDeals('*', {
       limit: 60,
       sortBy: 'hot',
       statusFilter: 'approved',
@@ -306,7 +306,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 // Optional: Generate static params for hot deals
 export async function generateStaticParams() {
   try {
-    const deals = await searchDealsTypesense('*', {
+    const deals = await searchDeals('*', {
       limit: 100,
       sortBy: 'hot',
       statusFilter: 'approved',

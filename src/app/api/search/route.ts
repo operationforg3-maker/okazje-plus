@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cacheGet, cacheSet, rateLimit } from '@/lib/cache';
 import { promises as fs } from 'fs';
 import path from 'path';
-import { searchProductsTypesense, searchDealsTypesense, getDealByIdTypesense } from '@/lib/search-server';
+import { searchProducts, searchDeals, getDealById } from '@/lib/search-server';
 
 const DEFAULT_TTL = 60; // seconds
 
@@ -158,7 +158,7 @@ export async function GET(request: Request) {
 
     // If dealId is provided, fetch just that single deal
     if (dealId) {
-      const deal = await getDealByIdTypesense(dealId);
+      const deal = await getDealById(dealId);
       deals = deal ? [deal] : [];
     } else {
       const tasks: Promise<any>[] = [];
@@ -167,7 +167,7 @@ export async function GET(request: Request) {
       if (type === 'products' || type === 'all') {
         const prodSort = sort === 'price_asc' ? 'price_asc' : sort === 'price_desc' ? 'price_desc' : sort === 'rating' ? 'rating' : sort === 'popularity' ? 'popularity' : sort === 'newest' ? 'newest' : 'relevance';
         tasks.push(
-          searchProductsTypesense(q, {
+          searchProducts(q, {
             mainCategorySlug: mainCategorySlug || undefined,
             subCategorySlug: subCategorySlug || undefined,
             subSubCategorySlug: subSubCategorySlug || undefined,
@@ -186,7 +186,7 @@ export async function GET(request: Request) {
       if (type === 'deals' || type === 'all') {
         const dealSort = sort === 'temperature' || sort === 'hot' ? 'hot' : sort === 'price_asc' ? 'price_asc' : sort === 'price_desc' ? 'price_desc' : sort === 'newest' ? 'newest' : sort === 'popularity' ? 'popularity' : sort === 'discount_desc' ? 'discount_desc' : 'relevance';
         tasks.push(
-          searchDealsTypesense(q, {
+          searchDeals(q, {
             mainCategorySlug: mainCategorySlug || undefined,
             subCategorySlug: subCategorySlug || undefined,
             subSubCategorySlug: subSubCategorySlug || undefined,

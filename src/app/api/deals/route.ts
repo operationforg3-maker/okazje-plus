@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDealsByFilters, getDealsCount } from '@/lib/data';
-import { searchDealsTypesense } from '@/lib/search';
+import { searchDeals } from '@/lib/search';
 import { retryWithBackoff } from '@/lib/offline-utils';
 
 /**
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   try {
     if (q.length > 0 || sort) {
       const semanticResults = await retryWithBackoff(() =>
-        searchDealsTypesense(q.length > 0 ? q : '*', {
+        searchDeals(q.length > 0 ? q : '*', {
           mainCategorySlug,
           subCategorySlug,
           subSubCategorySlug,

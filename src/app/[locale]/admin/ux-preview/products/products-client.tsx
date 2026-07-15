@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Product } from '@/lib/types';
 import { UXRedesignProductCard } from '@/components/ux-redesign/product-card';
-import { searchProductsTypesense } from '@/lib/search';
+import { searchProducts } from '@/lib/search';
 import { ShoppingBag, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -31,7 +31,7 @@ export function UXPreviewProductsClient({ initialProducts }: Props) {
     setLimit(initialLimit);
 
     try {
-      const results = await searchProductsTypesense('*', {
+      const results = await searchProducts('*', {
         limit: initialLimit,
         sortBy: newSort as any,
       });
@@ -56,7 +56,7 @@ export function UXPreviewProductsClient({ initialProducts }: Props) {
       const newLimit = limit + 12;
 
       try {
-        const results = await searchProductsTypesense('*', {
+        const results = await searchProducts('*', {
           limit: newLimit,
           sortBy: sortBy as any,
         });

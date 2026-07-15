@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef, Suspense } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { searchProductsTypesense } from '@/lib/search';
+import { searchProducts } from '@/lib/search';
 import ProductCard from '@/components/new-ux/product-card';
 import { UnifiedFilterSidebar } from '@/components/unified-filter-sidebar';
 import { Input } from '@/components/ui/input';
@@ -323,7 +323,7 @@ export function ProductsPageContent({
         if (q.length > 1) {
           if (productStatusView === 'approved') {
             // Wyszukiwanie approved przez Typesense
-            const results = await searchProductsTypesense(q, {
+            const results = await searchProducts(q, {
               mainCategorySlug: selectedMainCategorySlug,
               subCategorySlug: selectedSubcategory || undefined,
               subSubCategorySlug: selectedSubSubcategory || undefined,

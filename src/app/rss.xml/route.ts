@@ -1,5 +1,5 @@
 import { getRecommendedProducts } from '@/lib/data';
-import { searchDealsTypesense } from '@/lib/search-server';
+import { searchDeals } from '@/lib/search-server';
 import type { Deal, Product } from '@/lib/types';
 
 function escapeXml(text: string): string {
@@ -20,7 +20,7 @@ async function generateRssFeed() {
   
   // Fetch latest 50 deals and products
   const [deals, products] = await Promise.all([
-    searchDealsTypesense('*', {
+    searchDeals('*', {
       limit: 50,
       sortBy: 'hot',
       statusFilter: 'approved',

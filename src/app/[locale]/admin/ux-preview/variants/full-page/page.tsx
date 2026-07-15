@@ -1,6 +1,6 @@
 import React from 'react';
 import { FullPagePreviewClient } from './full-page-client';
-import { searchDealsTypesense, searchProductsTypesense } from '@/lib/search-server';
+import { searchDeals, searchProducts } from '@/lib/search-server';
 import { getAllCategories, getSubcategories, getSubSubcategories } from '@/lib/data-admin';
 import { adminDb } from '@/lib/firebase-admin';
 

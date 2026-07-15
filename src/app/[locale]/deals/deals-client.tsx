@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState, useRef, useCallback, Suspense } from 'react';
 import { getCategories, getCategoriesWithContent, getNavigationShowcase, getProductById, getDealsByCategory, getDealsCount, getDealsByFilters } from '@/lib/data';
-import { searchDealsTypesense } from '@/lib/search';
+import { searchDeals } from '@/lib/search';
 import { retryWithBackoff, isOnline, waitForOnline, isOfflineError } from '@/lib/offline-utils';
 import { Deal, Category, Product } from '@/lib/types';
 import { UnifiedFilterSidebar } from '@/components/unified-filter-sidebar';
@@ -360,7 +360,7 @@ function DealsPageContent() {
         const [fetchedCategories, showcaseConfig, hotDealsResult] = await Promise.all([
           retryWithBackoff(() => getCategoriesWithContent('deals'), 2, 500),
           retryWithBackoff(() => getNavigationShowcase(), 1, 500),
-          retryWithBackoff(() => searchDealsTypesense('*', {
+          retryWithBackoff(() => searchDeals('*', {
             limit: 100,
             sortBy: 'hot',
             statusFilter: 'approved',

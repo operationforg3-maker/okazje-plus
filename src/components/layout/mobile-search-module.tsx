@@ -6,7 +6,7 @@ import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { searchDealsTypesense, searchProductsTypesense } from '@/lib/search';
+import { searchDeals, searchProducts } from '@/lib/search';
 import type { Deal, ProductCore } from '@/lib/types';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
@@ -84,8 +84,8 @@ export function MobileSearchModule({ prefix, onNavigate }: MobileSearchModulePro
       setLoading(true);
       try {
         const [prod, deal] = await Promise.all([
-          searchProductsTypesense(q, { limit: 6, sortBy: 'relevance' }),
-          searchDealsTypesense(q, { limit: 6, sortBy: 'relevance', statusFilter: 'approved' }),
+          searchProducts(q, { limit: 6, sortBy: 'relevance' }),
+          searchDeals(q, { limit: 6, sortBy: 'relevance', statusFilter: 'approved' }),
         ]);
 
         if (!cancelled) {

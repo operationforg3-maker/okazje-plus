@@ -113,7 +113,7 @@ export type ProductSearchOptions = {
   statusFilter?: 'approved' | 'waiting_room';
 };
 
-export async function searchProductsTypesense(
+export async function searchProducts(
   q: string,
   opts: ProductSearchOptions = {}
 ): Promise<ProductCore[]> {
@@ -135,7 +135,7 @@ export type DealSearchOptions = {
   statusFilter?: 'approved' | 'waiting_room';
 };
 
-export async function searchDealsTypesense(
+export async function searchDeals(
   q: string,
   opts: DealSearchOptions = {}
 ): Promise<Deal[]> {
@@ -251,7 +251,7 @@ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<
   }
 }
 
-export async function getDealByIdTypesense(dealId: string): Promise<Deal | null> {
+export async function getDealById(dealId: string): Promise<Deal | null> {
   if (!dealId) return null;
 
   try {
@@ -261,7 +261,7 @@ export async function getDealByIdTypesense(dealId: string): Promise<Deal | null>
     if (!snap.exists) return null;
     return { id: snap.id, ...snap.data() } as Deal;
   } catch (error) {
-    console.warn('getDealByIdTypesense failed:', error);
+    console.warn('getDealById failed:', error);
     return null;
   }
 }
@@ -404,7 +404,7 @@ async function searchProductsFirestoreFallback(
       return allDocs.slice(offset, offset + safeLimit);
     }
   } catch (err) {
-    console.error('Firestore fallback for searchProductsTypesense failed:', err);
+    console.error('Firestore fallback for searchProducts failed:', err);
     return [];
   }
 }
@@ -603,7 +603,7 @@ async function searchDealsFirestoreFallback(
       return allDocs.slice(offset, offset + safeLimit);
     }
   } catch (err) {
-    console.error('Firestore fallback for searchDealsTypesense failed:', err);
+    console.error('Firestore fallback for searchDeals failed:', err);
     return [];
   }
 }

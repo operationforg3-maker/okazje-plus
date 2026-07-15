@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Deal } from '@/lib/types';
 import { UXRedesignDealCard } from '@/components/ux-redesign/deal-card';
-import { searchDealsTypesense } from '@/lib/search';
+import { searchDeals } from '@/lib/search';
 import { Flame, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,7 +33,7 @@ export function UXPreviewDealsClient({ initialDeals }: Props) {
     setLimit(initialLimit);
     
     try {
-      const results = await searchDealsTypesense('*', {
+      const results = await searchDeals('*', {
         limit: initialLimit,
         sortBy: newSort,
       });
@@ -58,7 +58,7 @@ export function UXPreviewDealsClient({ initialDeals }: Props) {
       const newLimit = limit + 12;
       
       try {
-        const results = await searchDealsTypesense('*', {
+        const results = await searchDeals('*', {
           limit: newLimit,
           sortBy,
         });

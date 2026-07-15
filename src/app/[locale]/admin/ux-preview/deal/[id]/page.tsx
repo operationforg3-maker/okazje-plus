@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getDealByIdTypesense, searchDealsTypesense } from '@/lib/search-server';
+import { getDealById, searchDeals } from '@/lib/search-server';
 import { getProductCore } from '@/lib/data';
 import { UXPreviewDealDetailClient } from './deal-detail-client';
 
@@ -36,7 +36,7 @@ function sanitizeData<T>(obj: T): T {
 }
 
 async function resolveDeal(id: string) {
-  const raw = await getDealByIdTypesense(id);
+  const raw = await getDealById(id);
   if (!raw) return null;
 
   const productId =
@@ -46,7 +46,7 @@ async function resolveDeal(id: string) {
   const product = productId ? await getProductCore(productId) : null;
 
   // Get related deals from same sub-category
-  const allHot = await searchDealsTypesense('*', { limit: 20, sortBy: 'hot', statusFilter: 'approved' });
+  const allHot = await searchDeals('*', { limit: 20, sortBy: 'hot', statusFilter: 'approved' });
   const related = allHot
     .filter((d) => d.id !== id)
     .filter((d) => {

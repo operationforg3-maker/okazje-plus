@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getRecommendedProducts, getCategories, getAllProductCores } from '@/lib/data';
-import { searchDealsTypesense } from '@/lib/search-server';
+import { searchDeals } from '@/lib/search-server';
 import { getGoogleProductPublicationState } from '@/lib/google-product-publication';
 import { getAllApprovedProductsForSitemap } from '@/lib/data-admin';
 
@@ -65,7 +65,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Dynamic deals — top 1000 hottest
   let dealUrls: MetadataRoute.Sitemap = [];
   try {
-    const deals = await searchDealsTypesense('*', {
+    const deals = await searchDeals('*', {
       limit: 1000,
       sortBy: 'hot',
       statusFilter: 'approved',
