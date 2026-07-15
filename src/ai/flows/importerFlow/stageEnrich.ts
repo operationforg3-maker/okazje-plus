@@ -299,8 +299,12 @@ export async function refineProductsBatch(
         await new Promise(r => setTimeout(r, finalConfig.delayBetweenItems));
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(`  ✗ Failed to refine ${raw.id}:`, error);
+      const errMsg = String(error?.message || error);
+      if (errMsg.includes('API_KEY_INVALID') || errMsg.includes('API key not valid')) {
+        console.error(`[CRITICAL] Gemini API Key is invalid or expired. AI refinement will fallback to raw/untranslated product details!`);
+      }
     }
   }
 

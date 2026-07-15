@@ -1,66 +1,130 @@
 import { genkit } from 'genkit';
-// NOTE: Switched from Vertex AI to Google AI (Gemini API key) due to
-// GCloud billing dunning block — Vertex AI returns 403 PERMISSION_DENIED.
-// Vertex AI can be re-enabled once billing is settled:
-//   import { vertexAI } from '@genkit-ai/vertexai';
-//   plugins: [vertexAI({ projectId, location })]
+import { vertexAI } from '@genkit-ai/vertexai';
 import { googleAI } from '@genkit-ai/googleai';
 
 const googleGenAIKey = process.env.GOOGLE_GENAI_API_KEY || '';
 
 if (process.env.NODE_ENV !== 'production' || process.env.GENKIT_DEBUG) {
-  console.log(`✅ Google AI (Gemini API key) initialized. Key configured: ${Boolean(googleGenAIKey)}`);
+  console.log(`✅ AI Registry: Initializing Vertex AI (Primary) and Google AI (Fallback, Key configured: ${Boolean(googleGenAIKey)})`);
 }
 
 export const ai = genkit({
   plugins: [
+    vertexAI({
+      projectId: 'okazje-plus',
+      location: 'europe-west4' // GCP region matching hosted environment
+    }),
     googleAI({ apiKey: googleGenAIKey }),
   ],
-  model: 'googleai/gemini-2.5-flash',
+  model: 'vertexai/gemini-2.5-flash',
 });
 
-// Alias model mapping — all redirect to Google AI plugin models
-const modelMapping: Record<string, string> = {
-  'refine-model': 'googleai/gemini-2.5-flash',
-  'googleai/gemini-2.5-flash': 'googleai/gemini-2.5-flash',
-  'googleai/gemini-2.5-pro': 'googleai/gemini-2.5-pro',
-  'vertexai/gemini-2.5-flash': 'googleai/gemini-2.5-flash',
-  'vertexai/gemini-2.5-pro': 'googleai/gemini-2.5-pro',
-  'vertexai/gemini-2.0-flash-exp': 'googleai/gemini-2.5-flash',
-  'vertexai/gemini-2.0-flash': 'googleai/gemini-2.5-flash',
-  'vertexai/gemini-1.5-flash': 'googleai/gemini-2.5-flash',
-  'vertexai/gemini-1.5-pro': 'googleai/gemini-2.5-pro',
-  'gemini-2.0-flash-exp': 'googleai/gemini-2.5-flash',
-  'gemini-1.5-flash': 'googleai/gemini-2.5-flash',
-  'gemini-1.5-pro': 'googleai/gemini-2.5-pro',
-  'gemini-2.0-flash': 'googleai/gemini-2.5-flash',
+interface ModelMapping {
+  primary: string;
+  fallback: string;
+}
+
+// Map each model alias to a primary Vertex AI model and a fallback Google AI Studio model.
+// Google AI Studio (fallback) uses gemini-2.0-flash and gemini-1.5-pro as stable models.
+const modelMapping: Record<string, ModelMapping> = {
+  'refine-model': {
+    primary: 'vertexai/gemini-2.5-flash',
+    fallback: 'googleai/gemini-2.0-flash'
+  },
+  'googleai/gemini-2.5-flash': {
+    primary: 'vertexai/gemini-2.5-flash',
+    fallback: 'googleai/gemini-2.0-flash'
+  },
+  'googleai/gemini-2.5-pro': {
+    primary: 'vertexai/gemini-2.5-pro',
+    fallback: 'googleai/gemini-1.5-pro'
+  },
+  'vertexai/gemini-2.5-flash': {
+    primary: 'vertexai/gemini-2.5-flash',
+    fallback: 'googleai/gemini-2.0-flash'
+  },
+  'vertexai/gemini-2.5-pro': {
+    primary: 'vertexai/gemini-2.5-pro',
+    fallback: 'googleai/gemini-1.5-pro'
+  },
+  'vertexai/gemini-2.0-flash-exp': {
+    primary: 'vertexai/gemini-2.0-flash-exp',
+    fallback: 'googleai/gemini-2.0-flash'
+  },
+  'vertexai/gemini-2.0-flash': {
+    primary: 'vertexai/gemini-2.0-flash',
+    fallback: 'googleai/gemini-2.0-flash'
+  },
+  'vertexai/gemini-1.5-flash': {
+    primary: 'vertexai/gemini-1.5-flash',
+    fallback: 'googleai/gemini-1.5-flash'
+  },
+  'vertexai/gemini-1.5-pro': {
+    primary: 'vertexai/gemini-1.5-pro',
+    fallback: 'googleai/gemini-1.5-pro'
+  },
+  'gemini-2.0-flash-exp': {
+    primary: 'vertexai/gemini-2.0-flash-exp',
+    fallback: 'googleai/gemini-2.0-flash'
+  },
+  'gemini-1.5-flash': {
+    primary: 'vertexai/gemini-1.5-flash',
+    fallback: 'googleai/gemini-1.5-flash'
+  },
+  'gemini-1.5-pro': {
+    primary: 'vertexai/gemini-1.5-pro',
+    fallback: 'googleai/gemini-1.5-pro'
+  },
+  'gemini-2.0-flash': {
+    primary: 'vertexai/gemini-2.0-flash',
+    fallback: 'googleai/gemini-2.0-flash'
+  },
 };
 
+// Define wrapper model aliases that implement the automatic fallback strategy
 for (const [alias, target] of Object.entries(modelMapping)) {
   ai.defineModel({
     name: alias,
-    label: `Redirect ${alias} to Google AI ${target}`
+    label: `Smart Redirect ${alias} (Primary: ${target.primary}, Fallback: ${target.fallback})`
   }, async (input) => {
     const rawInput = input as any;
-    if (process.env.NODE_ENV !== 'production' || process.env.GENKIT_DEBUG) {
-      console.log(`[GENKIT ALIAS REDIRECT] Redirecting ${alias} -> ${target}. Input keys:`, Object.keys(input));
-    }
     
     let retries = 8;
     let delay = 3000;
+    let useFallback = false;
+
     while (true) {
+      const selectedModel = useFallback ? target.fallback : target.primary;
+      
+      if (process.env.NODE_ENV !== 'production' || process.env.GENKIT_DEBUG) {
+        console.log(`[GENKIT REDIRECT] Using model: ${selectedModel} (Alias: ${alias}, Fallback Active: ${useFallback})`);
+      }
+
       try {
         return await ai.generate({
           ...rawInput,
-          model: target
+          model: selectedModel
         } as any);
       } catch (err: any) {
         const errMessage = String(err.message || '');
         const errOriginalMessage = String(err.originalMessage || '');
         const errStr = String(err);
 
+        // Print descriptive warning on Vertex AI failure
+        console.warn(`[GENKIT REDIRECT] Error occurred with model ${selectedModel}:`, errMessage || errStr);
+
+        // If Vertex AI (primary) fails, switch immediately to Google AI Studio (fallback)
+        if (!useFallback) {
+          console.warn(`[GENKIT REDIRECT] Vertex AI call failed. Switching to Google AI Studio fallback (${target.fallback})...`);
+          useFallback = true;
+          // Short sleep before trying fallback to avoid instant loops
+          await new Promise(r => setTimeout(r, 200));
+          continue;
+        }
+
+        // Standard rate-limiting & network retry logic (mostly for Google AI Studio)
         if (rawInput.config && rawInput.config.googleSearchRetrieval) {
-          console.warn(`[GENKIT ALIAS REDIRECT] Grounding call failed/rate-limited. Retrying WITHOUT Google Search Grounding...`);
+          console.warn(`[GENKIT REDIRECT] Grounding call failed. Retrying WITHOUT Google Search Grounding...`);
           rawInput.config = { ...rawInput.config };
           delete rawInput.config.googleSearchRetrieval;
           await new Promise(r => setTimeout(r, 500));
@@ -103,22 +167,21 @@ for (const [alias, target] of Object.entries(modelMapping)) {
             const val = parseFloat(retryMatch[1]);
             const unit = (retryMatch[2] || 's').toLowerCase();
             if (unit === 's') {
-              retryDelay = Math.ceil(val * 1000) + 1500; // wait val seconds + 1.5s buffer
+              retryDelay = Math.ceil(val * 1000) + 1500;
             } else {
-              retryDelay = Math.ceil(val) + 500; // wait val ms + 500ms buffer
+              retryDelay = Math.ceil(val) + 500;
             }
           }
 
-          console.warn(`[GENKIT ALIAS REDIRECT] Rate limited or transient network error. Retrying in ${retryDelay}ms... (Reason: ${isRateLimit ? '429' : 'Network'}, Retries left: ${retries})`);
+          console.warn(`[GENKIT REDIRECT] Rate limited or network error. Retrying in ${retryDelay}ms... (Retries left: ${retries})`);
           await new Promise(r => setTimeout(r, retryDelay));
           retries--;
           delay = Math.min(delay * 2.5, 45000); // Exponential backoff capped at 45s
         } else {
-          console.error(`[GENKIT ALIAS REDIRECT] Error generation failed (no retries left or non-retryable error):`, err);
+          console.error(`[GENKIT REDIRECT] Error generation failed permanently (no retries left or non-retryable error):`, err);
           throw err;
         }
       }
     }
   });
 }
-

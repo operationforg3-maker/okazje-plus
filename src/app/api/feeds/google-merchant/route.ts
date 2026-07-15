@@ -18,6 +18,50 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').trim();
 }
 
+function getGoogleProductCategory(main: string, sub?: string, subsub?: string): string {
+  const mainLower = (main || '').toLowerCase();
+  const subLower = (sub || '').toLowerCase();
+  const subsubLower = (subsub || '').toLowerCase();
+
+  if (mainLower.includes('elektronika')) {
+    if (subLower.includes('telefony')) return 'Electronics > Communications > Telephony > Mobile Phones';
+    if (subLower.includes('komputery')) return 'Electronics > Computers';
+    if (subLower.includes('rc') || subsubLower.includes('drony')) return 'Toys & Games > Toys > Radio Control Toys';
+    return 'Electronics';
+  }
+  if (mainLower.includes('dziecko') || mainLower.includes('zabawki')) {
+    if (subLower.includes('odziez') || subLower.includes('ubranka')) return 'Apparel & Accessories > Clothing > Baby & Toddler Clothing';
+    if (subLower.includes('foteliki')) return 'Baby & Toddler > Baby Transport > Car Seats';
+    return 'Toys & Games > Toys';
+  }
+  if (mainLower.includes('moda') || mainLower.includes('odziez') || mainLower.includes('buty')) {
+    if (subLower.includes('buty') || subLower.includes('obuwie')) return 'Apparel & Accessories > Shoes';
+    if (subLower.includes('akcesoria')) return 'Apparel & Accessories > Handbags, Wallets & Cases';
+    return 'Apparel & Accessories > Clothing';
+  }
+  if (mainLower.includes('dom') || mainLower.includes('ogrod') || mainLower.includes('kuchnia')) {
+    return 'Home & Garden';
+  }
+  if (mainLower.includes('sport') || mainLower.includes('turystyka')) {
+    return 'Sporting Goods';
+  }
+  if (mainLower.includes('zdrowie') || mainLower.includes('uroda') || mainLower.includes('kosmetyki')) {
+    if (subLower.includes('makijaz')) return 'Health & Beauty > Personal Care > Cosmetics > Makeup';
+    return 'Health & Beauty > Personal Care';
+  }
+  if (mainLower.includes('motoryzacja') || mainLower.includes('samochod')) {
+    return 'Vehicles & Parts > Vehicle Parts & Accessories';
+  }
+  if (mainLower.includes('zwierzeta')) {
+    return 'Animals & Pet Supplies';
+  }
+  if (mainLower.includes('ksiazki') || mainLower.includes('media')) {
+    return 'Media > Books';
+  }
+  
+  return 'Apparel & Accessories'; // Fallback
+}
+
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
@@ -71,8 +115,27 @@ export async function GET(request: NextRequest) {
       // Image resolution
       const image = product.imageUrl || (product.images && product.images[0]) || '';
       
+      // Additional images resolution
+      const productImages = Array.isArray(product.images) ? product.images : [];
+      const additionalImagesXml = productImages
+        .slice(1, 11) // Up to 10 additional images
+        .filter((img: string) => img && img !== image)
+        .map((img: string) => `      <g:additional_image_link>${escapeXml(img)}</g:additional_image_link>`)
+        .join('\n');
+      
       // Brand resolution
       const brand = product.metadata?.brand || product.specs?.brand || product.specs?.Brand || 'Various';
+      
+      // Google product category resolution
+      const googleCategory = getGoogleProductCategory(
+        product.mainCategorySlug || '',
+        product.subCategorySlug || '',
+        product.subSubCategorySlug || ''
+      );
+      
+      // Age group and gender resolution based on category
+      const isKids = (product.mainCategorySlug || '').toLowerCase().includes('dziecko') || (product.mainCategorySlug || '').toLowerCase().includes('zabawki');
+      const ageGroup = isKids ? 'kids' : 'adult';
       
       // Product URL uses the requested locale prefix
       const link = `${baseUrl}/${locale}/products/${product.id}`;
@@ -84,11 +147,16 @@ export async function GET(request: NextRequest) {
       <g:description>${escapeXml(cleanDescription.slice(0, 1000))}</g:description>
       <g:link>${escapeXml(link)}</g:link>
       <g:image_link>${escapeXml(image)}</g:image_link>
-      <g:condition>new</g:condition>
+${additionalImagesXml ? additionalImagesXml + '\n' : ''}      <g:condition>new</g:condition>
       <g:availability>in_stock</g:availability>
       <g:price>${escapeXml(formattedPrice)}</g:price>
       <g:brand>${escapeXml(brand)}</g:brand>
       <g:mpn>${escapeXml(product.id)}</g:mpn>
+      <g:google_product_category>${escapeXml(googleCategory)}</g:google_product_category>
+      <g:identifier_exists>false</g:identifier_exists>
+      <g:adult>no</g:adult>
+      <g:age_group>${ageGroup}</g:age_group>
+      <g:gender>unisex</g:gender>
     </item>`;
     }).join('\n');
     

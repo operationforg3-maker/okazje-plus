@@ -8,12 +8,14 @@ export interface EnsureAliExpressProfilesOptions {
   defaultStatus?: 'draft' | 'approved';
   createdBy?: string;
   dryRun?: boolean;
+  updateQueries?: boolean; // Option to update queries of existing profiles
 }
 
 export interface EnsureAliExpressProfilesResult {
   totalTargets: number;
   existingProfiles: number;
   createdProfiles: number;
+  updatedProfiles: number;
   skippedProfiles: number;
 }
 
@@ -24,19 +26,22 @@ function toSearchQuery(input: {
   englishName?: string;
   fallbackName: string;
 }): string {
+  // 1. If we have importKeywords, prefer the first keyword (typically the English translation)
   const fromKeywords = Array.isArray(input.importKeywords)
     ? input.importKeywords.filter((v) => typeof v === 'string' && v.trim().length > 0)
     : [];
 
   if (fromKeywords.length > 0) {
-    return fromKeywords.slice(0, 5).join(' ');
+    return fromKeywords[0].trim();
   }
 
+  // 2. Otherwise, prefer the English name if present
   if (typeof input.englishName === 'string' && input.englishName.trim().length > 0) {
     return input.englishName.trim();
   }
 
-  return input.fallbackName;
+  // 3. Fallback to Polish name
+  return input.fallbackName.trim();
 }
 
 function mappingKey(main: string, sub: string, subSub?: string): string {
@@ -54,13 +59,14 @@ export async function ensureAliExpressImportProfilesCoverage(
   const defaultStatus = options.defaultStatus || 'approved';
   const createdBy = options.createdBy || 'system';
   const dryRun = options.dryRun ?? false;
+  const updateQueries = options.updateQueries ?? false;
 
   const existingSnapshot = await adminDb
     .collection('importProfiles')
     .where('vendorId', '==', 'aliexpress')
     .get();
 
-  const existingKeys = new Set<string>();
+  const existingMap = new Map<string, any>();
   for (const docSnap of existingSnapshot.docs) {
     const data = docSnap.data() as any;
     const key = mappingKey(
@@ -69,7 +75,7 @@ export async function ensureAliExpressImportProfilesCoverage(
       data?.mapping?.targetSubSubCategory ? String(data.mapping.targetSubSubCategory) : ''
     );
     if (key !== '::::') {
-      existingKeys.add(key);
+      existingMap.set(key, { ref: docSnap.ref, data });
     }
   }
 
@@ -77,6 +83,7 @@ export async function ensureAliExpressImportProfilesCoverage(
 
   let totalTargets = 0;
   let createdProfiles = 0;
+  let updatedProfiles = 0;
   let skippedProfiles = 0;
 
   for (const main of categories) {
@@ -90,7 +97,25 @@ export async function ensureAliExpressImportProfilesCoverage(
           totalTargets += 1;
 
           const key = mappingKey(main.slug, sub.slug, subSub.slug);
-          if (existingKeys.has(key)) {
+          const existing = existingMap.get(key);
+
+          const targetQuery = toSearchQuery({
+            importKeywords: subSub.importKeywords,
+            englishName: subSub.translations?.en?.name,
+            fallbackName: subSub.name,
+          });
+
+          if (existing) {
+            if (updateQueries && existing.data?.filters?.searchQuery !== targetQuery) {
+              console.log(`[Import Profiles Bootstrap] Updating query for ${key}: "${existing.data?.filters?.searchQuery}" -> "${targetQuery}"`);
+              if (!dryRun) {
+                await existing.ref.update({
+                  'filters.searchQuery': targetQuery,
+                  updatedAt: new Date().toISOString(),
+                });
+              }
+              updatedProfiles += 1;
+            }
             skippedProfiles += 1;
             continue;
           }
@@ -102,11 +127,7 @@ export async function ensureAliExpressImportProfilesCoverage(
               name: `AliExpress Auto: ${main.name} / ${sub.name} / ${subSub.name}`,
               enabled,
               filters: {
-                searchQuery: toSearchQuery({
-                  importKeywords: subSub.importKeywords,
-                  englishName: subSub.translations?.en?.name,
-                  fallbackName: subSub.name,
-                }),
+                searchQuery: targetQuery,
                 categoryFilter: subSub.slug,
               },
               mapping: {
@@ -123,14 +144,27 @@ export async function ensureAliExpressImportProfilesCoverage(
             });
           }
 
-          existingKeys.add(key);
           createdProfiles += 1;
         }
       } else {
         totalTargets += 1;
 
         const key = mappingKey(main.slug, sub.slug, sub.slug);
-        if (existingKeys.has(key)) {
+        const existing = existingMap.get(key);
+
+        const targetQuery = sub.name; // Use subcategory name directly
+
+        if (existing) {
+          if (updateQueries && existing.data?.filters?.searchQuery !== targetQuery) {
+            console.log(`[Import Profiles Bootstrap] Updating query for ${key}: "${existing.data?.filters?.searchQuery}" -> "${targetQuery}"`);
+            if (!dryRun) {
+              await existing.ref.update({
+                'filters.searchQuery': targetQuery,
+                updatedAt: new Date().toISOString(),
+              });
+            }
+            updatedProfiles += 1;
+          }
           skippedProfiles += 1;
           continue;
         }
@@ -142,7 +176,7 @@ export async function ensureAliExpressImportProfilesCoverage(
             name: `AliExpress Auto: ${main.name} / ${sub.name}`,
             enabled,
             filters: {
-              searchQuery: sub.name,
+              searchQuery: targetQuery,
               categoryFilter: sub.slug,
             },
             mapping: {
@@ -159,7 +193,6 @@ export async function ensureAliExpressImportProfilesCoverage(
           });
         }
 
-        existingKeys.add(key);
         createdProfiles += 1;
       }
     }
@@ -169,6 +202,7 @@ export async function ensureAliExpressImportProfilesCoverage(
     totalTargets,
     existingProfiles: existingSnapshot.size,
     createdProfiles,
+    updatedProfiles,
     skippedProfiles,
   };
 }

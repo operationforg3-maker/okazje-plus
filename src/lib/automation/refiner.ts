@@ -517,8 +517,12 @@ export class AIRefiner {
         // Note: We skip 'cleanProductTitle' and 'generateDescriptions' calls below because 
         // generateMarketingContent handles ALL of this in one powerful prompt.
         
-      } catch (e) {
+      } catch (e: any) {
         console.error('[Refiner] Creative generation failed, falling back to legacy pipeline:', e);
+        const errMsg = String(e?.message || e);
+        if (errMsg.includes('API_KEY_INVALID') || errMsg.includes('API key not valid')) {
+          console.error(`[CRITICAL] Gemini API Key is invalid or expired. AI refinement will fallback to legacy pipelines (which may also fail)!`);
+        }
         // If creative fail, let the legacy blocks below run (logic unchanged)
       }
     }
