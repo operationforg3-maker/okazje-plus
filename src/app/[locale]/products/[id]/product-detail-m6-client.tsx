@@ -144,6 +144,41 @@ export default function ProductDetailM6Client({
     ? productCore.variants
     : [];
 
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+
+  // Initialize selected variants with the first option from each dimension
+  useEffect(() => {
+    if (productVariants && productVariants.length > 0) {
+      const initial: Record<string, string> = {};
+      productVariants.forEach(v => {
+        if (v.name && Array.isArray(v.values) && v.values.length > 0) {
+          initial[v.name] = v.values[0];
+        }
+      });
+      setSelectedVariants(initial);
+    }
+  }, [productVariants]);
+
+  const handleVariantChange = (name: string, value: string) => {
+    setSelectedVariants(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const matchedSku = useMemo(() => {
+    const skus = productCore?.skuList;
+    if (!skus || !Array.isArray(skus) || skus.length === 0) return null;
+    
+    return skus.find(sku => {
+      if (!sku.attributes || !Array.isArray(sku.attributes)) return false;
+      return sku.attributes.every((attr: any) => {
+        const selectedValue = selectedVariants[attr.name];
+        return selectedValue === attr.value;
+      });
+    });
+  }, [productCore?.skuList, selectedVariants]);
+
   const bestDealTotal = isM6 && Array.isArray(deals) && deals.length > 0
     ? deals.reduce((bestTotal, current) => {
         const shipping = 'shipping' in current ? (current.shipping?.cost || 0) : ((current as any).shippingCost || 0);
@@ -157,8 +192,15 @@ export default function ProductDetailM6Client({
     ? bestDealTotal
     : (product?.price || 0);
 
+  const activePriceAmount = useMemo(() => {
+    if (matchedSku && typeof matchedSku.price === 'number' && matchedSku.price > 0) {
+      return matchedSku.price;
+    }
+    return priceAmount;
+  }, [matchedSku, priceAmount]);
+
   // Re-render when currency changes for reactive UI
-  const formattedPriceWithCurrency = priceAmount !== null ? formatPrice(priceAmount) : '—';
+  const formattedPriceWithCurrency = activePriceAmount !== null ? formatPrice(activePriceAmount) : '—';
 
   // M6+ Market Price Estimation Display
   const marketPriceInfo = (() => {
@@ -337,7 +379,21 @@ export default function ProductDetailM6Client({
         {/* LEFT COLUMN: Gallery, Description, Price Comparison, Specs, Comments */}
         <div className="lg:col-span-8 space-y-6">
           {/* Gallery Component */}
-          <GalleryM6 images={imageUrls} title={title} />
+          {(() => {
+            const activeImageUrls = [...imageUrls];
+            if (matchedSku && matchedSku.image) {
+              if (!activeImageUrls.includes(matchedSku.image)) {
+                activeImageUrls.unshift(matchedSku.image);
+              } else {
+                const index = activeImageUrls.indexOf(matchedSku.image);
+                if (index > 0) {
+                  activeImageUrls.splice(index, 1);
+                  activeImageUrls.unshift(matchedSku.image);
+                }
+              }
+            }
+            return <GalleryM6 images={activeImageUrls} title={title} />;
+          })()}
 
           {/* Description Card */}
           <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm space-y-4">
@@ -502,7 +558,11 @@ export default function ProductDetailM6Client({
           {/* Variants selector if any */}
           {productVariants && productVariants.length > 0 && (
             <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
-              <VariantsM6 variants={productVariants} specs={specs} />
+              <VariantsM6 
+                variants={productVariants} 
+                specs={specs} 
+                onVariantChange={handleVariantChange} 
+              />
             </div>
           )}
 
