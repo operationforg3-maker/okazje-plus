@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { getRecommendedProducts, getCategories, getAllProductCores } from '@/lib/data';
 import { searchDealsTypesense } from '@/lib/search-server';
 import { getGoogleProductPublicationState } from '@/lib/google-product-publication';
+import { getAllApprovedProductsForSitemap } from '@/lib/data-admin';
 
 // Sitemap fetches up to ~3000 records from Firebase/Typesense — must be dynamic (not statically generated at build time)
 export const dynamic = 'force-dynamic';
@@ -81,10 +82,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('Error fetching deals for sitemap:', error);
   }
 
-  // Dynamic products — top 1000 recommended
+  // Dynamic products — all approved up to 50000
   let productUrls: MetadataRoute.Sitemap = [];
   try {
-    const products = await getRecommendedProducts(1000);
+    const products = await getAllApprovedProductsForSitemap(50000);
     const eligibleProducts = products.filter((product) =>
       getGoogleProductPublicationState({
         product,
@@ -95,7 +96,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     productUrls = SUPPORTED_LOCALES.flatMap((locale) =>
       eligibleProducts.map((product) => ({
         url: `${baseUrl}/${locale}/products/${product.id}`,
-        lastModified: new Date(),
+        lastModified: product.updatedAt ? new Date(product.updatedAt) : new Date(),
         changeFrequency: 'hourly' as const,                             // ← zmiana z 'weekly'
         priority: 0.7,
       }))

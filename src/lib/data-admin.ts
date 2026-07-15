@@ -555,3 +555,50 @@ export async function getProductWithDealsAdmin(productId: string): Promise<{ pro
      return null;
   }
 }
+
+/**
+ * Get all approved ProductCore documents with specific fields for sitemap/feed generation.
+ * Avoids loading heavy fullDescription fields to optimize memory and transfer.
+ */
+export async function getAllApprovedProductsForSitemap(limitCount = 5000): Promise<any[]> {
+  try {
+    const snap = await adminDb
+      .collection('product_cores')
+      .where('status', '==', 'approved')
+      .select(
+        'title',
+        'description',
+        'shortDescription',
+        'imageUrl',
+        'images',
+        'status',
+        'bestPrice',
+        'bestTotalPrice',
+        'rating',
+        'searchTags',
+        'specs',
+        'attributes',
+        'metadata',
+        'mainCategorySlug',
+        'subCategorySlug',
+        'subSubCategorySlug',
+        'updatedAt'
+      )
+      .limit(limitCount)
+      .get();
+
+    return snap.docs.map(doc => {
+      const data = doc.data();
+      return {
+        ...data,
+        id: doc.id,
+        createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt || new Date().toISOString(),
+        updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt || new Date().toISOString(),
+      };
+    });
+  } catch (err) {
+    console.error('Error in getAllApprovedProductsForSitemap:', err);
+    return [];
+  }
+}
+
