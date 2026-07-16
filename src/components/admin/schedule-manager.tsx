@@ -29,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Clock, Play, Pause, Trash2, Plus, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/lib/auth';
 
 interface ScheduledTask {
   id: string;
@@ -52,6 +53,7 @@ interface ScheduleManagerProps {
 }
 
 export function ScheduleManager({ onConsoleLog }: ScheduleManagerProps) {
+  const { getIdToken } = useAuth();
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState<Set<string>>(new Set());
@@ -164,9 +166,13 @@ export function ScheduleManager({ onConsoleLog }: ScheduleManagerProps) {
 
       onConsoleLog?.(`▶️ Uruchamiam: ${task.name}...`, 'info');
 
+      const token = await getIdToken();
       const response = await fetch('/api/admin/schedule/run', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
         body: JSON.stringify({ taskId, config: task.config }),
       });
 

@@ -1,18 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
-import { getAuth } from 'firebase-admin/auth';
-
-async function verifyAdminToken(request: NextRequest): Promise<string | null> {
-  const authHeader = request.headers.get('authorization');
-  const token = authHeader?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
-  if (!token) return null;
-  try {
-    const decoded = await getAuth().verifyIdToken(token);
-    return decoded.uid;
-  } catch {
-    return null;
-  }
-}
+import { requireAdmin } from '@/lib/auth-server';
 
 /**
  * GET /api/admin/scraping-queue
@@ -23,17 +11,14 @@ async function verifyAdminToken(request: NextRequest): Promise<string | null> {
  * Returns product_cores documents filtered by scrapingStatus + counts per status.
  */
 export async function GET(request: NextRequest) {
-  const uid = await verifyAdminToken(request);
-  if (!uid) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { searchParams } = new URL(request.url);
-  const statusParam = searchParams.get('status') || 'pending,running,failed';
-  const statuses = statusParam.split(',').filter(Boolean);
-  const limit = Math.min(Number(searchParams.get('limit') || '100'), 200);
-
   try {
+    await requireAdmin();
+
+    const { searchParams } = new URL(request.url);
+    const statusParam = searchParams.get('status') || 'pending,running,failed';
+    const statuses = statusParam.split(',').filter(Boolean);
+    const limit = Math.min(Number(searchParams.get('limit') || '100'), 200);
+
     // Fetch counts per status in parallel
     const [pendingSnap, runningSnap, failedSnap, doneSnap] = await Promise.all([
       adminDb.collection('product_cores').where('scrapingStatus', '==', 'pending').count().get(),
@@ -82,6 +67,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, counts, items });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
+    if (message.includes('Unauthorized') || message.includes('Forbidden')) {
+      return NextResponse.json({ error: 'Unauthorized', message }, { status: 403 });
+    }
     console.error('[scraping-queue] GET error:', err);
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
@@ -93,12 +81,9 @@ export async function GET(request: NextRequest) {
  *       { retryAll: true }   — reset all 'failed' → 'pending'
  */
 export async function PATCH(request: NextRequest) {
-  const uid = await verifyAdminToken(request);
-  if (!uid) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
+    await requireAdmin();
+
     const body = await request.json() as Record<string, unknown>;
 
     if (body.retryAll) {
@@ -145,6 +130,9 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Missing productId or retryAll' }, { status: 400 });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
+    if (message.includes('Unauthorized') || message.includes('Forbidden')) {
+      return NextResponse.json({ error: 'Unauthorized', message }, { status: 403 });
+    }
     console.error('[scraping-queue] PATCH error:', err);
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
