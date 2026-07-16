@@ -6,8 +6,7 @@ export type Suggestion = {
   label: string;
   subLabel?: string;
 };
-import { collection, doc, documentId, getDoc, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+// db import removed to prevent client SDK usage in SSR
 
 const DEAL_IMAGE_FALLBACK = '/icon_okazjeplus.svg';
 const MAX_PAGE_SIZE = 3000;
@@ -79,10 +78,12 @@ async function hydrateFallbackDealImages(deals: Deal[]): Promise<Deal[]> {
   const batches = chunkIds([...new Set(idsToHydrate)]);
   const resolved = new Map<string, string>();
 
+  const { adminDb, FieldValue } = await import('@/lib/firebase-admin');
+
   await Promise.all(
     batches.map(async (batch) => {
-      const snap = await getDocs(query(collection(db, 'deals'), where(documentId(), 'in', batch)));
-      snap.docs.forEach((docSnap) => {
+      const snap = await adminDb.collection('deals').where(FieldValue.documentId(), 'in', batch).get();
+      snap.docs.forEach((docSnap: any) => {
         const image = resolveDealImage(docSnap.data());
         if (image && image !== DEAL_IMAGE_FALLBACK) {
           resolved.set(docSnap.id, image);
@@ -323,7 +324,11 @@ async function searchProductsFirestoreFallback(
           }
         }
 
-        docs = snap.docs.map((docSnap: any) => ({ id: docSnap.id, ...docSnap.data() }));
+        docs = snap.docs.map((docSnap: any) => {
+          const data = docSnap.data();
+          delete data.embedding;
+          return { id: docSnap.id, ...data };
+        });
         docs = docs.filter((d: any) => d.status === targetStatus);
         vectorSearchSuccess = true;
       } catch (err) {
@@ -354,11 +359,16 @@ async function searchProductsFirestoreFallback(
             console.warn('[Search Fallback] tags array-contains-any query failed. Fetching recent products...', queryErr);
             snap = await adminDb.collection('product_cores')
               .where('status', '==', targetStatus)
-              .limit(100)
+              .orderBy('createdAt', 'desc')
+              .limit(300)
               .get();
           }
 
-          docs = snap.docs.map((docSnap: any) => ({ id: docSnap.id, ...docSnap.data() }));
+          docs = snap.docs.map((docSnap: any) => {
+            const data = docSnap.data();
+            delete data.embedding;
+            return { id: docSnap.id, ...data };
+          });
 
           // Post-filter matching all keywords in title, description, or tags
           docs = docs.filter((d: any) => {
@@ -467,7 +477,11 @@ async function searchDealsFirestoreFallback(
                 throw err;
               }
             }
-            let docsVal = snap.docs.map((docSnap: any) => ({ id: docSnap.id, ...docSnap.data() }));
+            let docsVal = snap.docs.map((docSnap: any) => {
+              const data = docSnap.data();
+              delete data.embedding;
+              return { id: docSnap.id, ...data };
+            });
             return docsVal.filter((d: any) => d.status === status);
           })
         );
@@ -490,7 +504,11 @@ async function searchDealsFirestoreFallback(
                 .orderBy('createdAt', 'desc')
                 .limit(300)
                 .get();
-              return snap.docs.map((docSnap: any) => ({ id: docSnap.id, ...docSnap.data() }));
+              return snap.docs.map((docSnap: any) => {
+                const data = docSnap.data();
+                delete data.embedding;
+                return { id: docSnap.id, ...data };
+              });
             })
           );
           let recentDeals = resultsArray.flat();
@@ -535,7 +553,11 @@ async function searchDealsFirestoreFallback(
                   .where('productId', 'in', chunk)
                   .limit(50)
                   .get();
-                return snap.docs.map((docSnap: any) => ({ id: docSnap.id, ...docSnap.data() }));
+                return snap.docs.map((docSnap: any) => {
+                  const data = docSnap.data();
+                  delete data.embedding;
+                  return { id: docSnap.id, ...data };
+                });
               })
             );
             productMatchDeals = relationalDealsList.flat();
