@@ -214,8 +214,15 @@ export async function fetchProductsFromAliexpress(
   
   // NEW: If hot-products mode, use category-based fetch instead
   if (importerType === 'hot-products' && keywords.length > 0) {
-    // Keywords are treated as category IDs in hot-products mode
-    return fetchHotProductsByCategory(keywords, config, siteUrl);
+    // Check if ALL keywords are numeric IDs. If not, it means the user passed actual text keywords 
+    // to a hot-products importer. We must fallback to standard keyword search to avoid 405 error!
+    const isAllNumeric = keywords.every(kw => /^\d+$/.test(kw.trim()));
+    if (isAllNumeric) {
+      // Keywords are treated as category IDs in hot-products mode
+      return fetchHotProductsByCategory(keywords, config, siteUrl);
+    } else {
+      console.log(`[Importer:Fetch] ⚠️ Keywords contain text! Falling back to standard keyword search instead of hot-products category ID search.`);
+    }
   }
   
   console.log(`[Importer:Fetch] Keywords (${keywords.length}): ${keywords.join(' | ')}`);

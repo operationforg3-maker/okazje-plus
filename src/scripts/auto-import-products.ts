@@ -59,7 +59,7 @@ async function createImportProfile(job: ImportJob, maxItems: number = 20): Promi
     enabled: true,
     schedule: undefined, // Manual scheduling
     filters: {
-      searchQuery: job.keywords[0], // Primary keyword
+      searchQuery: job.keywords.join(', '), // M6: Search all keywords instead of just the first one
       minPrice: 10,
       maxPrice: 1000,
       minRating: 4.0,

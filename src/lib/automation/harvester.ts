@@ -1655,7 +1655,16 @@ export class SmartHarvester {
       : shippingCost <= 0;
     const freeShipping = Boolean(sourceProduct.freeShipping ?? inferredFreeShipping);
     const shippingFromCountry = sourceProduct.shippingFromCountry || sourceProduct.warehouses?.[0];
-    const promotionCampaign = sourceProduct.promotionCampaign || sourceProduct.offerMeta?.promotionCampaign;
+    
+    let promotionCampaign = sourceProduct.promotionCampaign || sourceProduct.offerMeta?.promotionCampaign;
+    if (!promotionCampaign && (sourceProduct as any).campaignName) {
+      promotionCampaign = {
+        name: (sourceProduct as any).campaignName,
+        type: 'sale',
+        label: `AliExpress ${(sourceProduct as any).campaignName}`,
+        active: true
+      };
+    }
     const seller = sourceProduct.seller || (sourceProduct.merchantName
       ? {
           name: sourceProduct.merchantName,
@@ -1862,7 +1871,7 @@ export class SmartHarvester {
   * @param autoBrowse - Auto-browse entire catalog (Convertiser/AliExpress)
    */
   async harvestProducts(
-    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser',
+    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'campaigns',
     query: string,
     maxResults: number = 50,
     categories?: string[], // e.g., ['phones/flagship', 'phones/budget', 'tablets/android']
@@ -1879,8 +1888,13 @@ export class SmartHarvester {
     if (autoBrowse && (source === 'convertiser' || source === 'aliexpress')) {
       queries = ['__AUTO_BROWSE__'];
     } else {
-      const useSimpleQuery = source === 'convertiser' || !isTreeMode;
-      queries = (useSimpleQuery || !categories || categories.length === 0) ? [query] : categories;
+      // M6: Always respect categories if provided, otherwise split query by comma
+      if (categories && categories.length > 0) {
+        queries = categories;
+      } else {
+        queries = query.split(',').map(q => q.trim()).filter(Boolean);
+        if (queries.length === 0) queries = [query]; // fallback
+      }
     }
     const processedCategoriesLog: HarvesterJob['processedCategories'] = [];
     const stageTotals: NonNullable<HarvesterJob['telemetry']>['stageTotalsMs'] = {
@@ -2746,9 +2760,13 @@ export class SmartHarvester {
       gtin?: string;
       upc?: string;
       mpn?: string;
+      campaignName?: string;
+      discount?: number;
     }>
   > {
     switch (source) {
+      case 'campaigns':
+        return await this.fetchFromAliExpressCampaign(searchQuery, maxResults);
       case 'aliexpress':
         if (searchQuery === '__AUTO_BROWSE__') {
           return await this.fetchFromAliExpressAutoBrowse(maxResults, importStrategy);
@@ -2769,6 +2787,56 @@ export class SmartHarvester {
         }
       default:
         throw new Error(`Unknown source: ${source}`);
+    }
+  }
+
+  /**
+   * Fetch products from AliExpress Campaigns (Featured Promos)
+   */
+  private async fetchFromAliExpressCampaign(
+    promotionName: string,
+    maxResults: number
+  ) {
+    try {
+      const { createAliExpressClient } = await import('@/integrations/aliexpress/client');
+      const client = createAliExpressClient();
+      
+      this.addLog('info', `Fetching from AliExpress Campaign: "${promotionName}"`);
+      
+      const response = await client.getFeaturedPromoProducts({
+        promotion_name: promotionName,
+        page_size: Math.min(maxResults, 50),
+        target_currency: 'PLN'
+      });
+      
+      if (!response.resp_result || response.resp_code !== 200) {
+        this.addLog('error', `AliExpress campaign fetch failed for ${promotionName}`);
+        return [];
+      }
+      
+      const products = response.resp_result.result?.products || [];
+      return products.map((p: any) => ({
+        title: String(p.product_title || ''),
+        imageUrl: String(p.product_main_image_url || ''),
+        price: Number(p.target_sale_price || p.sale_price || 0),
+        currency: String(p.target_sale_price_currency || p.sale_price_currency || 'PLN'),
+        shippingCost: 0, // Campaign API doesn't provide shipping cost, default to 0
+        shippingDays: 14,
+        shippingVerified: false,
+        sourceProductId: String(p.product_id),
+        sourceUrl: String(p.promotion_link || p.product_detail_url),
+        merchantName: String(p.shop_name || 'AliExpress'),
+        merchantRating: 0,
+        specs: {},
+        rating: 0, // API doesn't provide rating directly
+        ratingCount: Number(p.lastest_volume || 0), // Use volume as proxy for popularity
+        ean: undefined,
+        campaignName: promotionName,
+        discount: p.discount ? parseInt(p.discount) : undefined,
+      }));
+    } catch (err: any) {
+      this.addLog('error', `Error fetching from AliExpress Campaign: ${err.message}`, err);
+      return [];
     }
   }
 

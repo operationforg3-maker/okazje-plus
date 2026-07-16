@@ -1332,6 +1332,38 @@ export class AliExpressClient {
   }
 
   /**
+   * Get featured promotions / campaigns from AliExpress Affiliate API
+   * Method: aliexpress.affiliate.featuredpromo.get
+   */
+  async getFeaturedPromos(): Promise<any> {
+    logger.info('Fetching featured promos');
+    return this.requestWithApiLimitRetry<any>('aliexpress.affiliate.featuredpromo.get', {});
+  }
+
+  /**
+   * Get products for a specific featured promotion
+   * Method: aliexpress.affiliate.featuredpromo.products.get
+   */
+  async getFeaturedPromoProducts(params: {
+    promotion_name: string;
+    page_size?: number;
+    page_no?: number;
+    target_currency?: string;
+    target_language?: string;
+    sort?: string;
+  }): Promise<any> {
+    logger.info('Fetching featured promo products', params);
+    return this.requestWithApiLimitRetry<any>('aliexpress.affiliate.featuredpromo.products.get', {
+      promotion_name: params.promotion_name,
+      page_size: params.page_size || 50,
+      page_no: params.page_no || 1,
+      target_currency: params.target_currency || 'PLN',
+      target_language: params.target_language || 'PL',
+      sort: params.sort,
+    });
+  }
+
+  /**
    * Get affiliate orders (earnings source) from AliExpress Affiliate API
    *
    * Method: aliexpress.affiliate.order.list

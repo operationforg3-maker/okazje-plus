@@ -35,6 +35,7 @@ import {
   ChevronRight,
   Eye,
   AlertTriangle,
+  ShoppingBag
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +43,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { AliExpressAutopilotControl } from '@/components/admin/aliexpress-autopilot-control';
 import { ScheduleManager } from '@/components/admin/schedule-manager';
+import { AliExpressCampaignsPanel } from '@/components/admin/aliexpress-campaigns-panel';
 
 function toSafeText(value: unknown, fallback = ""): string {
   if (typeof value === "string") return value;
@@ -1028,6 +1030,10 @@ export default function M6ImportDashboard() {
               <Zap className="w-4 h-4" />
               AI Refiner
             </TabsTrigger>
+            <TabsTrigger value="campaigns" className="gap-2">
+              <ShoppingBag className="w-4 h-4" />
+              Kampanie
+            </TabsTrigger>
             <TabsTrigger value="moderation" className="gap-2">
               <AlertTriangle className="w-4 h-4" />
               Moderacja
@@ -1111,6 +1117,11 @@ export default function M6ImportDashboard() {
               authToken={authToken}
               setAuthError={setAuthError}
             />
+          </TabsContent>
+
+          {/* TAB: Kampanie */}
+          <TabsContent value="campaigns">
+            <AliExpressCampaignsPanel authToken={authToken} />
           </TabsContent>
 
           {/* TAB: Moderacja */}
