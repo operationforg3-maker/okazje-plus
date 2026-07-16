@@ -336,7 +336,7 @@ async function searchProductsFirestoreFallback(
       }
 
       // Keyword search fallback
-      if (!vectorSearchSuccess) {
+      if (!vectorSearchSuccess || docs.length === 0) {
         const keywords = q.toLowerCase().split(/\s+/).filter(w => w.trim().length > 1);
         if (keywords.length > 0) {
           const getWordVariations = (word: string) => {
@@ -357,6 +357,10 @@ async function searchProductsFirestoreFallback(
               .get();
           } catch (queryErr) {
             console.warn('[Search Fallback] tags array-contains-any query failed. Fetching recent products...', queryErr);
+          }
+
+          if (!snap || snap.empty) {
+            console.warn('[Search Fallback] tags array-contains-any returned 0 or failed. Fetching recent products...');
             snap = await adminDb.collection('product_cores')
               .where('status', '==', targetStatus)
               .orderBy('createdAt', 'desc')
@@ -493,7 +497,7 @@ async function searchDealsFirestoreFallback(
       }
 
       // Keyword search fallback for deals
-      if (!vectorSearchSuccess) {
+      if (!vectorSearchSuccess || docs.length === 0) {
         const keywords = query.toLowerCase().split(/\s+/).filter(w => w.trim().length > 1);
         if (keywords.length > 0) {
           // 1. Direct title/desc match on recent 300 deals
