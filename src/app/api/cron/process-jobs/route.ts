@@ -873,16 +873,27 @@ async function processUIImportJob(uiJob: any): Promise<void> {
       'progress.totalCategories': batches.length,
     });
 
-    // Get currency rate & autoApprove
     let currencyRate = 4.0;
     let autoApprove = false;
+    let isPaused = false;
     try {
       const configDoc = await adminDb.collection('config').doc('importSettings').get();
       if (configDoc.exists) {
         currencyRate = configDoc.data()?.currencyRate || 4.0;
         autoApprove = !!configDoc.data()?.autoApprove;
+        isPaused = !!configDoc.data()?.isPaused;
       }
     } catch (_) {}
+
+    if (isPaused) {
+      logger.info('Importy są aktualnie zatrzymane (isPaused=true w bazie)', { jobId: uiJob.id });
+      await jobRef.update({
+        status: 'failed',
+        error: 'Proces zatrzymany (pauza) z poziomu panelu administratora.',
+        completedAt: new Date(),
+      });
+      return NextResponse.json({ success: false, reason: 'paused' });
+    }
 
     // Run import pipeline
     // Timeout wrapper for importerFlow
