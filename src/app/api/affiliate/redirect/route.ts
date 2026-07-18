@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import crypto from 'crypto';
 
 /**
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     // Log the click for conversion tracking
     try {
-      await addDoc(collection(db, 'affiliate_clicks'), {
+      await adminDb.collection('affiliate_clicks').add({
         productId: productId || 'unknown',
         affiliateId,
         userId: userId || 'anonymous',
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         userAgent: request.headers.get('user-agent'),
         referer: request.headers.get('referer'),
         ip: request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip') || 'unknown',
-        timestamp: serverTimestamp(),
+        timestamp: FieldValue.serverTimestamp(),
       });
     } catch (error) {
       console.error('Error logging affiliate click:', error);
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
 
     // Log the click
     try {
-      await addDoc(collection(db, 'affiliate_clicks'), {
+      await adminDb.collection('affiliate_clicks').add({
         productId: productId || 'unknown',
         affiliateId,
         userId: userId || 'anonymous',
@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
         userAgent: request.headers.get('user-agent'),
         referer: request.headers.get('referer'),
         ip: request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip') || 'unknown',
-        timestamp: serverTimestamp(),
+        timestamp: FieldValue.serverTimestamp(),
       });
     } catch (error) {
       console.error('Error logging affiliate click:', error);

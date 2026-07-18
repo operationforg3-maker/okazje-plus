@@ -85,7 +85,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Dynamic products — all approved up to 50000
   let productUrls: MetadataRoute.Sitemap = [];
   try {
-    const products = await getAllApprovedProductsForSitemap(50000);
+    const products = await getAllApprovedProductsForSitemap(5000);
     const eligibleProducts = products.filter((product) =>
       getGoogleProductPublicationState({
         product,

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, query, where, limit } from 'firebase/firestore';
-import { adminAuth } from '@/lib/firebase-admin';
+import { adminDb, adminAuth } from '@/lib/firebase-admin';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -43,12 +41,11 @@ export async function GET(request: NextRequest) {
         // Firestore check with short timeout
         if (Object.values(envChecks).every(Boolean)) {
           try {
-            const dealsQuery = query(
-              collection(db, 'deals'),
-              where('status', '==', 'approved'),
-              limit(1)
-            );
-            const snapshot = await getDocs(dealsQuery);
+            const snapshot = await adminDb
+              .collection('deals')
+              .where('status', '==', 'approved')
+              .limit(1)
+              .get();
             results.checks.firestore = {
               status: 'ok',
               message: `Connected, found ${snapshot.size} deal(s)`,

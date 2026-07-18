@@ -125,16 +125,6 @@ export async function generateMetadata({
       index: isIndexedLocale,
       follow: true,
     },
-    alternates: {
-      canonical,
-      languages: {
-        ...languageAlternates,
-        'x-default': `${SITE_URL}/pl/`,
-      },
-      types: {
-        'application/rss+xml': `${SITE_URL}/rss.xml`,
-      },
-    },
   };
 }
 
