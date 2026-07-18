@@ -28,7 +28,7 @@ interface ModelMapping {
 // Google AI Studio (fallback) uses gemini-2.0-flash and gemini-1.5-pro as stable models.
 const modelMapping: Record<string, ModelMapping> = {
   'refine-model': {
-    primary: 'vertexai/gemini-2.5-flash',
+    primary: 'vertexai/gemini-2.0-flash',
     fallback: 'googleai/gemini-2.0-flash'
   },
   'googleai/gemini-2.5-flash': {
@@ -101,8 +101,21 @@ for (const [alias, target] of Object.entries(modelMapping)) {
       }
 
       try {
+        const generationConfig = {
+          ...rawInput.config,
+        };
+
+        // Disable thinking mode for gemini-2.5 by default unless explicitly configured
+        if (selectedModel.includes('gemini-2.5')) {
+          generationConfig.thinkingConfig = {
+            thinkingBudget: 0,
+            ...generationConfig.thinkingConfig
+          };
+        }
+
         return await ai.generate({
           ...rawInput,
+          config: generationConfig,
           model: selectedModel
         } as any);
       } catch (err: any) {
