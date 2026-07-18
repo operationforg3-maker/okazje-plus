@@ -1184,6 +1184,13 @@ export class AIRefiner {
    */
   private async isJobActive(): Promise<boolean> {
     try {
+      // Check global pause first
+      const configDoc = await adminDb.collection('config').doc('importSettings').get();
+      if (configDoc.exists && configDoc.data()?.isPaused) {
+        console.warn('[Refiner] AI Refiner paused globally via importSettings.isPaused');
+        return false;
+      }
+
       const doc = await adminDb.collection('refiner_jobs').doc(this.jobId).get();
       if (!doc.exists) return true;
       const status = doc.data()?.status;

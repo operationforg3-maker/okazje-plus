@@ -57,6 +57,20 @@ export class DealRefiner {
     const processedIds: string[] = [];
 
     try {
+      // Check global pause
+      const configDoc = await adminDb.collection('config').doc('importSettings').get();
+      if (configDoc.exists && configDoc.data()?.isPaused) {
+        this.addLog('warn', 'AI Deal Refiner paused globally via importSettings.isPaused');
+        return {
+          id: this.jobId,
+          status: 'paused',
+          startedAt: jobStartTime,
+          completedAt: new Date().toISOString(),
+          lastUpdatedAt: new Date().toISOString(),
+          logs: this.logs,
+        } as any;
+      }
+
       this.addLog('info', `Starting Deal Refiner job: limit=${limit}`);
 
       // Find deals that need refinement:
@@ -140,6 +154,20 @@ export class DealRefiner {
     const processedIds: string[] = [];
 
     try {
+      // Check global pause
+      const configDoc = await adminDb.collection('config').doc('importSettings').get();
+      if (configDoc.exists && configDoc.data()?.isPaused) {
+        this.addLog('warn', 'AI Deal Refiner paused globally via importSettings.isPaused');
+        return {
+          id: this.jobId,
+          status: 'paused',
+          startedAt: jobStartTime,
+          completedAt: new Date().toISOString(),
+          lastUpdatedAt: new Date().toISOString(),
+          logs: this.logs,
+        } as any;
+      }
+
       this.addLog('info', `Starting targeted Deal Refiner job for ${dealIds.length} deals`);
 
       for (const dealId of dealIds) {

@@ -127,6 +127,24 @@ async function runAliExpressSync(request: NextRequest) {
       });
     }
 
+    // Check if imports are globally paused
+    let isPaused = false;
+    try {
+      const configDoc = await adminDb.collection('config').doc('importSettings').get();
+      if (configDoc.exists) {
+        isPaused = !!configDoc.data()?.isPaused;
+      }
+    } catch (_) {}
+
+    if (isPaused) {
+      logger.info('AliExpress sync skipped: globally paused in importSettings');
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        message: 'Autopilot AliExpress jest zatrzymany (globalna pauza).',
+      });
+    }
+
     const maxItemsParam = Number(request.nextUrl.searchParams.get('maxItems') || settings?.maxItemsPerProfile || '0');
     const hardCap = Number(settings?.hardCap || process.env.ALIEXPRESS_SYNC_HARD_CAP || '5000');
     const normalizedHardCap = Number.isFinite(hardCap) ? Math.max(100, hardCap) : 5000;
