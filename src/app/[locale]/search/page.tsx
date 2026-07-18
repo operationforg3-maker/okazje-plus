@@ -327,7 +327,7 @@ function SearchPageContent() {
             {deals.length > 0 && (
               <div>
                 <h2 className="font-headline text-2xl font-bold mb-4">🔥 Okazje</h2>
-                <div className="grid grid-cols-1 gap-6">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                   {deals.map((deal) => (
                     <DealCard key={deal.id} deal={deal} />
                   ))}
@@ -352,7 +352,7 @@ function SearchPageContent() {
             {deals.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">Brak okazji</p>
             ) : (
-              <div className="grid grid-cols-1 gap-6">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {deals.map((deal) => (
                   <DealCard key={deal.id} deal={deal} />
                 ))}

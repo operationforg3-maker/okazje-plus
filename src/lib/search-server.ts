@@ -209,43 +209,98 @@ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<
   const safeLimit = clampPageSize(limit, 5);
 
   try {
-    const { adminDb } = await import('@/lib/firebase-admin');
+    const { adminDb, FieldValue } = await import('@/lib/firebase-admin');
 
-    const qLower = q.toLowerCase();
-    
-    // Fetch a batch of approved products and deals
-    const [productsSnap, dealsSnap] = await Promise.all([
-      adminDb.collection('product_cores')
-        .where('status', '==', 'approved')
-        .limit(40).get(),
-      adminDb.collection('deals')
-        .where('status', '==', 'approved')
-        .limit(40).get()
-    ]);
+    const qLower = q.toLowerCase().trim();
+    if (!qLower) return [];
 
-    const out: Suggestion[] = [];
+    let queryVector: number[] | null = null;
+    try {
+      const { generateEmbeddings } = await import('@/ai/embeddings');
+      queryVector = await generateEmbeddings(qLower);
+    } catch (err) {
+      console.warn('Vector embedding failed for autocomplete:', err);
+    }
 
-    // Filter products locally by search query
-    productsSnap.docs.forEach((docSnap: any) => {
-      const doc = docSnap.data();
-      const titleStr = typeof doc.title === 'object' ? String(doc.title?.pl || doc.title?.en || '') : String(doc.title || '');
-      if (titleStr.toLowerCase().includes(qLower)) {
-        const suggestion = normalizeSuggestion({ id: docSnap.id, ...doc }, 'product');
-        if (suggestion) out.push(suggestion);
-      }
-    });
+    const queries = [];
 
-    // Filter deals locally by search query
-    dealsSnap.docs.forEach((docSnap: any) => {
-      const doc = docSnap.data();
-      const titleStr = typeof doc.title === 'object' ? String(doc.title?.pl || doc.title?.en || '') : String(doc.title || '');
-      if (titleStr.toLowerCase().includes(qLower)) {
-        const suggestion = normalizeSuggestion({ id: docSnap.id, ...doc }, 'deal');
-        if (suggestion) out.push(suggestion);
-      }
-    });
+    if (queryVector) {
+      // 1. Vector Search
+      queries.push(
+        adminDb.collection('product_cores')
+          .where('status', '==', 'approved')
+          .findNearest({
+            vectorField: 'embedding',
+            queryVector: FieldValue.vector(queryVector),
+            distanceMeasure: 'COSINE',
+            limit: 20,
+          }).get().catch((err: any) => {
+            console.warn('Vector search failed for product_cores in autocomplete:', err);
+            return { docs: [] };
+          })
+      );
+      queries.push(
+        adminDb.collection('deals')
+          .where('status', '==', 'approved')
+          .findNearest({
+            vectorField: 'embedding',
+            queryVector: FieldValue.vector(queryVector),
+            distanceMeasure: 'COSINE',
+            limit: 20,
+          }).get().catch((err: any) => {
+            console.warn('Vector search failed for deals in autocomplete:', err);
+            return { docs: [] };
+          })
+      );
+    } else {
+      // Fallback: If embedding fails, get most recent items
+      queries.push(
+        adminDb.collection('product_cores')
+          .where('status', '==', 'approved')
+          .orderBy('createdAt', 'desc')
+          .limit(40).get().catch(() => ({ docs: [] }))
+      );
+      queries.push(
+        adminDb.collection('deals')
+          .where('status', '==', 'approved')
+          .orderBy('createdAt', 'desc')
+          .limit(40).get().catch(() => ({ docs: [] }))
+      );
+    }
 
-    return out.slice(0, safeLimit);
+    const results = await Promise.all(queries);
+
+    const outMap = new Map<string, Suggestion>();
+
+    const processDocs = (docs: any[], type: 'product' | 'deal', exactMatchFilter: boolean) => {
+      docs.forEach((docSnap: any) => {
+        const doc = docSnap.data();
+        let shouldInclude = true;
+
+        // If we are doing fallback, we filter locally. If vector, we don't strictly require string match, 
+        // but we might want to prioritize things that actually match the prefix if they exist, or just trust the vector.
+        // For autocomplete, vector might return random similar things. Let's trust the vector.
+        if (exactMatchFilter) {
+           const titleStr = typeof doc.title === 'object' ? String(doc.title?.pl || doc.title?.en || '') : String(doc.title || '');
+           if (!titleStr.toLowerCase().includes(qLower)) {
+             shouldInclude = false;
+           }
+        }
+
+        if (shouldInclude) {
+          const suggestion = normalizeSuggestion({ id: docSnap.id, ...doc }, type);
+          if (suggestion && !outMap.has(suggestion.id)) {
+            outMap.set(suggestion.id, suggestion);
+          }
+        }
+      });
+    };
+
+    // Results from vector search or fallback
+    processDocs(results[0].docs, 'product', !queryVector);
+    processDocs(results[1].docs, 'deal', !queryVector);
+
+    return Array.from(outMap.values()).slice(0, safeLimit);
   } catch (err) {
     console.warn('Firestore autocomplete failed:', err);
     return [];

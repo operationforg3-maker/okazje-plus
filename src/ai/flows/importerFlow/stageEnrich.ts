@@ -31,11 +31,7 @@ const LocaleOutputSchema = z.object({
 const RefinedOutputSchema = z.object({
   qualityScore: z.number().describe("0-100 score based on product completeness and attractiveness"),
   pl: LocaleOutputSchema,
-  en: LocaleOutputSchema,
-  de: LocaleOutputSchema,
-  fr: LocaleOutputSchema,
-  es: LocaleOutputSchema,
-  uk: LocaleOutputSchema
+  en: LocaleOutputSchema
 });
 
 function specsToHtmlList(specs: Record<string, string>): string {
@@ -174,10 +170,9 @@ export async function refineProductsBatch(
 
         Your tasks:
         1. Calculate a Quality Score (0-100) based on e-commerce quality. Score low if the item looks like spam.
-        2. Use Google Search to query this product to verify and enrich specifications, features, and pricing details.
-        3. Generate clean, marketing-ready content for all 6 locales: Polish (pl), English (en), German (de), French (fr), Spanish (es), and Ukrainian (uk).
-        4. Translate and output clean key-value specifications for each locale under 'specs' (keys should be localized e.g. 'Marka', 'Model', 'Kolor').
-        5. Generate SEO metadata optimized for search engine and generative AI overview optimization (GEO/AIO).
+        2. Generate clean, marketing-ready content for 2 locales: Polish (pl) and English (en).
+        3. Translate and output clean key-value specifications for each locale under 'specs'.
+        4. Generate SEO metadata optimized for search engine and generative AI overview optimization (GEO/AIO).
       `;
 
       // Google Search grounding wyłączone — kosztuje $35/1000 zapytań.
@@ -211,44 +206,44 @@ export async function refineProductsBatch(
         title: {
           pl: result.pl.title,
           en: result.en.title,
-          de: result.de.title,
-          fr: result.fr.title,
-          es: result.es.title,
-          uk: result.uk.title
+          de: raw.title,
+          fr: raw.title,
+          es: raw.title,
+          uk: raw.title
         },
         description: {
           pl: result.pl.description,
           en: result.en.description,
-          de: result.de.description,
-          fr: result.fr.description,
-          es: result.es.description,
-          uk: result.uk.description
+          de: raw.description || raw.title,
+          fr: raw.description || raw.title,
+          es: raw.description || raw.title,
+          uk: raw.description || raw.title
         },
         specs: {
           pl: specsToHtmlList(result.pl.specs),
           en: specsToHtmlList(result.en.specs),
-          de: specsToHtmlList(result.de.specs),
-          fr: specsToHtmlList(result.fr.specs),
-          es: specsToHtmlList(result.es.specs),
-          uk: specsToHtmlList(result.uk.specs)
+          de: specsToHtmlList(raw.rawSpecs || raw.specs || {}),
+          fr: specsToHtmlList(raw.rawSpecs || raw.specs || {}),
+          es: specsToHtmlList(raw.rawSpecs || raw.specs || {}),
+          uk: specsToHtmlList(raw.rawSpecs || raw.specs || {})
         },
         specsLocalized: {
           pl: result.pl.specs,
           en: result.en.specs,
-          de: result.de.specs,
-          fr: result.fr.specs,
-          es: result.es.specs,
-          uk: result.uk.specs
+          de: raw.rawSpecs || raw.specs || {},
+          fr: raw.rawSpecs || raw.specs || {},
+          es: raw.rawSpecs || raw.specs || {},
+          uk: raw.rawSpecs || raw.specs || {}
         },
         
         // Metadata
         seo: {
           pl: { title: result.pl.seoTitle, description: result.pl.seoDescription, keywords: result.pl.keywords },
           en: { title: result.en.seoTitle, description: result.en.seoDescription, keywords: result.en.keywords },
-          de: { title: result.de.seoTitle, description: result.de.seoDescription, keywords: result.de.keywords },
-          fr: { title: result.fr.seoTitle, description: result.fr.seoDescription, keywords: result.fr.keywords },
-          es: { title: result.es.seoTitle, description: result.es.seoDescription, keywords: result.es.keywords },
-          uk: { title: result.uk.seoTitle, description: result.uk.seoDescription, keywords: result.uk.keywords },
+          de: { title: raw.title, description: (raw.description || raw.title).slice(0, 150), keywords: [] },
+          fr: { title: raw.title, description: (raw.description || raw.title).slice(0, 150), keywords: [] },
+          es: { title: raw.title, description: (raw.description || raw.title).slice(0, 150), keywords: [] },
+          uk: { title: raw.title, description: (raw.description || raw.title).slice(0, 150), keywords: [] },
         },
         qualityScore: result.qualityScore,
 

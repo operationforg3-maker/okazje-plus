@@ -894,7 +894,14 @@ async function processUIImportJob(uiJob: any): Promise<void> {
     let processedCount = 0;
     const errors: string[] = [];
 
-    for (let i = 0; i < batches.length; i++) {
+    // Track execution time to avoid serverless function timeouts
+    const executionStartTime = Date.now();
+    const MAX_EXECUTION_TIME_MS = 45000; // 45 seconds safe limit
+
+    const progress = uiJob.progress || {};
+    const startIndex = progress.currentBatchIndex || 0;
+
+    for (let i = startIndex; i < batches.length; i++) {
       const batch = batches[i];
 
       // Check if cancelled
@@ -958,6 +965,8 @@ async function processUIImportJob(uiJob: any): Promise<void> {
           'progress.processedCategories': processedCount,
           'progress.currentCategory': `${batch.categoryName}/${batch.subcategoryName}/${batch.subsubcategoryName}`,
           'progress.importedProducts': totalImported,
+          'progress.currentBatchIndex': i + 1,
+          updatedAt: new Date().toISOString(),
         });
 
       } catch (err) {
@@ -965,24 +974,46 @@ async function processUIImportJob(uiJob: any): Promise<void> {
         errors.push(errorMsg);
         logger.error('UI Import batch failed', { jobId: uiJob.id, batch: i, error: errorMsg });
       }
+
+      // Break if we are approaching timeout limit to avoid cron failing
+      if (Date.now() - executionStartTime > MAX_EXECUTION_TIME_MS) {
+        logger.info('UI Import job approaching timeout, suspending until next cron run', {
+          jobId: uiJob.id,
+          nextBatchIndex: i + 1,
+          totalBatches: batches.length
+        });
+        // Save progress, do not mark as completed. Return early.
+        await jobRef.update({
+          'progress.currentBatchIndex': i + 1,
+          updatedAt: new Date().toISOString(),
+        });
+        return;
+      }
     }
 
-    // Mark as completed
-    await jobRef.update({
-      status: 'completed',
-      completedAt: new Date().toISOString(),
-      'progress.errors': errors,
-      results: {
-        totalProducts: totalImported,
-        totalVariants: 0,
-        duration: Date.now() - new Date(uiJob.createdAt).getTime(),
-      },
-    });
+    // If we finished all batches
+    if (errors.length > 0) {
+      await jobRef.update({
+        status: 'completed_with_errors',
+        error: errors.join('; '),
+        completedAt: new Date().toISOString(),
+        'progress.errors': errors,
+      });
+    } else {
+      await jobRef.update({
+        status: 'completed',
+        completedAt: new Date().toISOString(),
+        results: {
+          totalProducts: totalImported,
+          totalVariants: 0,
+          duration: Date.now() - new Date(uiJob.createdAt).getTime(),
+        },
+      });
+    }
 
-    logger.info('UI Import job completed', {
+    logger.info('UI Import job fully completed', {
       jobId: uiJob.id,
-      totalImported,
-      processedCount,
+      totalBatches: batches.length,
       errors: errors.length,
     });
 

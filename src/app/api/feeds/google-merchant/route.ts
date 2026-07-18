@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     // Fetch all approved products (up to 50,000) using optimized Admin SDK query
     const products = await getAllApprovedProductsForSitemap(50000);
     
-    const itemsXml = products.map((product) => {
+    const itemsXmlArray = products.reduce((acc: string[], product) => {
       // Get title (prefer requested locale, fallback to PL/EN)
       let title = '';
       if (typeof product.title === 'string') {
@@ -107,13 +107,39 @@ export async function GET(request: NextRequest) {
       
       const cleanDescription = stripHtml(description) || title;
       
-      // Price calculation
-      const priceVal = product.bestPrice?.amount || product.bestTotalPrice || 0;
-      const currency = product.bestPrice?.currency || 'PLN';
-      const formattedPrice = `${priceVal.toFixed(2)} ${currency}`;
-      
       // Image resolution
       const image = product.imageUrl || (product.images && product.images[0]) || '';
+      
+      // REQUIRED FIELDS CHECK
+      if (!title || title === 'Produkt' || !image || !cleanDescription) {
+        return acc;
+      }
+      
+      // Price calculation
+      // Harvesters might save price in different locations
+      let priceVal = 0;
+      let currency = 'PLN';
+
+      if (product.bestPrice?.amount > 0) {
+        priceVal = product.bestPrice.amount;
+        currency = product.bestPrice.currency || 'PLN';
+      } else if (product.bestTotalPrice > 0) {
+        priceVal = product.bestTotalPrice;
+      } else if (product.smartPrice?.amount > 0) {
+        priceVal = product.smartPrice.amount;
+        currency = product.smartPrice.currency || 'PLN';
+      } else if (product.price?.amount > 0) {
+        priceVal = product.price.amount;
+        currency = product.price.currency || 'PLN';
+      } else if (typeof product.price === 'number' && product.price > 0) {
+        priceVal = product.price;
+      }
+
+      if (priceVal <= 0) {
+        return acc; // filter out items with no valid price
+      }
+
+      const formattedPrice = `${priceVal.toFixed(2)} ${currency}`;
       
       // Additional images resolution
       const productImages = Array.isArray(product.images) ? product.images : [];
@@ -124,7 +150,13 @@ export async function GET(request: NextRequest) {
         .join('\n');
       
       // Brand resolution
-      const brand = product.metadata?.brand || product.specs?.brand || product.specs?.Brand || 'Various';
+      const rawBrand = product.metadata?.brand || product.specs?.brand || product.specs?.Brand || product.attributes?.brand || product.attributes?.Brand || '';
+      const isGenericBrand = !rawBrand || /various|inne|unknown|generic/i.test(rawBrand.trim());
+      const brand = isGenericBrand ? '' : rawBrand.trim();
+      
+      // Identifiers resolution
+      const gtin = product.metadata?.gtin || product.metadata?.ean || product.metadata?.upc || product.metadata?.isbn || '';
+      const mpn = product.metadata?.mpn || product.specs?.mpn || product.specs?.MPN || '';
       
       // Google product category resolution
       const googleCategory = getGoogleProductCategory(
@@ -133,6 +165,13 @@ export async function GET(request: NextRequest) {
         product.subSubCategorySlug || ''
       );
       
+      // According to Google Merchant Center rules:
+      // If we don't have GTIN AND don't have both Brand and MPN, identifier_exists is false.
+      // If identifier_exists is false, we should NOT send g:brand or g:mpn unless they are real.
+      const hasValidGtin = gtin.length > 0;
+      const hasValidMpnAndBrand = mpn.length > 0 && brand.length > 0;
+      const identifierExists = hasValidGtin || hasValidMpnAndBrand;
+      
       // Age group and gender resolution based on category
       const isKids = (product.mainCategorySlug || '').toLowerCase().includes('dziecko') || (product.mainCategorySlug || '').toLowerCase().includes('zabawki');
       const ageGroup = isKids ? 'kids' : 'adult';
@@ -140,25 +179,55 @@ export async function GET(request: NextRequest) {
       // Product URL uses the requested locale prefix
       const link = `${baseUrl}/${locale}/products/${product.id}`;
       
-      // XML elements
-      return `    <item>
-      <g:id>${product.id}</g:id>
+      // XML elements construction
+      let itemXml = `    <item>
+      <g:id>${escapeXml(product.id)}</g:id>
       <g:title>${escapeXml(title.slice(0, 150))}</g:title>
-      <g:description>${escapeXml(cleanDescription.slice(0, 1000))}</g:description>
+      <g:description>${escapeXml(cleanDescription.slice(0, 5000))}</g:description>
       <g:link>${escapeXml(link)}</g:link>
       <g:image_link>${escapeXml(image)}</g:image_link>
 ${additionalImagesXml ? additionalImagesXml + '\n' : ''}      <g:condition>new</g:condition>
       <g:availability>in_stock</g:availability>
       <g:price>${escapeXml(formattedPrice)}</g:price>
-      <g:brand>${escapeXml(brand)}</g:brand>
-      <g:mpn>${escapeXml(product.id)}</g:mpn>
       <g:google_product_category>${escapeXml(googleCategory)}</g:google_product_category>
-      <g:identifier_exists>false</g:identifier_exists>
+      <g:identifier_exists>${identifierExists ? 'yes' : 'no'}</g:identifier_exists>
       <g:adult>no</g:adult>
       <g:age_group>${ageGroup}</g:age_group>
-      <g:gender>unisex</g:gender>
-    </item>`;
-    }).join('\n');
+      <g:gender>unisex</g:gender>`;
+
+      if (brand) {
+        itemXml += `\n      <g:brand>${escapeXml(brand)}</g:brand>`;
+      }
+      if (gtin) {
+        itemXml += `\n      <g:gtin>${escapeXml(gtin)}</g:gtin>`;
+      }
+      if (mpn && !hasValidGtin) {
+        itemXml += `\n      <g:mpn>${escapeXml(mpn)}</g:mpn>`;
+      }
+      
+      // Extract shipping cost
+      let shippingCostVal = -1;
+      if (product.metadata?.shippingDetails?.cost !== undefined) {
+        shippingCostVal = product.metadata.shippingDetails.cost;
+      } else if (product.metadata?.shippingCost !== undefined) {
+        shippingCostVal = product.metadata.shippingCost;
+      } else if (product.metadata?.freeShipping || product.metadata?.shippingDetails?.free) {
+        shippingCostVal = 0;
+      }
+      
+      if (shippingCostVal >= 0) {
+        itemXml += `\n      <g:shipping>
+        <g:country>PL</g:country>
+        <g:price>${shippingCostVal.toFixed(2)} ${currency}</g:price>
+      </g:shipping>`;
+      }
+
+      itemXml += `\n    </item>`;
+      acc.push(itemXml);
+      return acc;
+    }, []);
+    
+    const itemsXml = itemsXmlArray.join('\n');
     
     const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
