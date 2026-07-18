@@ -48,6 +48,18 @@ export const autofillDraftDealV2 = onDocumentCreated(
     const draftDeal = snapshot.data() as DraftDeal;
 
     try {
+      // Check global pause
+      const configDoc = await db.collection('config').doc('importSettings').get();
+      if (configDoc.exists && configDoc.data()?.isPaused) {
+        logger.info(`[AutoFill] Skipped - imports are globally paused`);
+        await snapshot.ref.update({
+          status: 'failed',
+          error: 'Imports globally paused',
+          failedAt: new Date().toISOString(),
+        });
+        return;
+      }
+
       logger.info(`[AutoFill] Starting auto-fill for draft: ${draftDealId}`, {
         link: draftDeal.link,
         userId: draftDeal.userId,

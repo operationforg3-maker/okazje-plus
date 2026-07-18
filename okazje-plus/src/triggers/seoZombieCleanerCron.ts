@@ -159,6 +159,13 @@ export const seoZombieCleanerCron = onSchedule(
     logger.info('[ZombieCleaner] Starting scheduled cleanup...');
 
     try {
+      // Check global pause
+      const configDoc = await db.collection('config').doc('importSettings').get();
+      if (configDoc.exists && configDoc.data()?.isPaused) {
+        logger.info('[ZombieCleaner] Skipped - imports are globally paused');
+        return;
+      }
+
       // Step 1: Find expired deals
       const expired = await findExpiredDeals();
       logger.info(`[ZombieCleaner] Found ${expired.length} expired deals`);
