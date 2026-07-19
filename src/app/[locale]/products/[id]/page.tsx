@@ -372,7 +372,7 @@ export async function generateStaticParams() {
 export default async function ProductDetailPage({ params }: PageProps) {
   const resolvedParams = await params;
   setRequestLocale(resolvedParams.locale);
-  const locale = SUPPORTED_LOCALES.includes(resolvedParams.locale as (typeof SUPPORTED_LOCALES)[number])
+  const effectiveLocale = SUPPORTED_LOCALES.includes(resolvedParams.locale as (typeof SUPPORTED_LOCALES)[number])
     ? resolvedParams.locale
     : 'pl';
   const data = await getProductData(resolvedParams.id);
