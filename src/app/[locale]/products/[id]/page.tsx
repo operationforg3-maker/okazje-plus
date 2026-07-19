@@ -4,15 +4,14 @@ import { notFound } from 'next/navigation';
 import { Product, ProductRating, ProductCore, DealM6 } from '@/lib/types';
 import { getProductRatings, getProductWithDeals } from '@/lib/data';
 import { getProductWithDealsAdmin } from '@/lib/data-admin';
-import { getServerAuthSession } from '@/lib/auth-server';
 import { generateProductJsonLd, generateBreadcrumbJsonLd, generateFaqJsonLd } from '@/lib/json-ld-generators';
 import { getGoogleProductPublicationState } from '@/lib/google-product-publication';
 import { buildCategoryPath, humanizeCategorySlug } from '@/lib/category-routes';
 import ProductDetailM6Client from './product-detail-m6-client';
+import { setRequestLocale } from 'next-intl/server';
 
-// ISR: revalidate co 5 minut — pozwala Next.js cache'ować strony i serwować stale-while-revalidate.
-// NIE używamy force-dynamic — konfliktuje z revalidate i powoduje 5xx pod obciążeniem crawlera.
-export const revalidate = 300;
+// Wymuszamy dynamiczne renderowanie (on-demand), co pozwoli na bezproblemowy odczyt nagłówków autoryzacyjnych i zlikwiduje błędy 500.
+export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: Promise<{ id: string; locale: string }>;
@@ -42,18 +41,9 @@ async function getProductData(id: string) {
     }
 
     console.log(`[getProductData] Fetching product: ${id}`);
-    const session = await getServerAuthSession();
-    const isAdmin = session?.role === 'admin' || session?.role === 'moderator';
-
-    // Try M6 first (ProductCore + Deals)
-    // If admin, use Admin permissions (view drafts). If generic user, use standard query (only approved).
-    let m6Data;
-    if (isAdmin) {
-       console.log('[getProductData] Admin access detected - using privileged fetch');
-       m6Data = await getProductWithDealsAdmin(id);
-    } else {
-       m6Data = await getProductWithDeals(id);
-    }
+    // For public ISR we assume regular user and always fetch approved data only
+    // Admins viewing drafts would need a separate route or dynamic component
+    const m6Data = await getProductWithDeals(id);
     
     if (m6Data) {
       console.log(`[getProductData] M6 data found for ${id}, have ${m6Data.deals.length} deals`);
@@ -61,10 +51,8 @@ async function getProductData(id: string) {
       const { product: productCore, deals } = m6Data;
 
       // Skip only truly hidden items (drafts / rejected) from public view.
-      // Products with status 'pending' or 'pending_approval' are shown in
-      // search results and the waiting-room feed, so clicking them must work.
       const hiddenStatuses = ['draft', 'rejected'];
-      if (productCore?.status && hiddenStatuses.includes(productCore.status) && !isAdmin) {
+      if (productCore?.status && hiddenStatuses.includes(productCore.status)) {
         return null;
       }
 
@@ -382,11 +370,12 @@ export async function generateStaticParams() {
 }
 
 export default async function ProductDetailPage({ params }: PageProps) {
-  const { id, locale } = await params;
-  const effectiveLocale = SUPPORTED_LOCALES.includes(locale as (typeof SUPPORTED_LOCALES)[number])
-    ? locale
+  const resolvedParams = await params;
+  setRequestLocale(resolvedParams.locale);
+  const locale = SUPPORTED_LOCALES.includes(resolvedParams.locale as (typeof SUPPORTED_LOCALES)[number])
+    ? resolvedParams.locale
     : 'pl';
-  const data = await getProductData(id);
+  const data = await getProductData(resolvedParams.id);
   
   if (!data) {
     notFound();

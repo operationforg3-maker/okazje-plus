@@ -8,10 +8,10 @@ import { getDealById, searchDeals } from '@/lib/search-server';
 import { generateDealJsonLd, generateBreadcrumbJsonLd } from '@/lib/json-ld-generators';
 import { buildCategoryPath, humanizeCategorySlug } from '@/lib/category-routes';
 import DealDetailClient from './deal-detail-client';
+import { setRequestLocale } from 'next-intl/server';
 
-// ISR: revalidate co 5 minut — pozwala Next.js cache'ować strony i serwować stale-while-revalidate.
-// NIE używamy force-dynamic — konfliktuje z revalidate i powoduje 5xx pod obciążeniem crawlera.
-export const revalidate = 300;
+// Wymuszamy dynamiczne renderowanie (on-demand), co pozwoli na bezproblemowy odczyt nagłówków autoryzacyjnych i zlikwiduje błędy 500.
+export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: { id: string; locale: string };
@@ -381,6 +381,7 @@ function deepSerialize<T>(value: T): T {
 
 export default async function DealDetailPage({ params }: PageProps) {
   const resolvedParams = await params;
+  setRequestLocale(resolvedParams.locale);
   const locale = SUPPORTED_LOCALES.includes(resolvedParams.locale as (typeof SUPPORTED_LOCALES)[number])
     ? resolvedParams.locale
     : 'pl';

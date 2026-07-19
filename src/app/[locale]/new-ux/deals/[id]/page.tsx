@@ -8,7 +8,7 @@ import { generateDealJsonLd, generateBreadcrumbJsonLd } from '@/lib/json-ld-gene
 import { buildCategoryPath, humanizeCategorySlug, buildCategoryPathNewUx } from '@/lib/category-routes';
 import DealDetailClient from './deal-detail-client';
 
-// Must be force-dynamic: page uses headers() for auth session verification
+// Wymuszamy dynamiczne renderowanie (on-demand), co pozwoli na bezproblemowy odczyt nagłówków autoryzacyjnych i zlikwiduje błędy 500.
 export const dynamic = 'force-dynamic';
 
 interface PageProps {

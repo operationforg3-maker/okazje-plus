@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { Product, ProductRating, ProductCore, DealM6 } from '@/lib/types';
 import { getProductRatings, getProductWithDeals } from '@/lib/data';
 import { getProductWithDealsAdmin } from '@/lib/data-admin';
-import { getServerAuthSession } from '@/lib/auth-server';
+
 import { generateProductJsonLd, generateBreadcrumbJsonLd, generateFaqJsonLd } from '@/lib/json-ld-generators';
 import { getGoogleProductPublicationState } from '@/lib/google-product-publication';
 import { buildCategoryPath, humanizeCategorySlug } from '@/lib/category-routes';
@@ -42,29 +42,15 @@ async function getProductData(id: string) {
     }
 
     console.log(`[getProductData] Fetching product: ${id}`);
-    const session = await getServerAuthSession();
-    const isAdmin = session?.role === 'admin' || session?.role === 'moderator';
-
-    // Try M6 first (ProductCore + Deals)
-    // If admin, use Admin permissions (view drafts). If generic user, use standard query (only approved).
-    let m6Data;
-    if (isAdmin) {
-       console.log('[getProductData] Admin access detected - using privileged fetch');
-       m6Data = await getProductWithDealsAdmin(id);
-    } else {
-       m6Data = await getProductWithDeals(id);
-    }
+    const m6Data = await getProductWithDeals(id);
     
     if (m6Data) {
       console.log(`[getProductData] M6 data found for ${id}, have ${m6Data.deals.length} deals`);
       // M6 ProductCore found - return with deals
       const { product: productCore, deals } = m6Data;
 
-      // Skip only truly hidden items (drafts / rejected) from public view.
-      // Products with status 'pending' or 'pending_approval' are shown in
-      // search results and the waiting-room feed, so clicking them must work.
       const hiddenStatuses = ['draft', 'rejected'];
-      if (productCore?.status && hiddenStatuses.includes(productCore.status) && !isAdmin) {
+      if (productCore?.status && hiddenStatuses.includes(productCore.status)) {
         return null;
       }
 

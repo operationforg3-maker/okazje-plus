@@ -8,7 +8,7 @@ import { CurrencyProvider } from '@/context/currency-context';
 import { UXProvider } from '@/context/UXContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import {NextIntlClientProvider} from 'next-intl';
-import {getMessages} from 'next-intl/server';
+import {getMessages, setRequestLocale} from 'next-intl/server';
 import ErrorBoundary from '@/components/auth/error-boundary';
 import { generateOrganizationJsonLd, generateWebSiteJsonLd } from '@/lib/json-ld-generators';
 import { DeferredClientWidgets } from '@/components/layout/deferred-client-widgets';
@@ -137,7 +137,8 @@ export default async function LocaleLayout({
 }>) {
   const { locale } = await params;
   const effectiveLocale = locale || 'pl';
-  const messages = await getMessages();
+  setRequestLocale(effectiveLocale);
+  const messages = await getMessages({ locale: effectiveLocale });
   const websiteJsonLd = generateWebSiteJsonLd();
   const organizationJsonLd = generateOrganizationJsonLd();
   const categories = await getCategories().catch(() => []);

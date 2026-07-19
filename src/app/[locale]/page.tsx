@@ -3,6 +3,7 @@ import HomeClient from './home-client';
 import { getRecommendedProducts, getCategories } from '@/lib/data';
 import { searchDeals } from '@/lib/search-server';
 import { generateHomePageJsonLd } from '@/lib/json-ld-generators';
+import { setRequestLocale } from 'next-intl/server';
 
 // Cache home page more aggressively for better performance
 export const revalidate = 300; // ISR co 5 minut dla niższego kosztu backendu i stabilniejszego TTFB
@@ -137,7 +138,10 @@ export async function generateMetadata({
   };
 }
 
-export default async function HomePage() {
+export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
+  const resolvedParams = await params;
+  setRequestLocale(resolvedParams.locale);
+
   // Pobieramy więcej dealów jednocześnie — 40 do karuzeli + hot deals grid
   const [allHotDeals, topProducts, categories] = await Promise.all([
     searchDeals('*', {
