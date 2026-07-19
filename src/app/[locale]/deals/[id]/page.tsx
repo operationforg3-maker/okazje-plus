@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { Deal, LocalizedText } from '@/lib/types';
 import { getProductCore } from '@/lib/data';
 import { getExternalUrl } from '@/lib/external-url';
@@ -418,6 +419,26 @@ export default async function DealDetailPage({ params }: PageProps) {
       : undefined,
     'deals'
   );
+
+  const categoryPath: Array<{ name: string; url: string }> = [];
+  if (deal.mainCategorySlug) {
+    categoryPath.push({
+      name: humanizeCategorySlug(deal.mainCategorySlug),
+      url: `/${locale}/category/${deal.mainCategorySlug}`,
+    });
+    if (deal.subCategorySlug) {
+      categoryPath.push({
+        name: humanizeCategorySlug(deal.subCategorySlug),
+        url: `/${locale}/category/${deal.mainCategorySlug}/${deal.subCategorySlug}`,
+      });
+      if (deal.subSubCategorySlug) {
+        categoryPath.push({
+          name: humanizeCategorySlug(deal.subSubCategorySlug),
+          url: `/${locale}/category/${deal.mainCategorySlug}/${deal.subCategorySlug}/${deal.subSubCategorySlug}`,
+        });
+      }
+    }
+  }
   
   return (
     <>

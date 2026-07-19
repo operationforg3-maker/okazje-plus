@@ -94,14 +94,14 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
   if (!deals.length) return null;
 
   return (
-    // Stała wysokość 400px — karuzela nigdy nie skacze
-    <div className="relative" style={{ height: 400 }}>
+    // Stała wysokość ~480px, by karuzela była większa
+    <div className="relative w-full max-w-lg mx-auto" style={{ height: 480 }}>
       {/* Glow */}
       <div className="absolute inset-0 bg-gradient-to-tr from-primary/25 to-accent/25 rounded-3xl blur-2xl opacity-60 pointer-events-none" />
 
-      {/* Karta kontenera — stała wielkość */}
-      <div className="relative bg-background/60 backdrop-blur-xl border border-border/40 rounded-3xl shadow-2xl overflow-hidden" style={{ height: 400 }}>
-
+      {/* Karta kontenera — struktura z wzoru HeroVariantCurrent */}
+      <div className="relative bg-background/60 backdrop-blur-xl border border-border/40 rounded-3xl shadow-xl overflow-hidden p-6 space-y-5" style={{ height: 480 }}>
+        
         {/* Wszystkie slajdy renderowane naraz — tylko aktywny jest widoczny (opacity transition) */}
         {deals.map((deal, idx) => {
           const title = getLocalizedText(deal.title);
@@ -115,123 +115,95 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
             <div
               key={deal.id ?? idx}
               aria-hidden={!isActive}
+              className="absolute inset-0 p-6 flex flex-col space-y-4"
               style={{
-                position: 'absolute',
-                inset: 0,
                 opacity: isActive ? 1 : 0,
-                transition: 'opacity 0.45s ease',
+                transition: 'opacity 0.4s ease-in-out',
                 pointerEvents: isActive ? 'auto' : 'none',
-                display: 'flex',
-                flexDirection: 'column',
               }}
             >
-              {/* Top bar — stała wysokość 44px */}
-              <div className="flex items-center justify-between px-5 shrink-0" style={{ height: 44, paddingTop: 14 }}>
-                <span className="bg-orange-500/15 text-orange-400 border border-orange-500/25 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+              {/* Header: Znaczki */}
+              <div className="flex items-center justify-between shrink-0">
+                <span className="bg-orange-500/15 text-orange-500 border border-orange-500/25 text-[10px] sm:text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
                   <Flame className="h-3.5 w-3.5 animate-pulse" />
                   Okazja Tygodnia
                 </span>
-                <div className="flex items-center gap-2">
-                  {discount > 0 && (
-                    <span className="flex items-center gap-1 bg-green-500/15 text-green-400 border border-green-500/20 text-xs font-black px-2.5 py-1 rounded-full">
-                      <TrendingDown className="h-3.5 w-3.5" />
-                      -{discount}%
-                    </span>
-                  )}
-                  <span className="flex items-center gap-1 text-xs text-orange-400 font-black">
-                    <Flame className="h-3.5 w-3.5" />
-                    +{Math.round(deal.temperature || 0)}°
-                  </span>
-                </div>
+                <span className="text-sm text-orange-500 font-black flex items-center gap-1">
+                  <Flame className="h-4 w-4" />
+                  +{Math.round(deal.temperature || 0)}°
+                </span>
               </div>
 
-              {/* Obraz — strzałki na bokach, object-contain = widać całe zdjęcie */}
-              <div
-                className="mx-4 shrink-0 rounded-2xl overflow-hidden relative"
-                style={{
-                  height: 220,
-                  background: 'radial-gradient(ellipse at center, var(--muted) 0%, var(--background) 100%)',
-                }}
-              >
+              {/* Obraz (więcej przestrzeni, z tłem masonry) */}
+              <Link href={`/${locale}/deals/${deal.id}`} className="flex-1 bg-sky-500/10 dark:bg-sky-500/5 rounded-2xl flex items-center justify-center relative overflow-hidden group outline-none">
                 <img
                   src={image}
                   alt={title}
                   loading={idx === 0 ? 'eager' : 'lazy'}
-                  className="w-full h-full"
-                  style={{
-                    objectFit: 'contain',
-                    objectPosition: 'center',
-                    padding: '8px',
-                    transition: 'transform 0.6s ease',
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLImageElement).style.transform = 'scale(1.07)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLImageElement).style.transform = 'scale(1)'; }}
+                  className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105"
                 />
-                {/* Strzałka LEWO — na środku wysokości zdjęcia */}
+
+                {/* Strzałki wewnątrz obszaru obrazka */}
                 {isActive && (
                   <>
                     <button
-                      onClick={() => { prev(); resetTimer(); }}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 shadow-md hover:bg-background hover:scale-110 transition-all duration-200"
+                      onClick={(e) => { e.preventDefault(); prev(); resetTimer(); }}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 shadow-md hover:bg-background hover:scale-110 transition-all duration-200 z-20"
                       aria-label="Poprzednia okazja"
-                      style={{ zIndex: 5 }}
                     >
-                      <ChevronLeft className="h-4 w-4 text-foreground" />
+                      <ChevronLeft className="h-5 w-5 text-foreground" />
                     </button>
                     <button
-                      onClick={() => { next(); resetTimer(); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 shadow-md hover:bg-background hover:scale-110 transition-all duration-200"
+                      onClick={(e) => { e.preventDefault(); next(); resetTimer(); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 shadow-md hover:bg-background hover:scale-110 transition-all duration-200 z-20"
                       aria-label="Następna okazja"
-                      style={{ zIndex: 5 }}
                     >
-                      <ChevronRight className="h-4 w-4 text-foreground" />
+                      <ChevronRight className="h-5 w-5 text-foreground" />
                     </button>
                   </>
                 )}
-              </div>
+              </Link>
 
-              {/* Treść */}
-              <div className="flex-1 flex flex-col justify-between px-5 pt-2 pb-4">
-                {/* Tytuł — max 2 linie, fixed height 44px */}
-                <div style={{ height: 44, overflow: 'hidden' }}>
-                  <h3 className="font-bold text-sm leading-5 text-foreground line-clamp-2">
+              {/* Treść z cenami - dokładnie wg wzoru */}
+              <div className="space-y-3 shrink-0 pb-1">
+                <div style={{ height: 48, overflow: 'hidden' }}>
+                  <Link href={`/${locale}/deals/${deal.id}`} className="font-bold text-base sm:text-lg text-foreground line-clamp-2 hover:text-primary transition-colors outline-none">
                     {title}
-                  </h3>
+                  </Link>
                 </div>
-
-                {/* Cena + CTA + Dots */}
-                <div className="flex items-center justify-between mt-2">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-xl font-black text-foreground">{price || 'Sprawdź'}</span>
+                
+                <div className="flex items-baseline gap-2">
+                  <Link href={`/${locale}/deals/${deal.id}`} className="flex items-baseline gap-2 outline-none">
+                    <span className="text-2xl sm:text-3xl font-black text-foreground">{price || 'Sprawdź'}</span>
                     {origPrice && origPrice !== price && (
-                      <span className="text-xs text-muted-foreground line-through opacity-70">{origPrice}</span>
+                      <span className="text-sm sm:text-base text-muted-foreground line-through">{origPrice}</span>
                     )}
-                  </div>
-                  <Button size="sm" className="rounded-xl font-bold bg-primary text-primary-foreground shadow-md text-xs" asChild>
-                    <Link href={`/${locale}/deals/${deal.id}`}>Odbierz okazję</Link>
-                  </Button>
-                </div>
-
-                {/* Kropki nawigacji — pod tytułem, nad ceną */}
-                <div className="flex justify-center gap-1.5 pt-1">
-                  {deals.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { setActive(i); resetTimer(); }}
-                      className={cn(
-                        'h-1.5 rounded-full transition-all duration-300',
-                        i === active ? 'w-5 bg-primary' : 'w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50'
-                      )}
-                      aria-label={`Okazja ${i + 1}`}
-                    />
-                  ))}
+                  </Link>
+                  {discount > 0 && (
+                    <span className="text-sm sm:text-base font-bold text-green-500 ml-auto flex-shrink-0">
+                      -{discount}%
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
           );
         })}
 
-        {/* Strzałki są teraz wewnątrz obrazu każdego slajdu (powyżej) */}
+        {/* Kropki nawigacji wyrównane na dnie absolutnie (aby nie skakały i mieściły się w układzie p-6) */}
+        <div className="absolute bottom-5 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
+          {deals.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => { setActive(i); resetTimer(); }}
+              className={cn(
+                'h-1.5 rounded-full transition-all duration-300 pointer-events-auto',
+                i === active ? 'w-6 bg-primary' : 'w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50'
+              )}
+              aria-label={`Okazja ${i + 1}`}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -410,9 +382,11 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             </Button>
           </div>
           {visibleTopProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
-              {visibleTopProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+            <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-6 space-y-6 w-full">
+              {visibleTopProducts.map((product, idx) => (
+                <div key={product.id} className="break-inside-avoid">
+                  <ProductCard product={product} layoutMode="masonry" />
+                </div>
               ))}
             </div>
           ) : (
@@ -446,9 +420,11 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             </Button>
           </div>
           {visibleHotDeals.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
+            <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-6 space-y-6 w-full">
               {visibleHotDeals.map((deal, idx) => (
-                <DealCard key={deal.id} deal={deal} priority={idx === 0} />
+                <div key={deal.id} className="break-inside-avoid">
+                  <DealCard deal={deal} priority={idx === 0} layoutMode="masonry" index={idx} />
+                </div>
               ))}
             </div>
           ) : (
