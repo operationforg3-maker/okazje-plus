@@ -8,7 +8,10 @@
     },
     "subtitle": "Społeczność dzieląca się najlepszymi znaleziskami, promocjami i produktami. Oszczędzaj mądrze! 💰",
     "searchPlaceholder": "Czego szukasz? (np. iPhone, buty sportowe, AGD...)",
-    "searchButton": "Szukaj"
+    "searchButton": "Szukaj",
+    "dealOfWeek": "Okazja Tygodnia",
+    "browseDeals": "Przeglądaj okazje",
+    "catalog": "Katalog produktów"
   },
   "stats": {
     "hotDealsCount": "Gorących okazji",

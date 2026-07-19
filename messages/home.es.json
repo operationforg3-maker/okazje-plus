@@ -8,7 +8,10 @@
     },
     "subtitle": "Una comunidad que comparte los mejores hallazgos, promociones y productos. ¡Ahorra inteligentemente! 💰",
     "searchPlaceholder": "¿Qué estás buscando? (ej. iPhone, zapatillas deportivas, electrodomésticos...)",
-    "searchButton": "Buscar"
+    "searchButton": "Buscar",
+    "dealOfWeek": "Oferta de la semana",
+    "browseDeals": "Explorar ofertas",
+    "catalog": "Catálogo de productos"
   },
   "stats": {
     "hotDealsCount": "Ofertas irresistibles",

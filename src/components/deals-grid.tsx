@@ -9,7 +9,7 @@ import { LazyDealCard } from '@/components/lazy-card';
 
 interface DealsGridProps {
   deals: Deal[];
-  defaultView?: 'grid' | 'list';
+  defaultView?: 'grid' | 'masonry' | 'list';
   showViewToggle?: boolean;
   columnCountDesktop?: number;
   columnCountTablet?: number;
@@ -30,14 +30,14 @@ interface DealsGridProps {
  */
 export function DealsGrid({
   deals,
-  defaultView = 'grid',
+  defaultView = 'masonry',
   showViewToggle = true,
   columnCountDesktop = 4,
   columnCountTablet = 2,
   columnCountMobile = 1,
 }: DealsGridProps) {
   const t = useTranslations('deals');
-  const [view, setView] = useState<'grid' | 'list'>(defaultView);
+  const [view, setView] = useState<'grid' | 'masonry' | 'list'>(defaultView);
 
   // Jeśli showViewToggle=false, wymuś defaultView
   const currentView = showViewToggle ? view : defaultView;
@@ -73,18 +73,27 @@ export function DealsGrid({
         <div className="grid gap-4 auto-rows-max" style={{
           gridTemplateColumns: `repeat(auto-fill, minmax(280px, 1fr))`
         }}>
-          {deals.map((deal) => (
+          {deals.map((deal, index) => (
             <div key={deal.id}>
-              <LazyDealCard deal={deal} />
+              <LazyDealCard deal={deal} layoutMode="grid" index={index} />
+            </div>
+          ))}
+        </div>
+      ) : currentView === 'masonry' ? (
+        /* Masonry View */
+        <div className="columns-1 sm:columns-2 md:columns-3 xl:columns-4 gap-6 space-y-6 w-full">
+          {deals.map((deal, index) => (
+            <div key={deal.id} className="break-inside-avoid mb-6 flex justify-center">
+              <LazyDealCard deal={deal} layoutMode="masonry" index={index} />
             </div>
           ))}
         </div>
       ) : (
         /* List View */
         <div className="space-y-3">
-          {deals.map((deal) => (
+          {deals.map((deal, index) => (
             <div key={deal.id}>
-              <LazyDealCard deal={deal} />
+              <LazyDealCard deal={deal} layoutMode="list" index={index} />
             </div>
           ))}
         </div>

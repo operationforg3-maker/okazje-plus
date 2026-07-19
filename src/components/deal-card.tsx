@@ -200,7 +200,7 @@ function getRelativeTime(when: any): string {
   return `${Math.floor(diffDays / 30)} mies. temu`;
 }
 
-function DealCard({ deal, product, priority = false, layoutMode = 'grid' }: DealCardProps) {
+function DealCard({ deal, product, priority = false, layoutMode = 'grid', index = 0 }: DealCardProps) {
   const { cardDensity } = useUX();
   const details = cardDensity === 'compact' ? 'compact' : 'expanded';
   // Używaj przekazanego ProductCore jeśli dostępny (spójność z ProductCard)
@@ -626,7 +626,8 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid' }: Deal
         "ux-image-wrapper relative bg-muted/10 dark:bg-zinc-800/20 shrink-0 flex items-center justify-center overflow-hidden w-full transition-all duration-300",
         isList ? "w-36 h-36" : (details === 'compact' ? "mb-1.5" : "mb-3"),
         !isList && !isMasonry ? (details === 'compact' ? "h-32" : "h-44 aspect-square") : "",
-        isMasonry ? "h-64" : ""
+        isMasonry ? (index % 2 === 0 ? "h-56" : "h-72") : "",
+        isMasonry && "bg-sky-500/10 dark:bg-sky-500/5 rounded-xl"
       )}>
         {layoutMode === 'masonry' ? (
           <img 
@@ -733,9 +734,10 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid' }: Deal
               <div className="ux-vote-pill" onClick={(e) => e.stopPropagation()}>
                 <button 
                   className={cn(
-                    "flex items-center justify-center transition-all duration-200 font-black text-xs h-5 w-5",
+                    "flex items-center justify-center transition-all duration-300 font-black text-xs h-5",
+                    (!isList && !isMasonry) ? "w-5" : "w-0 opacity-0 scale-0 group-hover:w-5 group-hover:opacity-100 group-hover:scale-100",
                     userVote === 1 ? "bg-primary text-primary-foreground font-black" : "",
-                    "opacity-75 hover:opacity-100 disabled:opacity-50"
+                    "hover:opacity-100 disabled:opacity-50"
                   )}
                   style={{ borderRadius: 'var(--ux-radius-btn)' }}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleVote('up'); }}
@@ -750,9 +752,10 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid' }: Deal
                 </span>
                 <button 
                   className={cn(
-                    "flex items-center justify-center transition-all duration-200 font-black text-xs h-5 w-5",
-                    userVote === -1 ? "bg-primary text-primary-foreground font-black" : "",
-                    "opacity-75 hover:opacity-100 disabled:opacity-50"
+                    "flex items-center justify-center transition-all duration-300 font-black text-xs h-5",
+                    (!isList && !isMasonry) ? "w-5" : "w-0 opacity-0 scale-0 group-hover:w-5 group-hover:opacity-100 group-hover:scale-100",
+                    userVote === -1 ? "bg-red-500 text-white font-black" : "",
+                    "hover:opacity-100 disabled:opacity-50"
                   )}
                   style={{ borderRadius: 'var(--ux-radius-btn)' }}
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleVote('down'); }}

@@ -18,7 +18,7 @@ export default function HomeClient({ initialHotDeals, initialRecommendedProducts
   return (
     <div className="space-y-10">
       {/* Hero z wyszukiwarką */}
-      <HeroSection />
+      <HeroSection featuredDeal={initialHotDeals[0]} />
 
       {/* Statystyki portalu */}
       <StatsStrip />

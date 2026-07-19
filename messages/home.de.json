@@ -8,7 +8,10 @@
     },
     "subtitle": "Eine Community, die die besten Funde, Aktionen und Produkte teilt. Spare clever! 💰",
     "searchPlaceholder": "Wonach suchen Sie? (z.B. iPhone, Sportschuhe, Haushaltsgeräte...)",
-    "searchButton": "Suchen"
+    "searchButton": "Suchen",
+    "dealOfWeek": "Angebot der Woche",
+    "browseDeals": "Angebote durchsuchen",
+    "catalog": "Produktkatalog"
   },
   "stats": {
     "hotDealsCount": "Heiße Angebote",

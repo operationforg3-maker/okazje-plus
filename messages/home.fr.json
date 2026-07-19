@@ -8,7 +8,10 @@
     },
     "subtitle": "Une communauté qui partage les meilleures trouvailles, promotions et produits. Économisez intelligemment ! 💰",
     "searchPlaceholder": "Que recherchez-vous ? (par exemple, iPhone, chaussures de sport, électroménager...)",
-    "searchButton": "Rechercher"
+    "searchButton": "Rechercher",
+    "dealOfWeek": "Offre de la semaine",
+    "browseDeals": "Parcourir les offres",
+    "catalog": "Catalogue de produits"
   },
   "stats": {
     "hotDealsCount": "Offres exceptionnelles",

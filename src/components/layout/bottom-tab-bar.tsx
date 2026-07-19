@@ -75,14 +75,14 @@ export function BottomTabBar() {
     {
       key: 'cart',
       href: '#',
-      label: t('cart', { defaultValue: 'Koszyk' }),
+      label: 'Koszyk',
       icon: ShoppingCart,
       isActive: () => isCartOpen,
     },
     {
       key: 'account',
       href: `${prefix}/profile`,
-      label: t('account'),
+      label: 'Konto',
       icon: User,
       isActive: (p) => p === `${prefix}/profile` || p.startsWith(`${prefix}/profile/`) || isAccountOpen,
     },
@@ -95,7 +95,7 @@ export function BottomTabBar() {
         <SheetContent side="bottom" className="md:hidden rounded-t-2xl p-4 max-h-[85vh] overflow-y-auto bg-background/95 backdrop-blur-xl flex flex-col">
           <SheetHeader className="mb-4">
             <SheetTitle className="text-left flex items-center justify-between">
-              <span>{t('cart', { defaultValue: 'Koszyk' })}</span>
+              <span>Koszyk</span>
               <span className="text-xs font-normal text-muted-foreground">{itemCount} szt.</span>
             </SheetTitle>
           </SheetHeader>
@@ -229,7 +229,7 @@ export function BottomTabBar() {
                         ? 'text-primary font-bold'
                         : 'text-zinc-700 dark:text-zinc-300 hover:text-foreground active:scale-[0.98]'
                     )}
-                    aria-label={t('cart', { defaultValue: 'Koszyk' })}
+                    aria-label="Koszyk"
                   >
                     <div className="relative flex items-center justify-center">
                       <Icon className={cn('h-5 w-5', active && 'text-primary')} />

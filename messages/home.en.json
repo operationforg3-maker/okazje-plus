@@ -8,7 +8,10 @@
     },
     "subtitle": "A community sharing the best finds, promotions and products. Save smart! 💰",
     "searchPlaceholder": "What are you looking for? (e.g. iPhone, sports shoes, appliances...)",
-    "searchButton": "Search"
+    "searchButton": "Search",
+    "dealOfWeek": "Deal of the Week",
+    "browseDeals": "Browse Deals",
+    "catalog": "Product Catalog"
   },
   "stats": {
     "hotDealsCount": "Hot deals",

@@ -26,12 +26,14 @@ const DealCardDynamic = dynamic(
 interface LazyDealCardProps {
   deal: Deal;
   product?: Product | null;
+  layoutMode?: 'grid' | 'masonry' | 'list';
+  index?: number;
 }
 
-export function LazyDealCard({ deal, product }: LazyDealCardProps) {
+export function LazyDealCard({ deal, product, layoutMode, index }: LazyDealCardProps) {
   return (
     <Suspense fallback={<CardSkeleton />}>
-      <DealCardDynamic deal={deal} product={product} />
+      <DealCardDynamic deal={deal} product={product} layoutMode={layoutMode} index={index} />
     </Suspense>
   );
 }
