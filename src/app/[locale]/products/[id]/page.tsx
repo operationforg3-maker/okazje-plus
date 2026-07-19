@@ -10,9 +10,9 @@ import { getGoogleProductPublicationState } from '@/lib/google-product-publicati
 import { buildCategoryPath, humanizeCategorySlug } from '@/lib/category-routes';
 import ProductDetailM6Client from './product-detail-m6-client';
 
-// Force dynamic rendering dla real-time danych
-export const dynamic = 'force-dynamic';
-export const revalidate = 300; // ISR: revalidate co 5 minut
+// ISR: revalidate co 5 minut — pozwala Next.js cache'ować strony i serwować stale-while-revalidate.
+// NIE używamy force-dynamic — konfliktuje z revalidate i powoduje 5xx pod obciążeniem crawlera.
+export const revalidate = 300;
 
 interface PageProps {
   params: Promise<{ id: string; locale: string }>;

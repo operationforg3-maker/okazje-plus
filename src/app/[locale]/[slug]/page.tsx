@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { getSecretPageBySlug, recordSecretPageView } from "@/lib/data";
 import { WheelOfFortuneClient } from "@/components/wheel-of-fortune-client";
 import { headers } from "next/headers";
@@ -8,6 +9,14 @@ interface SecretPageProps {
     slug: string;
   }>;
 }
+
+// Secret/promotional pages should never be indexed by search engines
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function SecretPage({ params }: SecretPageProps) {
   const { slug } = await params;

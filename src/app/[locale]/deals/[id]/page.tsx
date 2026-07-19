@@ -8,9 +8,9 @@ import { generateDealJsonLd, generateBreadcrumbJsonLd } from '@/lib/json-ld-gene
 import { buildCategoryPath, humanizeCategorySlug } from '@/lib/category-routes';
 import DealDetailClient from './deal-detail-client';
 
-// Force dynamic rendering dla real-time danych
-export const dynamic = 'force-dynamic';
-export const revalidate = 300; // ISR: revalidate co 5 minut
+// ISR: revalidate co 5 minut — pozwala Next.js cache'ować strony i serwować stale-while-revalidate.
+// NIE używamy force-dynamic — konfliktuje z revalidate i powoduje 5xx pod obciążeniem crawlera.
+export const revalidate = 300;
 
 interface PageProps {
   params: { id: string; locale: string };
@@ -153,13 +153,23 @@ function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
 }
 
 // Server-side data fetching
-async function getDealData(id: string) {
+type DealDataResult =
+  | { gone: true }
+  | { gone?: false; expired?: boolean; deal: Deal; relatedDeals: Deal[]; product: any };
+
+async function getDealData(id: string): Promise<DealDataResult | null> {
   const dealDoc = await getDealById(id);
-  // Block only truly hidden statuses (drafts / rejected).
-  // 'pending' and 'pending_approval' are visible in search/waiting-room feeds.
-  const hiddenDealStatuses = ['draft', 'rejected'];
-  if (!dealDoc || hiddenDealStatuses.includes((dealDoc as any).status)) {
+  
+  // Deal document doesn't exist at all — true 404
+  if (!dealDoc) {
     return null;
+  }
+
+  // Block only truly hidden statuses (drafts / rejected).
+  // These existed once but are now gone — return 410 signal.
+  const hiddenDealStatuses = ['draft', 'rejected'];
+  if (hiddenDealStatuses.includes((dealDoc as any).status)) {
+    return { gone: true };
   }
 
   const productId =
@@ -194,7 +204,11 @@ async function getDealData(id: string) {
       .slice(0, 6) as Deal[];
   }
 
-  return { deal, relatedDeals, product };
+  const isExpired = (dealDoc as any).status === 'expired' || 
+                    (dealDoc as any).lifecycleStatus === 'expired' || 
+                    deal.isActive === false;
+
+  return { deal, relatedDeals, product, expired: isExpired };
 }
 
 // SEO: Generate metadata
@@ -205,13 +219,36 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     : 'pl';
   const data = await getDealData(resolvedParams.id);
   
-  if (!data) {
+  // 410 Gone — deal exists in DB but is rejected/deleted
+  if (data && 'gone' in data && data.gone) {
+    return {
+      title: 'Okazja usunięta | Okazje Plus',
+      description: 'Ta okazja została usunięta i nie jest już dostępna.',
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  if (!data || ('gone' in data && data.gone)) {
     return {
       title: 'Okazja nie znaleziona | Okazje Plus',
       description: 'Szukana okazja nie istnieje w naszej bazie.',
       robots: {
         index: false,
         follow: false,
+      },
+    };
+  }
+
+  if (data.expired) {
+    return {
+      title: `[WYGASŁA] ${(data.deal.title as any)?.pl || 'Okazja'} | Okazje Plus`,
+      description: 'Ta okazja wygasła i nie jest już dostępna.',
+      robots: {
+        index: false,
+        follow: true,
       },
     };
   }
@@ -348,7 +385,9 @@ export default async function DealDetailPage({ params }: PageProps) {
     : 'pl';
   const data = await getDealData(resolvedParams.id);
   
-  if (!data) {
+  // Deal not found or hidden (draft/rejected) — notFound() returns 404.
+  // generateMetadata already sets noindex for 'gone' deals, so Google won't re-index.
+  if (!data || ('gone' in data && data.gone)) {
     notFound();
   }
   
@@ -357,6 +396,8 @@ export default async function DealDetailPage({ params }: PageProps) {
   const deal = deepSerialize(data.deal);
   const relatedDeals = deepSerialize(data.relatedDeals);
   const product = deepSerialize(data.product);
+  
+  const isExpired = data.expired || false;
   
   // JSON-LD structured data dla Google Rich Results
   const dealTitle = typeof deal.title === 'string' ? deal.title : deal.title?.pl || 'Okazja';
@@ -390,6 +431,51 @@ export default async function DealDetailPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbList) }}
       />
       
+      {/* Breadcrumbs z mikroformatami */}
+      <nav aria-label="Breadcrumb" className="mb-4">
+        <ol className="flex flex-wrap items-center space-x-2 text-sm text-gray-500">
+          <li>
+            <Link href="/" className="hover:text-blue-600">Strona główna</Link>
+          </li>
+          <li><span className="text-gray-400">/</span></li>
+          <li>
+            <Link href="/deals" className="hover:text-blue-600">Okazje</Link>
+          </li>
+          {categoryPath.map((step, index) => (
+            <li key={step.url} className="flex items-center space-x-2">
+              <span className="text-gray-400">/</span>
+              {index === categoryPath.length - 1 ? (
+                <span className="text-gray-900 font-medium truncate max-w-[200px]" aria-current="page">
+                  {step.name}
+                </span>
+              ) : (
+                <Link href={step.url} className="hover:text-blue-600 truncate max-w-[150px]">
+                  {step.name}
+                </Link>
+              )}
+            </li>
+          ))}
+        </ol>
+      </nav>
+
+      {isExpired && (
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-yellow-800">Okazja wygasła</h3>
+              <div className="mt-2 text-sm text-yellow-700">
+                <p>Ta oferta dobiegła końca lub nie jest już dostępna. Poniżej znajdziesz informacje archiwale.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Client component z interaktywnym UI */}
       <DealDetailClient 
         deal={deal}

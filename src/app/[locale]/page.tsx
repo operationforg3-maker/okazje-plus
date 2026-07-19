@@ -123,9 +123,12 @@ export async function generateMetadata({
     },
     alternates: {
       canonical,
-      languages: Object.fromEntries(
-        SUPPORTED_LOCALES.map((localeCode) => [localeCode, `${SITE_URL}/${localeCode}`])
-      ),
+      languages: {
+        ...Object.fromEntries(
+          SUPPORTED_LOCALES.map((localeCode) => [localeCode, `${SITE_URL}/${localeCode}`])
+        ),
+        'x-default': `${SITE_URL}/pl`,
+      },
     },
     robots: {
       index: isIndexedLocale,

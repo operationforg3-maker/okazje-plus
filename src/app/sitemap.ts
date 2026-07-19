@@ -1,35 +1,77 @@
 import type { MetadataRoute } from 'next';
-import { getRecommendedProducts, getCategories, getAllProductCores } from '@/lib/data';
+import { getCategories } from '@/lib/data';
 import { searchDeals } from '@/lib/search-server';
 import { getGoogleProductPublicationState } from '@/lib/google-product-publication';
 import { getAllApprovedProductsForSitemap } from '@/lib/data-admin';
 
-// Sitemap fetches up to ~3000 records from Firebase/Typesense — must be dynamic (not statically generated at build time)
+// Sitemap must be dynamic — fetches live data from Firestore
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
+const BASE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://okazjeplus.pl').replace(/\/$/, '');
+
+// All supported locales
 const SUPPORTED_LOCALES = ['pl', 'en', 'de', 'fr', 'es', 'uk'] as const;
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://okazjeplus.pl').replace(/\/$/, '');
-  
-  // Static pages — all under /pl/ (canonical locale)
-  const staticPages: { route: string; changeFrequency: 'hourly' | 'daily' | 'weekly'; priority: number }[] = [
-    { route: '', changeFrequency: 'hourly', priority: 1 },
-    { route: '/deals', changeFrequency: 'hourly', priority: 0.9 },
-    { route: '/products', changeFrequency: 'daily', priority: 0.9 },
-    { route: '/leaderboard', changeFrequency: 'daily', priority: 0.6 },
-    { route: '/forum', changeFrequency: 'daily', priority: 0.7 },
-    { route: '/regulamin', changeFrequency: 'weekly', priority: 0.3 },
-    { route: '/polityka-prywatnosci', changeFrequency: 'weekly', priority: 0.3 },
-    { route: '/polityka-zwrotow', changeFrequency: 'weekly', priority: 0.3 },
+/**
+ * Generate sitemap index with multiple sitemaps.
+ * Next.js will call sitemap() for each id returned here,
+ * producing /sitemap/0.xml, /sitemap/1.xml, etc.
+ */
+export async function generateSitemaps() {
+  return [
+    { id: 0 }, // static pages + categories
+    { id: 1 }, // deals
+    { id: 2 }, // products
+  ];
+}
+
+// Fixed date for truly static pages (legal, etc.) — avoids signaling false freshness to Google
+const STATIC_PAGES_LAST_MODIFIED = new Date('2026-06-01');
+
+export default async function sitemap({
+  id,
+}: {
+  id: number;
+}): Promise<MetadataRoute.Sitemap> {
+  switch (id) {
+    case 0:
+      return generateStaticAndCategorySitemap();
+    case 1:
+      return generateDealsSitemap();
+    case 2:
+      return generateProductsSitemap();
+    default:
+      return [];
+  }
+}
+
+/**
+ * Sitemap 0: Static pages + category pages
+ */
+async function generateStaticAndCategorySitemap(): Promise<MetadataRoute.Sitemap> {
+  // Static pages
+  const staticPages: {
+    route: string;
+    changeFrequency: 'hourly' | 'daily' | 'weekly';
+    priority: number;
+    lastModified: Date;
+  }[] = [
+    { route: '', changeFrequency: 'hourly', priority: 1, lastModified: new Date() },
+    { route: '/deals', changeFrequency: 'hourly', priority: 0.9, lastModified: new Date() },
+    { route: '/products', changeFrequency: 'daily', priority: 0.9, lastModified: new Date() },
+    { route: '/leaderboard', changeFrequency: 'daily', priority: 0.6, lastModified: new Date() },
+    { route: '/forum', changeFrequency: 'daily', priority: 0.7, lastModified: new Date() },
+    { route: '/regulamin', changeFrequency: 'weekly', priority: 0.3, lastModified: STATIC_PAGES_LAST_MODIFIED },
+    { route: '/polityka-prywatnosci', changeFrequency: 'weekly', priority: 0.3, lastModified: STATIC_PAGES_LAST_MODIFIED },
+    { route: '/polityka-zwrotow', changeFrequency: 'weekly', priority: 0.3, lastModified: STATIC_PAGES_LAST_MODIFIED },
   ];
 
-  const staticUrls = SUPPORTED_LOCALES.flatMap((locale) => {
-    const localizedBase = `${baseUrl}/${locale}`;
+  const staticUrls: MetadataRoute.Sitemap = SUPPORTED_LOCALES.flatMap(locale => {
+    const localizedBase = `${BASE_URL}/${locale}`;
     return staticPages.map((page) => ({
       url: `${localizedBase}${page.route}`,
-      lastModified: new Date(),
+      lastModified: page.lastModified,
       changeFrequency: page.changeFrequency,
       priority: page.priority,
     }));
@@ -41,17 +83,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const categories = await getCategories();
     for (const cat of categories) {
       for (const locale of SUPPORTED_LOCALES) {
+        const localizedBase = `${BASE_URL}/${locale}`;
         categoryUrls.push({
-          url: `${baseUrl}/${locale}/categories/${cat.slug}`,
-          lastModified: new Date(),
+          url: `${localizedBase}/categories/${cat.slug}`,
+          lastModified: STATIC_PAGES_LAST_MODIFIED,
           changeFrequency: 'weekly' as const,
           priority: 0.6,
         });
 
         for (const sub of cat.subcategories ?? []) {
           categoryUrls.push({
-            url: `${baseUrl}/${locale}/categories/${cat.slug}/${sub.slug}`,
-            lastModified: new Date(),
+            url: `${localizedBase}/categories/${cat.slug}/${sub.slug}`,
+            lastModified: STATIC_PAGES_LAST_MODIFIED,
             changeFrequency: 'weekly' as const,
             priority: 0.55,
           });
@@ -59,31 +102,42 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }
     }
   } catch (error) {
-    console.error('Error fetching categories for sitemap:', error);
+    console.error('[sitemap:0] Error fetching categories:', error);
   }
 
-  // Dynamic deals — top 1000 hottest
-  let dealUrls: MetadataRoute.Sitemap = [];
+  return [...staticUrls, ...categoryUrls];
+}
+
+/**
+ * Sitemap 1: Deal pages — top 2000 hottest approved deals
+ */
+async function generateDealsSitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const deals = await searchDeals('*', {
-      limit: 1000,
+      limit: 2000,
       sortBy: 'hot',
       statusFilter: 'approved',
     });
-    dealUrls = SUPPORTED_LOCALES.flatMap((locale) =>
-      deals.map((deal) => ({
-        url: `${baseUrl}/${locale}/deals/${deal.id}`,
-        lastModified: deal.updatedAt ? new Date(deal.updatedAt) : new Date(),
-        changeFrequency: 'hourly' as const,                             // ← zmiana z 'daily'
-        priority: 0.8,
-      }))
-    );
-  } catch (error) {
-    console.error('Error fetching deals for sitemap:', error);
-  }
 
-  // Dynamic products — all approved up to 50000
-  let productUrls: MetadataRoute.Sitemap = [];
+    return SUPPORTED_LOCALES.flatMap(locale => {
+      const localizedBase = `${BASE_URL}/${locale}`;
+      return deals.map((deal) => ({
+        url: `${localizedBase}/deals/${deal.id}`,
+        lastModified: deal.updatedAt ? new Date(deal.updatedAt) : new Date(),
+        changeFrequency: 'daily' as const,
+        priority: 0.8,
+      }));
+    });
+  } catch (error) {
+    console.error('[sitemap:1] Error fetching deals:', error);
+    return [];
+  }
+}
+
+/**
+ * Sitemap 2: Product pages — all approved products eligible for Google
+ */
+async function generateProductsSitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const products = await getAllApprovedProductsForSitemap(5000);
     const eligibleProducts = products.filter((product) =>
@@ -93,55 +147,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         deals: [],
       }).eligible
     );
-    productUrls = SUPPORTED_LOCALES.flatMap((locale) =>
-      eligibleProducts.map((product) => ({
-        url: `${baseUrl}/${locale}/products/${product.id}`,
+
+    return SUPPORTED_LOCALES.flatMap(locale => {
+      const localizedBase = `${BASE_URL}/${locale}`;
+      return eligibleProducts.map((product) => ({
+        url: `${localizedBase}/products/${product.id}`,
         lastModified: product.updatedAt ? new Date(product.updatedAt) : new Date(),
-        changeFrequency: 'hourly' as const,                             // ← zmiana z 'weekly'
+        changeFrequency: 'daily' as const,
         priority: 0.7,
-      }))
-    );
-  } catch (error) {
-    console.error('Error fetching products for sitemap:', error);
-  }
-
-  // Dedicated watch pages for products with video
-  let productWatchUrls: MetadataRoute.Sitemap = [];
-  try {
-    const productCores = await getAllProductCores('approved', 1000);
-    const withVideo = productCores.filter((product: any) => {
-      const publicationState = getGoogleProductPublicationState({
-        product,
-        isM6: true,
-        deals: [],
-      });
-
-      if (!publicationState.eligible) {
-        return false;
-      }
-
-      if (typeof product?.videoUrl === 'string' && product.videoUrl.trim().length > 0) {
-        return true;
-      }
-
-      if (Array.isArray(product?.gallery)) {
-        return product.gallery.some((item: any) => item?.type === 'VIDEO' && typeof item?.url === 'string' && item.url.trim().length > 0);
-      }
-
-      return false;
+      }));
     });
-
-    productWatchUrls = SUPPORTED_LOCALES.flatMap((locale) =>
-      withVideo.map((product: any) => ({
-        url: `${baseUrl}/${locale}/watch/products/${product.id}`,
-        lastModified: product.updatedAt ? new Date(product.updatedAt) : new Date(),
-        changeFrequency: 'hourly' as const,                             // ← zmiana z 'weekly'
-        priority: 0.65,
-      }))
-    );
   } catch (error) {
-    console.error('Error fetching product watch pages for sitemap:', error);
+    console.error('[sitemap:2] Error fetching products:', error);
+    return [];
   }
-
-  return [...staticUrls, ...categoryUrls, ...dealUrls, ...productUrls, ...productWatchUrls];
 }

@@ -28,7 +28,9 @@ const checks = [
     label: 'core-indexing-files',
     file: 'src/app/robots.ts',
     required: [
-      "disallow: ['/api/', '/admin/', '/_next/']",
+      "'/api/'",
+      "'/_next/'",
+      "'/*/admin/'",
       'sitemap:',
     ],
   },

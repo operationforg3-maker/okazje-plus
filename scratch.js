@@ -2,10 +2,14 @@ const { initializeApp } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 initializeApp();
 const db = getFirestore();
+
 async function run() {
-  const snapshot = await db.collection('importJobs').where('status', 'in', ['pending', 'processing', 'running']).get();
-  console.log('Active importJobs:', snapshot.size);
-  const sysJobs = await db.collection('jobs').where('status', 'in', ['pending', 'processing']).get();
-  console.log('Active system jobs:', sysJobs.size);
+  const importSettings = await db.collection('config').doc('importSettings').get();
+  console.log('--- config/importSettings ---');
+  console.log(JSON.stringify(importSettings.data(), null, 2));
+
+  const autopilotSettings = await db.collection('admin_meta').doc('aliexpress-autopilot-settings').get();
+  console.log('--- admin_meta/aliexpress-autopilot-settings ---');
+  console.log(JSON.stringify(autopilotSettings.data(), null, 2));
 }
 run().catch(console.error);

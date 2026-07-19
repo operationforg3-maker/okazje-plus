@@ -8,7 +8,26 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/', '/admin/', '/_next/'],
+        disallow: [
+          // API & framework internals
+          '/api/',
+          '/_next/',
+          // Admin panel
+          '/*/admin/',
+          // Internal/preview routes — noindex via meta, but save crawl budget too
+          '/*/preview/',
+          '/*/new-ux/',
+          '/*/test-products2/',
+          // User-specific pages (no SEO value)
+          '/*/login/',
+          '/*/activate/',
+          '/*/profile/',
+          '/*/cart/',
+          '/*/add-deal/',
+          '/*/analytics/',
+          // Search pages (noindex via layout, but also block crawl)
+          '/*/search/',
+        ],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
