@@ -255,7 +255,11 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
   }, [hasTrackedView, product.id, user?.uid]);
 
   const handleDetailClick = () => {
-    void trackFirestoreClick('product', product.id, user?.uid);
+    void trackFirestoreClick('product', product.id, user?.uid, productExternalUrl || undefined, {
+      category: (product as any).mainCategorySlug || (product as any).categorySlug || (product as any).category,
+      merchant: (product as any).merchant || (product as any).metadata?.merchant,
+      discountPct: priceData.discount ?? undefined,
+    });
   };
 
   const handleShare = (platform?: string) => {

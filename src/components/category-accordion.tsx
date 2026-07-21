@@ -10,6 +10,7 @@ import { ChevronRight, Package, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getLocalizedCategoryName, SupportedLanguage } from '@/lib/i18n-utils';
 import { getCategoryStyle } from '@/lib/category-theme';
+import { trackCategoryFilter } from '@/lib/analytics';
 
 interface CategoryGridProps {
   categories: Category[];
@@ -38,6 +39,7 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
       setActiveCategory(null); // Toggle close
     } else {
       setActiveCategory(category); // Open
+      trackCategoryFilter(category.slug || category.id || '');
     }
   };
 
@@ -134,6 +136,10 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                               sub.slug || sub.id || ''
                             )}
                             className="flex items-center gap-2.5 font-bold text-sm text-foreground hover:text-primary transition-colors group/sub"
+                            onClick={() => trackCategoryFilter(
+                              category.slug || category.id || '',
+                              sub.slug || sub.id || ''
+                            )}
                           >
                             <div className={cn("p-1.5 rounded-lg text-primary flex items-center justify-center bg-gradient-to-br", style.bg, style.accent)}>
                               {sub.icon ? (
@@ -159,6 +165,10 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
                                     subsub.slug || subsub.id || ''
                                   )}
                                   className="flex items-center gap-1.5 py-1 px-2 rounded-md text-xs text-muted-foreground hover:text-primary hover:bg-secondary/40 transition-colors group/subsub"
+                                  onClick={() => trackCategoryFilter(
+                                    category.slug || category.id || '',
+                                    `${sub.slug || sub.id}/${subsub.slug || subsub.id}`
+                                  )}
                                 >
                                   <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30 group-hover/subsub:bg-primary transition-colors" />
                                   <span className="flex-grow truncate">{getLocalizedCategoryName(subsub, locale as SupportedLanguage)}</span>

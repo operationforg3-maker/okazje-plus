@@ -37,6 +37,7 @@ import { getExternalUrl } from '@/lib/external-url';
 import { Sparkline, generateSmartBadges } from '@/components/product/Sparkline';
 import { SpecsTeaserInline } from '@/components/product/SpecificationsTable';
 import { useUX } from '@/context/UXContext';
+import { cn } from '@/lib/utils';
 
 interface DealCardProps {
   deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
@@ -524,7 +525,19 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid' }: Deal
   }
 
   const handleDetailClick = () => {
-    void trackFirestoreClick('deal', deal.id, user?.uid);
+    const externalUrl = getExternalUrl(deal.link || (deal as any).url || '');
+    const originalPrice = deal.originalPrice ?? (deal as any).priceOriginal;
+    const currentPrice = deal.price ?? (deal as any).currentPrice;
+    const discountPct =
+      originalPrice && currentPrice && originalPrice > currentPrice
+        ? Math.round((1 - currentPrice / originalPrice) * 100)
+        : undefined;
+    void trackFirestoreClick('deal', deal.id, user?.uid, externalUrl || undefined, {
+      category: deal.mainCategorySlug || (deal as any).categorySlug,
+      temperature: typeof temperature === 'number' ? temperature : undefined,
+      merchant: deal.merchant,
+      discountPct,
+    });
   };
 
   const handleShareTrack = (platform?: string) => {

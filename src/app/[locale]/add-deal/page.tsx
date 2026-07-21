@@ -24,6 +24,7 @@ import { Loader2, Image as ImageIcon, Link2, Tag, Info, CheckCircle2, AlertCircl
 import { createNewDeal } from './actions';
 import DealCard from '@/components/deal-card';
 import { cn } from '@/lib/utils';
+import { trackAddContent } from '@/lib/analytics';
 
 // Typ dla danych nowej okazji wysyłanych do API endpoint
 interface NewDealData {
@@ -266,6 +267,7 @@ export default function AddDealPage() {
         }
         
         toast.success(t('successMessage'));
+        trackAddContent('deal', mainCategorySlug || undefined);
         router.push('/deals');
     } catch (error) {
         console.error('Błąd podczas tworzenia okazji:', error);

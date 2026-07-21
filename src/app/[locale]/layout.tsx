@@ -165,20 +165,20 @@ export default async function LocaleLayout({
         }}
       />
 
-      {/* Google Analytics 4 - Lazy loaded to avoid blocking main thread */}
+      {/* Google Analytics 4 - afterInteractive to avoid missing early events */}
       <Script
-        src="https://www.googletagmanager.com/gtag/js?id=G-FT6DRFR25D"
-        strategy="lazyOnload"
+        src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-FT6DRFR25D'}`}
+        strategy="afterInteractive"
       />
       <Script
         id="google-analytics"
-        strategy="lazyOnload"
+        strategy="afterInteractive"
         dangerouslySetInnerHTML={{
           __html: `
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'G-FT6DRFR25D', {
+            gtag('config', '${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-FT6DRFR25D'}', {
               page_path: window.location.pathname,
               send_page_view: true
             });

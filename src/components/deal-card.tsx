@@ -532,7 +532,18 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
   }
 
   const handleDetailClick = () => {
-    void trackFirestoreClick('deal', deal.id, user?.uid);
+    const originalPrice = deal.originalPrice ?? (deal as any).priceOriginal;
+    const currentPrice = deal.price ?? (deal as any).currentPrice;
+    const discountPct =
+      originalPrice && currentPrice && originalPrice > currentPrice
+        ? Math.round((1 - currentPrice / originalPrice) * 100)
+        : undefined;
+    void trackFirestoreClick('deal', deal.id, user?.uid, dealExternalUrl || undefined, {
+      category: deal.mainCategorySlug || (deal as any).categorySlug,
+      temperature: typeof temperature === 'number' ? temperature : undefined,
+      merchant: deal.merchant,
+      discountPct,
+    });
   };
 
   const handleShareTrack = (platform?: string) => {

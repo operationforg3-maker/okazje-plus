@@ -11,7 +11,7 @@ declare global {
   }
 }
 
-export const GA_TRACKING_ID = 'G-FT6DRFR25D';
+export const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || 'G-FT6DRFR25D';
 
 /**
  * Sprawdź czy GA jest dostępne
@@ -70,7 +70,35 @@ export const trackItemView = (type: 'deal' | 'product', itemId: string, category
 };
 
 /**
- * Track kliknięcie w link zewnętrzny (Go to Deal/Product)
+ * Track kliknięcie "Przejdź do okazji" / "Przejdź do produktu" — Key Events w GA4
+ * - type='deal'    → event `go_to_deal`
+ * - type='product' → event `go_to_product`
+ */
+export const trackGoToDeal = (
+  itemId: string,
+  url: string,
+  options?: {
+    temperature?: number;
+    category?: string;
+    merchant?: string;
+    discountPct?: number;
+    type?: 'deal' | 'product';
+  }
+) => {
+  const eventName = options?.type === 'product' ? 'go_to_product' : 'go_to_deal';
+  trackEvent(eventName, {
+    deal_id: itemId,
+    deal_url: url,
+    deal_temperature: options?.temperature,
+    deal_category: options?.category,
+    deal_merchant: options?.merchant,
+    deal_discount_pct: options?.discountPct,
+    content_type: options?.type ?? 'deal',
+  });
+};
+
+/**
+ * @deprecated Użyj trackGoToDeal — pozostawione dla kompatybilności wstecznej
  */
 export const trackOutboundClick = (
   type: 'deal' | 'product',
@@ -78,13 +106,7 @@ export const trackOutboundClick = (
   url: string,
   temperature?: number
 ) => {
-  trackEvent('click', {
-    content_type: type,
-    item_id: itemId,
-    outbound_url: url,
-    temperature,
-    event_category: 'outbound_link',
-  });
+  trackGoToDeal(itemId, url, { type, temperature });
 };
 
 /**
@@ -296,21 +318,31 @@ export async function trackFirestoreView(
 }
 
 /**
- * Śledzi kliknięcie w link
+ * Śledzi kliknięcie w link zewnętrzny (go_to_deal / go_to_product)
  */
 export async function trackFirestoreClick(
   resourceType: ResourceType,
   resourceId: string,
   userId?: string,
-  url?: string
+  url?: string,
+  extras?: {
+    category?: string;
+    temperature?: number;
+    merchant?: string;
+    discountPct?: number;
+  }
 ): Promise<void> {
-  // Jeśli brak URL, metadata będzie pominięta (aby nie dodawać destination: undefined)
-  const meta = url ? { destination: url } : undefined;
+  // Metadata dla Firestore
+  const meta = url
+    ? { destination: url, ...(extras || {}) }
+    : extras && Object.keys(extras).length > 0
+      ? extras
+      : undefined;
   await trackFirestoreEvent('click', resourceType, resourceId, userId, meta);
-  
-  // Track też w GA
+
+  // Track go_to_deal w GA4 z pełnymi parametrami
   if (url) {
-    trackOutboundClick(resourceType, resourceId, url);
+    trackGoToDeal(resourceId, url, { type: resourceType, ...extras });
   }
 }
 

@@ -11,6 +11,7 @@ import { AuthProvider, createUserWithEmailAndPassword, FacebookAuthProvider, Goo
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { trackLogin, trackSignUp } from '@/lib/analytics';
 
 interface LoginFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -28,6 +29,7 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
     setError(null);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      trackLogin('email');
       router.push('/');
     } catch (error: any) {
       setError(error.message);
@@ -42,6 +44,7 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
     setError(null);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
+      trackSignUp('email');
       router.push('/');
     } catch (error: any) {
       setError(error.message);
@@ -55,6 +58,12 @@ export default function LoginForm({ className, ...props }: LoginFormProps) {
     setError(null);
     try {
       await signInWithPopup(auth, provider);
+      const method = provider instanceof GoogleAuthProvider
+        ? 'google'
+        : provider instanceof FacebookAuthProvider
+          ? 'facebook'
+          : 'social';
+      trackLogin(method);
       router.push('/');
     } catch (error: any) {
       setError(error.message);
