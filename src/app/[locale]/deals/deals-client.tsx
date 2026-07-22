@@ -9,6 +9,7 @@ import { retryWithBackoff, isOnline, waitForOnline, isOfflineError } from '@/lib
 import { Deal, Category, Product } from '@/lib/types';
 import { UnifiedFilterSidebar } from '@/components/unified-filter-sidebar';
 import { UnifiedFilters, SortBy } from '@/lib/filter-config';
+import { ListingToolbar } from '@/components/layout/listing-toolbar';
 import DealCard from '@/components/deal-card';
 import DealListCard from '@/components/deal-list-card';
 import { Input } from '@/components/ui/input';

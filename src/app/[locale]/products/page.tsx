@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { searchProducts } from '@/lib/search';
 import ProductCard from '@/components/product-card';
 import { UnifiedFilterSidebar } from '@/components/unified-filter-sidebar';
+import { ListingToolbar } from '@/components/layout/listing-toolbar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
