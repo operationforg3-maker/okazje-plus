@@ -1,27 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useLocale } from 'next-intl';
-import { useAuth } from '@/lib/auth';
-import { addComment, getComments } from '@/lib/data';
-import { useCommentsCount } from '@/hooks/use-comments-count';
-import { Comment } from '@/lib/types';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
-import { Trash2, AlertTriangle } from 'lucide-react';
-import { trackFirestoreComment } from '@/lib/analytics';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import CommentSectionV2 from './comment-section-v2';
+import type { Comment } from '@/lib/types';
 
 interface CommentSectionProps {
   collectionName: 'products' | 'deals' | 'articles';
@@ -30,186 +10,14 @@ interface CommentSectionProps {
 }
 
 export default function CommentSection({ collectionName, docId, initialComments }: CommentSectionProps) {
-  const { user } = useAuth();
-  const locale = useLocale();
-  const [comments, setComments] = useState<Comment[]>(initialComments || []);
-  const [newComment, setNewComment] = useState('');
-  const [deletingComment, setDeletingComment] = useState<Comment | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  // Sprawdź czy user jest adminem/moderatorem - prawdziwa rola z User object
-  const isAdmin = user?.role === 'admin' || user?.role === 'moderator';
-
-  // Optymistyczne podbijanie licznika komentarzy
-  const commentsCount = useCommentsCount(collectionName === 'deals' ? 'deals' : 'products', docId, undefined);
-
-  useEffect(() => {
-    async function fetchComments() {
-      // Pobieramy tylko w tle (refresh) lub jeśli nie było z SSR
-      const fetched = await getComments(collectionName, docId, 50);
-      setComments(fetched);
-    }
-    fetchComments();
-  }, [collectionName, docId]);
-
-  const handleSubmitComment = async () => {
-    if (!user) {
-      toast.error("Musisz być zalogowany, aby dodać komentarz.");
-      return;
-    }
-    if (!newComment.trim()) {
-      return;
-    }
-    try {
-      // OPTIMISTIC UI: pokaż lokalnie komentarz i podbij licznik
-      const tempComment: Comment = {
-        id: `tmp-${Date.now()}`,
-        dealId: collectionName === 'deals' ? docId : '',
-        userId: user.uid,
-        userDisplayName: user.displayName || 'Ty',
-        content: newComment,
-        createdAt: new Date().toISOString()
-      };
-      setComments((prev) => [tempComment, ...prev]);
-      commentsCount.increment?.(1);
-      setNewComment('');
-
-      await addComment(collectionName, docId, user.uid, newComment);
-      void trackFirestoreComment(collectionName === 'deals' ? 'deal' : 'product', docId, user.uid, newComment.length);
-
-      // Po zapisie pobierz odświeżone (limitowane) komentarze z serwera
-      setComments(await getComments(collectionName, docId, 50));
-      toast.success("Komentarz został dodany.");
-    } catch (error) {
-      console.error('Add comment error:', error);
-      const message = (error as any)?.message || "Wystąpił błąd podczas dodawania komentarza.";
-      // rollback optimistic update
-      commentsCount.decrement?.(1);
-      setComments(await getComments(collectionName, docId, 50));
-      toast.error(message);
-    }
-  };
-
-  const handleDeleteComment = async () => {
-    if (!deletingComment) return;
-
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`/api/admin/comments/${deletingComment.id}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collectionName, docId }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Błąd podczas usuwania');
-      }
-
-      toast.success('Komentarz został usunięty');
-      
-      // Refresh comments
-      setComments(await getComments(collectionName, docId));
-    } catch (error: any) {
-      toast.error(error.message || 'Wystąpił błąd podczas usuwania komentarza');
-      console.error('Delete comment error:', error);
-    } finally {
-      setIsDeleting(false);
-      setDeletingComment(null);
-    }
-  };
-
+  const targetType = collectionName === 'deals' ? 'deal' : collectionName === 'products' ? 'product' : 'forum';
   return (
-    <div className="mt-8">
-      <h3 className="font-headline text-2xl font-bold mb-4">Komentarze</h3>
-      <div className="mb-6">
-        {user ? (
-          <>
-            <Textarea 
-              placeholder="Dodaj swój komentarz..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              className="mb-2"
-            />
-            <Button onClick={handleSubmitComment}>Dodaj komentarz</Button>
-          </>
-        ) : (
-          <>
-            <Textarea 
-              placeholder="Zaloguj się, aby dodać komentarz"
-              disabled
-              className="mb-2 cursor-not-allowed bg-muted"
-            />
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              <span>Musisz być zalogowany, aby dodać komentarz.</span>
-              <Link href={`/${locale}/login`} className="text-primary hover:underline font-medium">
-                Zaloguj się
-              </Link>
-            </p>
-          </>
-        )}
-      </div>
-      <div className="space-y-4">
-        {comments.length === 0 ? (
-          <p className="text-muted-foreground text-center py-8">
-            Brak komentarzy. Bądź pierwszy!
-          </p>
-        ) : (
-          comments.map(comment => (
-            <div key={comment.id} className="border-l-4 border-primary pl-4 py-2 relative group">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-sm text-muted-foreground mb-1">
-                    {comment.userDisplayName || `Użytkownik ${comment.userId.substring(0, 6)}...`}
-                    <span className="mx-2">•</span>
-                    <span className="text-xs">
-                      {comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('pl-PL') : 'niedawno'}
-                    </span>
-                  </p>
-                  <p className="text-foreground">{comment.content}</p>
-                </div>
-                
-                {isAdmin && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeletingComment(comment)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-2"
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* Dialog potwierdzenia usunięcia */}
-      <AlertDialog open={!!deletingComment} onOpenChange={(open) => !open && setDeletingComment(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Usuń komentarz
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Czy na pewno chcesz usunąć ten komentarz? Ta operacja jest nieodwracalna.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Anuluj</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteComment}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? 'Usuwam...' : 'Usuń komentarz'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+    <CommentSectionV2
+      targetType={targetType}
+      targetId={docId}
+      initialComments={initialComments}
+    />
   );
 }
+
+export { CommentSectionV2 };
