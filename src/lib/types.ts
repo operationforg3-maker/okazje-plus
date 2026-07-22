@@ -2800,3 +2800,24 @@ export interface IdentityMatch {
   
   createdAt: string;
 }
+
+// ============================================
+// BLOG ARCHITECTURE
+// ============================================
+
+export interface Article {
+  id: string;
+  slug: string;
+  title: LocalizedText;
+  excerpt: LocalizedText;
+  content: LocalizedText; // HTML content
+  coverImage?: string;
+  authorId: string;
+  authorName: string;
+  tags: string[];
+  status: 'draft' | 'published' | 'archived';
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  commentsCount?: number;
+}

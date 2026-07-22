@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Deal, LocalizedText } from '@/lib/types';
 import { getProductCore } from '@/lib/data';
+import { getCommentsAdmin } from '@/lib/data-admin';
 import { getExternalUrl } from '@/lib/external-url';
 import { getDealById, searchDeals } from '@/lib/search-server';
 import { generateDealJsonLd, generateBreadcrumbJsonLd } from '@/lib/json-ld-generators';
@@ -399,6 +400,10 @@ export default async function DealDetailPage({ params }: PageProps) {
   const relatedDeals = deepSerialize(data.relatedDeals);
   const product = deepSerialize(data.product);
   
+  // Pobieranie komentarzy na serwerze (SSR) dla indeksowania przez boty
+  const fetchedComments = await getCommentsAdmin('deals', resolvedParams.id, 50);
+  const initialComments = deepSerialize(fetchedComments);
+  
   const isExpired = data.expired || false;
   
   // JSON-LD structured data dla Google Rich Results
@@ -503,6 +508,7 @@ export default async function DealDetailPage({ params }: PageProps) {
         deal={deal}
         product={product}
         relatedDeals={relatedDeals}
+        initialComments={initialComments}
       />
     </>
   );

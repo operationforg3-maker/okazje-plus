@@ -602,3 +602,34 @@ export async function getAllApprovedProductsForSitemap(limitCount = 5000): Promi
   }
 }
 
+/**
+ * Pobiera komentarze po stronie serwera dla lepszego SEO (SSR)
+ */
+export async function getCommentsAdmin(
+  collectionName: 'products' | 'deals' | 'articles',
+  docId: string,
+  limitCount: number = 50
+): Promise<any[]> {
+  try {
+    const snap = await adminDb
+      .collection(collectionName)
+      .doc(docId)
+      .collection('comments')
+      .orderBy('createdAt', 'desc')
+      .limit(limitCount)
+      .get();
+
+    return snap.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        // Konwersja Timestamp na ISO string, aby uniknąć błędów serializacji w Next.js
+        createdAt: data.createdAt?.toDate?.().toISOString?.() || new Date().toISOString(),
+      };
+    });
+  } catch (err) {
+    console.error(`Error in getCommentsAdmin for ${collectionName}/${docId}:`, err);
+    return [];
+  }
+}

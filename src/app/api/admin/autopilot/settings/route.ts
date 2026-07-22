@@ -19,6 +19,9 @@ export type AliExpressAutopilotSettings = {
   hotStreamEnabled: boolean;
   hotStreamGlobalLimit: number;
   hotStreamPerCategoryLimit: number;
+  // Super Deals
+  superDealsEnabled: boolean;
+  superDealsMaxPromos: number;
   updatedAt?: string;
   updatedBy?: string;
 };
@@ -36,7 +39,9 @@ const DEFAULT_SETTINGS: AliExpressAutopilotSettings = {
   // Hot Stream
   hotStreamEnabled: false,
   hotStreamGlobalLimit: 50,
-  hotStreamPerCategoryLimit: 0,
+  // Super Deals
+  superDealsEnabled: true,
+  superDealsMaxPromos: 2,
 };
 
 function normalizeNumeric(value: unknown, fallback: number, min: number, max: number): number {
@@ -59,6 +64,9 @@ function normalizeSettings(input: Partial<AliExpressAutopilotSettings>): AliExpr
     hotStreamEnabled: typeof input.hotStreamEnabled === 'boolean' ? input.hotStreamEnabled : DEFAULT_SETTINGS.hotStreamEnabled,
     hotStreamGlobalLimit: normalizeNumeric(input.hotStreamGlobalLimit, DEFAULT_SETTINGS.hotStreamGlobalLimit, 0, 500),
     hotStreamPerCategoryLimit: normalizeNumeric(input.hotStreamPerCategoryLimit, DEFAULT_SETTINGS.hotStreamPerCategoryLimit, 0, 500),
+    // Super Deals
+    superDealsEnabled: typeof input.superDealsEnabled === 'boolean' ? input.superDealsEnabled : DEFAULT_SETTINGS.superDealsEnabled,
+    superDealsMaxPromos: normalizeNumeric(input.superDealsMaxPromos, DEFAULT_SETTINGS.superDealsMaxPromos, 1, 10),
   };
 }
 

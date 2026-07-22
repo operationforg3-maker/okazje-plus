@@ -24,14 +24,15 @@ import {
 } from "@/components/ui/alert-dialog";
 
 interface CommentSectionProps {
-  collectionName: 'products' | 'deals';
+  collectionName: 'products' | 'deals' | 'articles';
   docId: string;
+  initialComments?: Comment[];
 }
 
-export default function CommentSection({ collectionName, docId }: CommentSectionProps) {
+export default function CommentSection({ collectionName, docId, initialComments }: CommentSectionProps) {
   const { user } = useAuth();
   const locale = useLocale();
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<Comment[]>(initialComments || []);
   const [newComment, setNewComment] = useState('');
   const [deletingComment, setDeletingComment] = useState<Comment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -44,7 +45,9 @@ export default function CommentSection({ collectionName, docId }: CommentSection
 
   useEffect(() => {
     async function fetchComments() {
-      setComments(await getComments(collectionName, docId, 50));
+      // Pobieramy tylko w tle (refresh) lub jeśli nie było z SSR
+      const fetched = await getComments(collectionName, docId, 50);
+      setComments(fetched);
     }
     fetchComments();
   }, [collectionName, docId]);

@@ -137,9 +137,10 @@ interface Props {
   deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
   product?: Product | null;
   relatedDeals: Deal[];
+  initialComments?: any[];
 }
 
-export default function DealDetailClient({ deal, product, relatedDeals }: Props) {
+export default function DealDetailClient({ deal, product, relatedDeals, initialComments }: Props) {
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const { getText } = useContentLanguage();
@@ -904,7 +905,7 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
               <MessageSquare className="h-5 w-5 text-primary" />
               Dyskusja ({liveComments.count})
             </h3>
-            <CommentSection collectionName="deals" docId={deal.id} />
+            <CommentSection collectionName="deals" docId={deal.id} initialComments={initialComments} />
           </div>
         </div>
 

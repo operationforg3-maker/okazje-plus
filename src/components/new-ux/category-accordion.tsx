@@ -55,6 +55,8 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
             <button
               key={category.id}
               onClick={() => handleCategoryClick(category)}
+              aria-expanded={isActive}
+              aria-label={`Rozwiń kategorię ${getLocalizedCategoryName(category, locale as SupportedLanguage)}`}
               className={cn(
                 "w-full flex items-center gap-3 p-3 text-left group relative",
                 isActive

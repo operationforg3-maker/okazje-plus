@@ -8,8 +8,8 @@ import { useLocale, useTranslations } from 'next-intl';
 import { Deal, Product, Category } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import DealCard from '@/components/deal-card';
-import ProductCard from '@/components/product-card';
+import DealCard from '@/components/new-ux/deal-card';
+import ProductCard from '@/components/new-ux/product-card';
 import {
   Flame,
   ShoppingBag,
@@ -30,7 +30,7 @@ const AutocompleteSearch = dynamic(
   }
 );
 
-const CategoryGrid = dynamic(() => import('@/components/category-accordion'), { ssr: false });
+const CategoryGrid = dynamic(() => import('@/components/new-ux/category-accordion'), { ssr: false });
 const RegistrationCTA = dynamic(() => import('@/components/home/registration-cta'), { ssr: false });
 const HomeSecondarySections = dynamic(() => import('@/components/home/home-secondary-sections'), {
   ssr: false,
@@ -94,15 +94,15 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
   if (!deals.length) return null;
 
   return (
-    // Stała wysokość ~480px, by karuzela była większa
-    <div className="relative w-full max-w-lg mx-auto" style={{ height: 480 }}>
+    // Większy kontener - dopasowuje się do siatki (h-full na desktopie, min-height na mobile)
+    <div className="relative w-full h-full min-h-[420px] md:min-h-[460px] lg:h-[500px]">
       {/* Glow */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-primary/25 to-accent/25 rounded-3xl blur-2xl opacity-60 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-primary/30 to-accent/30 rounded-[2rem] blur-2xl opacity-60 pointer-events-none" />
 
-      {/* Karta kontenera — struktura z wzoru HeroVariantCurrent */}
-      <div className="relative bg-background/60 backdrop-blur-xl border border-border/40 rounded-3xl shadow-xl overflow-hidden p-6 space-y-5" style={{ height: 480 }}>
-        
-        {/* Wszystkie slajdy renderowane naraz — tylko aktywny jest widoczny (opacity transition) */}
+      {/* Karta kontenera */}
+      <div className="relative w-full h-full bg-background border border-border/40 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col">
+
+        {/* Wszystkie slajdy */}
         {deals.map((deal, idx) => {
           const title = getLocalizedText(deal.title);
           const image = deal.image || (deal as any).imageUrl || '/icon_okazjeplus.svg';
@@ -110,95 +110,124 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
           const origPrice = formatPrice(deal.originalPrice);
           const discount = calcDiscount(deal);
           const isActive = idx === active;
+          const sales = deal.metrics?.soldCount || (deal as any).soldCount || deal.salesCount;
 
           return (
             <div
               key={deal.id ?? idx}
               aria-hidden={!isActive}
-              className="absolute inset-0 p-6 flex flex-col space-y-4"
               style={{
+                position: 'absolute',
+                inset: 0,
                 opacity: isActive ? 1 : 0,
-                transition: 'opacity 0.4s ease-in-out',
+                transition: 'opacity 0.45s ease',
                 pointerEvents: isActive ? 'auto' : 'none',
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
-              {/* Header: Znaczki */}
-              <div className="flex items-center justify-between shrink-0">
-                <span className="bg-orange-500/15 text-orange-500 border border-orange-500/25 text-[10px] sm:text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                  <Flame className="h-3.5 w-3.5 animate-pulse" />
-                  Okazja Tygodnia
-                </span>
-                <span className="text-sm text-orange-500 font-black flex items-center gap-1">
-                  <Flame className="h-4 w-4" />
-                  +{Math.round(deal.temperature || 0)}°
-                </span>
-              </div>
+              {/* Cała karta jest linkiem */}
+              <Link href={`/${locale}/deals/${deal.id}`} className="flex-1 flex flex-col group overflow-hidden relative z-10">
+                
+                {/* Zdjęcie wypełniające górę - ze sztuczką bluru zamiast chamskiego ucinania */}
+                <div className="relative flex-1 w-full bg-background overflow-hidden flex items-center justify-center">
+                  
+                  {/* Tło z blurem dla spójnego wypełnienia (rozwiązuje problem dziwnego kadrowania proporcji na mobile) */}
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center opacity-30 blur-2xl scale-125"
+                    style={{ backgroundImage: `url(${image})` }}
+                  />
 
-              {/* Obraz (więcej przestrzeni, z tłem masonry) */}
-              <Link href={`/${locale}/deals/${deal.id}`} className="flex-1 bg-sky-500/10 dark:bg-sky-500/5 rounded-2xl flex items-center justify-center relative overflow-hidden group outline-none">
-                <img
-                  src={image}
-                  alt={title}
-                  loading={idx === 0 ? 'eager' : 'lazy'}
-                  className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105"
-                />
+                  {/* Właściwe zdjęcie (w całości widoczne, na wierzchu bluru) */}
+                  <img
+                    src={image}
+                    alt={title}
+                    loading={idx === 0 ? 'eager' : 'lazy'}
+                    fetchPriority={idx === 0 ? 'high' : 'auto'}
+                    decoding={idx === 0 ? 'sync' : 'async'}
+                    className="relative w-full h-full object-contain p-4 transition-transform duration-700 md:group-hover:scale-105"
+                  />
 
-                {/* Strzałki wewnątrz obszaru obrazka */}
-                {isActive && (
-                  <>
-                    <button
-                      onClick={(e) => { e.preventDefault(); prev(); resetTimer(); }}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 shadow-md hover:bg-background hover:scale-110 transition-all duration-200 z-20"
-                      aria-label="Poprzednia okazja"
-                    >
-                      <ChevronLeft className="h-5 w-5 text-foreground" />
-                    </button>
-                    <button
-                      onClick={(e) => { e.preventDefault(); next(); resetTimer(); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 shadow-md hover:bg-background hover:scale-110 transition-all duration-200 z-20"
-                      aria-label="Następna okazja"
-                    >
-                      <ChevronRight className="h-5 w-5 text-foreground" />
-                    </button>
-                  </>
-                )}
+                  {/* Ciemniejszy gradient z góry dla kontrastu tekstu (badge) */}
+                  <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-black/50 to-transparent pointer-events-none z-10" />
+                  
+                  {/* Etykiety i zniżki nałożone na zdjęcie */}
+                  <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-20">
+                    <span className="bg-orange-500 text-white text-[10px] md:text-xs font-black px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-lg">
+                      <Flame className="h-3.5 w-3.5 animate-pulse" />
+                      Okazja Tygodnia
+                    </span>
+                    <div className="flex flex-col items-end gap-1.5">
+                      {discount > 0 && (
+                        <span className="bg-green-500 text-white font-black text-xs md:text-sm px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
+                          <TrendingDown className="h-3.5 w-3.5" />
+                          -{discount}%
+                        </span>
+                      )}
+                      {sales > 10 && (
+                        <span className="bg-background/95 backdrop-blur-sm text-foreground text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full shadow-md">
+                          Kupiono {sales}+ szt.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Treść na dole karty */}
+                <div className="bg-background px-5 py-5 shrink-0 z-20 flex flex-col justify-end">
+                  <h3 className="font-bold text-base md:text-lg leading-snug text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                    {title}
+                  </h3>
+                  
+                  <div className="flex items-center justify-between mt-3">
+                    <div className="flex flex-col">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-black text-primary">{price || 'Sprawdź'}</span>
+                        {origPrice && origPrice !== price && (
+                          <span className="text-sm text-muted-foreground line-through opacity-70">{origPrice}</span>
+                        )}
+                      </div>
+                    </div>
+                    {/* Fake button purely for UI */}
+                    <div className="rounded-xl font-bold bg-primary text-primary-foreground shadow-md text-sm px-4 py-2 flex items-center transition-transform group-hover:scale-105">
+                      Odbierz okazję
+                    </div>
+                  </div>
+                </div>
               </Link>
 
-              {/* Treść z cenami - dokładnie wg wzoru */}
-              <div className="space-y-3 shrink-0 pb-1">
-                <div style={{ height: 48, overflow: 'hidden' }}>
-                  <Link href={`/${locale}/deals/${deal.id}`} className="font-bold text-base sm:text-lg text-foreground line-clamp-2 hover:text-primary transition-colors outline-none">
-                    {title}
-                  </Link>
-                </div>
-                
-                <div className="flex items-baseline gap-2">
-                  <Link href={`/${locale}/deals/${deal.id}`} className="flex items-baseline gap-2 outline-none">
-                    <span className="text-2xl sm:text-3xl font-black text-foreground">{price || 'Sprawdź'}</span>
-                    {origPrice && origPrice !== price && (
-                      <span className="text-sm sm:text-base text-muted-foreground line-through">{origPrice}</span>
-                    )}
-                  </Link>
-                  {discount > 0 && (
-                    <span className="text-sm sm:text-base font-bold text-green-500 ml-auto flex-shrink-0">
-                      -{discount}%
-                    </span>
-                  )}
-                </div>
-              </div>
+              {/* Strzałki nawigacji nałożone na zdjęcie, oddzielone od Linka (z-30) */}
+              {isActive && (
+                <>
+                  <button
+                    onClick={(e) => { e.preventDefault(); prev(); resetTimer(); }}
+                    className="absolute left-3 top-[35%] p-2.5 rounded-full bg-background/80 backdrop-blur-md shadow-xl hover:bg-background hover:scale-110 transition-all z-30"
+                    aria-label="Poprzednia okazja"
+                  >
+                    <ChevronLeft className="h-5 w-5 text-foreground" />
+                  </button>
+                  <button
+                    onClick={(e) => { e.preventDefault(); next(); resetTimer(); }}
+                    className="absolute right-3 top-[35%] p-2.5 rounded-full bg-background/80 backdrop-blur-md shadow-xl hover:bg-background hover:scale-110 transition-all z-30"
+                    aria-label="Następna okazja"
+                  >
+                    <ChevronRight className="h-5 w-5 text-foreground" />
+                  </button>
+                </>
+              )}
             </div>
           );
         })}
 
-        {/* Kropki nawigacji wyrównane na dnie absolutnie (aby nie skakały i mieściły się w układzie p-6) */}
-        <div className="absolute bottom-5 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
+        {/* Kropki nawigacji - połączone z dolną krawędzią całej karty */}
+        <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
           {deals.map((_, i) => (
             <button
               key={i}
-              onClick={() => { setActive(i); resetTimer(); }}
+              onClick={(e) => { e.preventDefault(); setActive(i); resetTimer(); }}
               className={cn(
                 'h-1.5 rounded-full transition-all duration-300 pointer-events-auto',
-                i === active ? 'w-6 bg-primary' : 'w-1.5 bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                i === active ? 'w-5 bg-primary' : 'w-1.5 bg-border/80 hover:bg-primary/50'
               )}
               aria-label={`Okazja ${i + 1}`}
             />

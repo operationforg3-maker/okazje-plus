@@ -89,8 +89,8 @@ for (const [alias, target] of Object.entries(modelMapping)) {
   }, async (input) => {
     const rawInput = input as any;
     
-    let retries = 8;
-    let delay = 3000;
+    let retries = 1; // Capped to max 1 retry (not 8) to avoid CPU lockup & cost spikes in Cloud Run
+    let delay = 1000;
     let useFallback = false;
 
     while (true) {
@@ -122,9 +122,16 @@ for (const [alias, target] of Object.entries(modelMapping)) {
         const errMessage = String(err.message || '');
         const errOriginalMessage = String(err.originalMessage || '');
         const errStr = String(err);
+        const msgToCheck = `${errMessage}\n${errOriginalMessage}\n${errStr}`;
 
         // Print descriptive warning on Vertex AI failure
         console.warn(`[GENKIT REDIRECT] Error occurred with model ${selectedModel}:`, errMessage || errStr);
+
+        // Fail fast immediately if credits depleted or project billing error
+        if (msgToCheck.includes('prepayment credits are depleted') || msgToCheck.includes('billing')) {
+          console.error(`[GENKIT REDIRECT] Prepayment credits depleted or billing issue. Aborting immediately without retries to save CPU costs.`);
+          throw err;
+        }
 
         // If Vertex AI (primary) fails, switch immediately to Google AI Studio (fallback)
         if (!useFallback) {
@@ -173,23 +180,21 @@ for (const [alias, target] of Object.entries(modelMapping)) {
           errStr.includes('ECONNRESET');
 
         if ((isRateLimit || isTransientNetwork) && retries > 0) {
-          let retryDelay = delay;
-          const msgToCheck = `${errMessage}\n${errOriginalMessage}\n${errStr}`;
+          let retryDelay = Math.min(delay, 2000); // Cap retry delay to 2s max
           const retryMatch = msgToCheck.match(/Please retry in ([\d.]+)(ms|s)?/i);
           if (retryMatch) {
             const val = parseFloat(retryMatch[1]);
             const unit = (retryMatch[2] || 's').toLowerCase();
             if (unit === 's') {
-              retryDelay = Math.ceil(val * 1000) + 1500;
+              retryDelay = Math.min(Math.ceil(val * 1000) + 500, 3000);
             } else {
-              retryDelay = Math.ceil(val) + 500;
+              retryDelay = Math.min(Math.ceil(val) + 200, 3000);
             }
           }
 
           console.warn(`[GENKIT REDIRECT] Rate limited or network error. Retrying in ${retryDelay}ms... (Retries left: ${retries})`);
           await new Promise(r => setTimeout(r, retryDelay));
           retries--;
-          delay = Math.min(delay * 2.5, 45000); // Exponential backoff capped at 45s
         } else {
           console.error(`[GENKIT REDIRECT] Error generation failed permanently (no retries left or non-retryable error):`, err);
           throw err;

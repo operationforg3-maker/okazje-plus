@@ -4,6 +4,7 @@ import { adminDb } from '@/lib/firebase-admin';
 import { SmartHarvester } from '@/lib/automation/harvester';
 import { refreshProductPrices } from '@/lib/aliexpress-price-refresh';
 import { logger } from '@/lib/logger';
+import { isBackgroundProcessingEnabled } from '@/lib/system-settings';
 
 const SETTINGS_DOC_PATH = 'admin_meta/aliexpress-autopilot-settings';
 
@@ -17,6 +18,15 @@ export async function POST(request: NextRequest) {
     const session = await requireAdmin();
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
+
+    const enabled = await isBackgroundProcessingEnabled('autopilotEnabled');
+    if (!enabled) {
+      return NextResponse.json({
+        success: false,
+        disabled: true,
+        message: 'Autopilot jest obecnie wyłączony przez Master Switch procesów w tle.',
+      });
     }
 
     const body = await request.json().catch(() => ({} as Record<string, unknown>));

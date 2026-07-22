@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SmartHarvester } from '@/lib/automation/harvester';
+import { getAliExpressClient } from '@/lib/integrations/aliexpress-client';
 import { ensureAliExpressImportProfilesCoverage } from '@/lib/import-profiles-bootstrap';
 import { adminDb } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger';
+import { isBackgroundProcessingEnabled } from '@/lib/system-settings';
 
 const LOCK_DOC_PATH = 'admin_meta/aliexpress-sync-lock';
 const SETTINGS_DOC_PATH = 'admin_meta/aliexpress-autopilot-settings';
@@ -127,7 +129,18 @@ async function runAliExpressSync(request: NextRequest) {
       });
     }
 
-    // Check if imports are globally paused
+    // Check if imports are globally paused via System Master Switch or config
+    const isMasterEnabled = await isBackgroundProcessingEnabled('autopilotEnabled');
+    if (!isMasterEnabled) {
+      logger.info('AliExpress sync skipped: disabled by System Master Switch');
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        disabled: true,
+        message: 'Autopilot AliExpress jest wyłączony przez Master Switch.',
+      });
+    }
+
     let isPaused = false;
     try {
       const configDoc = await adminDb.collection('config').doc('importSettings').get();
@@ -204,14 +217,59 @@ async function runAliExpressSync(request: NextRequest) {
       .get();
     runTelemetry.loadProfilesMs += Date.now() - loadProfilesStartedAt;
 
-    if (profilesSnapshot.empty) {
-      logger.info('No enabled AliExpress import profiles found');
+    // ─── Phase A: Super Deals Stream ────────
+    const superDealsEnabled = settings?.superDealsEnabled === true;
+    const superDealsMaxPromos = Number(settings?.superDealsMaxPromos ?? 0);
+    
+    let superDealsResult: any = null;
+    
+    if (superDealsEnabled && superDealsMaxPromos > 0) {
+      const superDealsStartedAt = Date.now();
+      logger.info('Phase A: Starting AliExpress Super Deals', { superDealsMaxPromos });
+      try {
+        const client = getAliExpressClient();
+        const promosResponse = await client.getFeaturedPromos();
+        const promos = promosResponse?.resp_result?.result?.promos?.promo || [];
+        
+        let totalProcessed = 0;
+        if (promos.length > 0) {
+          const topPromos = promos.slice(0, superDealsMaxPromos);
+          const harvester = new SmartHarvester(`cron_superdeals_${Date.now()}`);
+          
+          for (const promo of topPromos) {
+            const promoName = promo.promo_name;
+            logger.info(`Phase A: Harvesting Super Deals for campaign: ${promoName}`);
+            const job = await harvester.harvestProducts('campaigns', promoName, 20);
+            totalProcessed += (job.telemetry?.totalMatched || 0);
+          }
+        }
+        
+        superDealsResult = {
+          success: true,
+          promosProcessed: promos.length > 0 ? Math.min(promos.length, superDealsMaxPromos) : 0,
+          totalProducts: totalProcessed,
+          durationMs: Date.now() - superDealsStartedAt
+        };
+      } catch (err: any) {
+        logger.error('Phase A: Super Deals failed', { error: err.message });
+        superDealsResult = {
+          success: false,
+          error: err.message,
+          durationMs: Date.now() - superDealsStartedAt
+        };
+      }
+    }
+    // ────────────────────────────────────────
+
+    if (profilesSnapshot.empty && !superDealsEnabled && !settings?.hotStreamEnabled) {
+      logger.info('No enabled AliExpress import profiles and other streams disabled');
       return NextResponse.json({
         success: true,
-        message: 'No profiles to sync',
+        message: 'No profiles or streams to sync',
         synced: 0,
       });
     }
+
 
     const orderedProfileDocs = [...profilesSnapshot.docs].sort((left, right) => left.id.localeCompare(right.id));
     const lastProfileCursor = typeof state?.lastProfileCursor === 'string' ? state.lastProfileCursor.trim() : '';
@@ -465,6 +523,7 @@ async function runAliExpressSync(request: NextRequest) {
           totalMs: runTelemetry.totalMs,
           processedProfiles: selectedProfileDocs.length,
           availableProfiles: orderedProfileDocs.length,
+          superDeals: superDealsResult ?? undefined,
           hotStream: hotStreamResult ?? undefined,
         },
         updatedAt: new Date().toISOString(),
@@ -490,6 +549,7 @@ async function runAliExpressSync(request: NextRequest) {
       availableProfiles: orderedProfileDocs.length,
       processedProfiles: selectedProfileDocs.length,
       nextProfileCursor,
+      superDeals: superDealsResult,
       hotStream: hotStreamResult,
       telemetry: {
         ensureProfilesMs: runTelemetry.ensureProfilesMs,

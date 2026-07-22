@@ -24,6 +24,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { logger } from '@/lib/logger';
 import typesenseAdminClient from '@/lib/typesense-admin';
+import { isBackgroundProcessingEnabled } from '@/lib/system-settings';
 
 interface Job {
   id: string;
@@ -224,6 +225,18 @@ export async function POST(req: NextRequest) {
         { error: 'Unauthorized - invalid CRON_SECRET' },
         { status: 401 }
       );
+    }
+
+    // ===== MASTER SWITCH CHECK =====
+    const enabled = await isBackgroundProcessingEnabled('harvesterEnabled');
+    if (!enabled) {
+      logger.info('[ProcessJobs Cron] Aborted execution: Background processing disabled by Master Switch.');
+      return NextResponse.json({
+        success: true,
+        disabled: true,
+        message: 'Procesy w tle są wyłączone przez Master Switch.',
+        timestamp: new Date().toISOString(),
+      });
     }
 
     const startTime = Date.now();

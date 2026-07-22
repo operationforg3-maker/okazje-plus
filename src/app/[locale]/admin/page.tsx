@@ -35,6 +35,7 @@ import Link from 'next/link';
 import { Deal } from '@/lib/types';
 import TestsTab from '@/components/admin/tests-tab';
 import { ExchangeRateAlert } from '@/components/admin/exchange-rate-alert';
+import { BackgroundProcessControl } from '@/components/admin/background-process-control';
 
 interface Stats {
   products: number;
@@ -252,6 +253,9 @@ function AdminPage() {
           </Button>
         </div>
       </div>
+
+      {/* Control Procesów w Tle (Master Switch) */}
+      <BackgroundProcessControl />
 
       <Card className="border-l-4 border-l-emerald-500">
         <CardHeader className="pb-3">

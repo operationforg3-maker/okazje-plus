@@ -24,6 +24,9 @@ type Settings = {
   hotStreamEnabled: boolean;
   hotStreamGlobalLimit: number;
   hotStreamPerCategoryLimit: number;
+  // Super Deals
+  superDealsEnabled: boolean;
+  superDealsMaxPromos: number;
   updatedAt?: string;
   updatedBy?: string;
 };
@@ -41,7 +44,9 @@ const DEFAULTS: Settings = {
   // Hot Stream
   hotStreamEnabled: false,
   hotStreamGlobalLimit: 50,
-  hotStreamPerCategoryLimit: 0,
+  // Super Deals
+  superDealsEnabled: true,
+  superDealsMaxPromos: 2,
 };
 
 type HealthIssue = {
@@ -751,6 +756,33 @@ export function AliExpressAutopilotControl({
           </div>
         </div>
 
+        <div className="p-4 border border-amber-200 rounded-lg bg-amber-50/50 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-base text-amber-900 flex items-center gap-2">
+                <Activity className="w-4 h-4" />
+                Faza A: Priorytetowy import promowanych (Super Deals)
+              </Label>
+              <p className="text-sm text-amber-700/80">Pobiera najwyższej klasy okazje priorytetowo przed profilami.</p>
+            </div>
+            <Switch
+              checked={settings.superDealsEnabled}
+              onCheckedChange={(value) => setSettings((prev) => ({ ...prev, superDealsEnabled: value }))}
+            />
+          </div>
+          <div className="space-y-1 w-1/2">
+            <Label className="text-xs">superDealsMaxPromos</Label>
+            <Input
+              type="number"
+              min={1}
+              max={10}
+              value={settings.superDealsMaxPromos}
+              onChange={(e) => updateNumber('superDealsMaxPromos', e.target.value)}
+              disabled={!settings.superDealsEnabled}
+            />
+            <p className="text-xs text-slate-500">Ilość kampanii do zaciągnięcia (rekomendowane: 2-3)</p>
+          </div>
+        </div>
 
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={loadSettings} disabled={!canAct || loading} className="gap-2">

@@ -377,6 +377,46 @@ export class AliExpressClient {
        return this.call("aliexpress.affiliate.product.smartmatch", params);
    }
 
+   /**
+    * Get Featured Promos (Super Deals, Choice, etc.)
+    * Doc: https://developers.aliexpress.com/en/doc.htm?docId=46109&docType=2
+    */
+   async getFeaturedPromos(): Promise<any> {
+       const params = {
+           target_currency: 'PLN',
+           target_language: 'PL'
+       };
+       return this.call("aliexpress.affiliate.featuredpromo.get", params);
+   }
+
+   /**
+    * Get products for a specific Featured Promo
+    * Doc: https://developers.aliexpress.com/en/doc.htm?docId=46108&docType=2
+    */
+   async getFeaturedPromoProducts(
+       promotionName?: string,
+       promotionStartTime?: string,
+       promotionEndTime?: string,
+       categoryId?: string,
+       pageSize: number = 50,
+       pageNo: number = 1
+   ): Promise<any> {
+       const params: Record<string, any> = {
+           target_currency: 'PLN',
+           target_language: 'PL',
+           sort: 'SALE_PRICE_ASC',
+           page_size: pageSize,
+           page_no: pageNo
+       };
+       if (promotionName) params.promotion_name = promotionName;
+       if (promotionStartTime) params.promotion_start_time = promotionStartTime;
+       if (promotionEndTime) params.promotion_end_time = promotionEndTime;
+       if (categoryId) params.category_id = categoryId;
+
+       return this.call("aliexpress.affiliate.featuredpromo.products.get", params);
+   }
+
+
   // Smart match (Advanced API)
   async smartMatch(keywords: string): Promise<any> {
     // endpoint: aliexpress.solution.product.smart.match (docId w portalu)

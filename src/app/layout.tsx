@@ -2,12 +2,29 @@ import type { Metadata } from 'next';
 import Script from 'next/script';
 import './globals.css';
 import { cn } from '@/lib/utils';
+import WebsiteSchema from '@/components/structured-data/WebsiteSchema';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://okazjeplus.pl';
 
 export const metadata: Metadata = {
   title: 'Okazje+',
+  description: 'Najlepsze okazje i promocje w Polsce – codzienne oferty, zniżki i wyprzedaże.',
   metadataBase: new URL(SITE_URL),
+  openGraph: {
+    title: 'Okazje+ – codzienne promocje',
+    description: 'Najlepsze okazje i promocje w Polsce – codzienne oferty, zniżki i wyprzedaże.',
+    url: SITE_URL,
+    siteName: 'Okazje+',
+    images: [{ url: `${SITE_URL}/og-image.jpg` }],
+    locale: 'pl_PL',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Okazje+ – codzienne promocje',
+    description: 'Najlepsze okazje i promocje w Polsce – codzienne oferty, zniżki i wyprzedaże.',
+    images: [`${SITE_URL}/og-image.jpg`],
+  },
 };
 
 export default function RootLayout({
@@ -25,6 +42,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://imgproxy.convertiser.com" />
         <link rel="dns-prefetch" href="https://ae-pic-a1.aliexpress-media.com" />
         <link rel="dns-prefetch" href="https://imgproxy.convertiser.com" />
+        <link rel="canonical" href={SITE_URL} />
         <script dangerouslySetInnerHTML={{
           __html: `
             (function() {
@@ -69,7 +87,8 @@ export default function RootLayout({
         <style dangerouslySetInnerHTML={{__html: `
           html { scroll-behavior: smooth; }
         `}} />
-      </head>
+        <WebsiteSchema />
+  </head>
       <body suppressHydrationWarning className={cn('min-h-screen bg-background font-body antialiased')} style={{ WebkitOverflowScrolling: 'touch' }}>
         {children}
       </body>
