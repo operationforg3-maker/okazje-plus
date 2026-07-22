@@ -10,6 +10,7 @@ import { Deal, Category, Product } from '@/lib/types';
 import { UnifiedFilterSidebar } from '@/components/unified-filter-sidebar';
 import { UnifiedFilters, SortBy } from '@/lib/filter-config';
 import { ListingToolbar } from '@/components/layout/listing-toolbar';
+import { CategorySidebar } from '@/components/layout/category-sidebar';
 import DealCard from '@/components/deal-card';
 import DealListCard from '@/components/deal-list-card';
 import { Input } from '@/components/ui/input';
@@ -1086,7 +1087,33 @@ function DealsPageContent() {
               <div className="space-y-4">
                 {/* Categories */}
                 <div suppressHydrationWarning>
-                  <SidebarContent />
+                  <CategorySidebar
+                    type="deals"
+                    categories={categories}
+                    selectedCategory={selectedCategory}
+                    selectedSubcategory={selectedSubcategory}
+                    selectedSubSubcategory={selectedSubSubcategory}
+                    onSelectAll={() => {
+                      setSelectedCategory(null);
+                      setSelectedSubcategory(null);
+                      setSelectedSubSubcategory(null);
+                    }}
+                    onSelectCategory={(cat) => {
+                      setSelectedCategory(cat);
+                      setSelectedSubcategory(null);
+                      setSelectedSubSubcategory(null);
+                    }}
+                    onSelectSubcategory={(subSlug) => {
+                      const willSelect = selectedSubcategory !== subSlug;
+                      setSelectedSubcategory(willSelect ? subSlug : null);
+                      setSelectedSubSubcategory(null);
+                    }}
+                    onSelectSubSubcategory={(subSlug, subSubSlug) => {
+                      setSelectedSubcategory(subSlug);
+                      setSelectedSubSubcategory(subSubSlug);
+                    }}
+                    locale={locale}
+                  />
                 </div>
 
                 {/* Separator */}

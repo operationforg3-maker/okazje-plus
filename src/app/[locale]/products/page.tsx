@@ -8,6 +8,7 @@ import { searchProducts } from '@/lib/search';
 import ProductCard from '@/components/product-card';
 import { UnifiedFilterSidebar } from '@/components/unified-filter-sidebar';
 import { ListingToolbar } from '@/components/layout/listing-toolbar';
+import { CategorySidebar } from '@/components/layout/category-sidebar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -851,7 +852,18 @@ export function ProductsPageContent({
             <div className="hidden lg:block lg:col-span-3 space-y-6">
               {/* Categories */}
               <div suppressHydrationWarning>
-                <SidebarContent />
+                <CategorySidebar
+                  type="products"
+                  categories={categories}
+                  selectedCategory={selectedCategory}
+                  selectedSubcategory={selectedSubcategory}
+                  selectedSubSubcategory={selectedSubSubcategory}
+                  onSelectAll={() => navigateToCategory(null)}
+                  onSelectCategory={(cat) => navigateToCategory(cat.slug || cat.id)}
+                  onSelectSubcategory={(subSlug) => navigateToCategory(selectedCategory?.slug || selectedCategory?.id || null, subSlug)}
+                  onSelectSubSubcategory={(subSlug, subSubSlug) => navigateToCategory(selectedCategory?.slug || selectedCategory?.id || null, subSlug, subSubSlug)}
+                  locale={locale}
+                />
               </div>
 
               {/* Separator */}
