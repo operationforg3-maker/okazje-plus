@@ -569,7 +569,58 @@ async function fetchFromConvertiserAdvanced(
           // Stats not critical, continue
         }
 
-        await db.collection('products').add(productData);
+        const productRef = await db.collection('products').add(productData);
+
+        // Also create matching deal document so it appears in deals list
+        const merchantName = product.advertiser_name || 'Partner Convertiser';
+        const dealData = {
+          productId: productRef.id,
+          mainCategorySlug: category.slug,
+          subCategorySlug: category.subcategories?.[0]?.slug || '',
+          price: {
+            amount: product.price || 0,
+            currency: product.currency || 'PLN',
+          },
+          shipping: {
+            cost: 0,
+            fromCountry: 'PL',
+          },
+          source: 'convertiser' as const,
+          affiliateLink: trackingUrl,
+          link: trackingUrl,
+          affiliateUrl: trackingUrl,
+          dealUrl: trackingUrl,
+          merchantName,
+          title: { pl: baseName },
+          dealType: 'deal' as const,
+          freeShipping: false,
+          stockStatus: 'in_stock' as const,
+          isActive: true,
+          priceHistory: [
+            {
+              date: new Date().toISOString().split('T')[0],
+              price: product.price || 0,
+              currency: product.currency || 'PLN',
+            },
+          ],
+          voteCount: 0,
+          temperature: 0,
+          commentsCount: 0,
+          status: 'draft',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          createdBy: 'system',
+          sourceProductId: product.uuid || '',
+          sourceUrl: trackingUrl,
+          metadata: {
+            source: 'convertiser',
+            originalId: product.uuid,
+            importedAt: new Date().toISOString(),
+            merchant: merchantName,
+          },
+        };
+
+        await db.collection('deals').add(dealData);
         totalProducts++;
       }
     } catch (error) {

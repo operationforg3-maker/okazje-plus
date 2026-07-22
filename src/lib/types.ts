@@ -334,7 +334,7 @@ export interface PromotionCampaignInfo {
 }
 
 export interface ProductImportMetadata {
-  source: 'aliexpress' | 'manual' | 'csv' | 'amazon' | 'allegro' | 'ebay';
+  source: 'aliexpress' | 'convertiser' | 'manual' | 'csv' | 'amazon' | 'allegro' | 'ebay';
   originalId?: string; // External ID from source platform
   
   // Product identifiers (critical for deduplication & SEO)
@@ -1014,7 +1014,7 @@ export interface ImportRun {
     uniqueProductsInPool?: number; // Unique product candidates scanned before selection
     duplicateProductsInPool?: number; // Duplicate product candidates scanned before selection
     uniqueSharePercent?: number; // Fraction of unique products in final processing list (0-100)
-    searchMethod?: 'keyword' | 'hotfeed' | 'mixed'; // Discovery method used
+    searchMethod?: 'keyword' | 'hotfeed' | 'mixed' | 'products' | 'offers'; // Discovery method used
   };
   startedAt: string;
   finishedAt?: string;
@@ -1066,6 +1066,7 @@ export interface ImportItemLog {
   metadata?: {
     title?: string;
     price?: number;
+    merchant?: string;
     category?: string;
     aiEnriched?: boolean;
     autoApproved?: boolean;

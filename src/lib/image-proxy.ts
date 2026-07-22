@@ -1,8 +1,13 @@
 const PROXY_HOSTS = new Set([
   'imgproxy.convertiser.com',
   'static.convertiser.com',
+  'convertiser.com',
+  'media.convertiser.com',
   'images.unsplash.com',
   'picsum.photos',
+  'cdn.mediaexpert.pl',
+  'images.morele.net',
+  'cdna.empik.com',
 ]);
 
 export function withImageProxy(url?: string): string {

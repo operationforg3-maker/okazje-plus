@@ -31,12 +31,13 @@ function generateTrackingToken(): string {
 }
 
 // Validate affiliate URL to prevent injection
-function isValidAliExpressUrl(url: string): boolean {
+function isValidAffiliateUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
-    return parsed.hostname.includes('aliexpress.com') || 
-           parsed.hostname.includes('aliexpress.ru') ||
-           parsed.hostname.includes('aff.alibaba.com');
+    const host = parsed.hostname.toLowerCase();
+    // Allow AliExpress, Convertiser, Tradedoubler, Awin, and general http(s) outbound urls
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    return true;
   } catch {
     return false;
   }
@@ -64,9 +65,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate the URL
-    if (!isValidAliExpressUrl(affiliateUrl)) {
+    if (!isValidAffiliateUrl(affiliateUrl)) {
       return NextResponse.json(
-        { error: 'Invalid AliExpress URL' },
+        { error: 'Invalid affiliate URL' },
         { status: 400 }
       );
     }
@@ -133,8 +134,8 @@ export async function GET(request: NextRequest) {
 
     let affiliateUrl = productUrl || `https://www.aliexpress.com/item/${productId}.html`;
 
-    if (!isValidAliExpressUrl(affiliateUrl)) {
-      return new NextResponse('Invalid AliExpress URL', { status: 400 });
+    if (!isValidAffiliateUrl(affiliateUrl)) {
+      return new NextResponse('Invalid affiliate URL', { status: 400 });
     }
 
     const trackingToken = generateTrackingToken();

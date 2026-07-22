@@ -1,45 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as admin from 'firebase-admin';
-import * as fs from 'fs';
-import * as path from 'path';
-
-function initializeFirebaseAdmin() {
-  if (admin.apps.length > 0) return admin.app();
-  try {
-    if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
-      const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/gm, '\n').replace(/^"(.*)"$/, '$1');
-      return admin.initializeApp({
-        credential: admin.credential.cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey,
-        }),
-      });
-    } else {
-      try {
-        const serviceAccountPath = path.join(process.cwd(), 'serviceAccountKey.json');
-        const serviceAccountJson = fs.readFileSync(serviceAccountPath, 'utf8');
-        const serviceAccount = JSON.parse(serviceAccountJson);
-        return admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-      } catch (fileError) {
-        return admin.initializeApp({ credential: admin.credential.applicationDefault() });
-      }
-    }
-  } catch (e) {
-    console.error('Failed to init Firebase Admin:', e);
-    throw e;
-  }
-}
+import { adminDb, adminAuth } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
+import { getConvertiserClient } from '@/lib/integrations/convertiser-client';
 
 async function isAdminUser(idToken: string | null) {
   if (!idToken) return false;
   try {
-    const app = initializeFirebaseAdmin();
-    const auth = admin.auth();
-    const decoded = await auth.verifyIdToken(idToken);
+    const decoded = await adminAuth.verifyIdToken(idToken);
     if ((decoded as any).admin) return true;
-    const db = admin.firestore();
-    const userDoc = await db.collection('users').doc(decoded.uid).get();
+    const userDoc = await adminDb.collection('users').doc(decoded.uid).get();
     if (userDoc.exists) {
       const data = userDoc.data() as any;
       return data?.role === 'admin';
@@ -64,50 +33,81 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'invalid_payload' }, { status: 400 });
     }
 
-    const app = initializeFirebaseAdmin();
-    const db = admin.firestore();
-    const decoded = idToken ? await admin.auth().verifyIdToken(idToken) : null;
+    const decoded = idToken ? await adminAuth.verifyIdToken(idToken) : null;
+    const externalId = product.uuid || product.id || null;
 
-    // Check for duplicates by Convertiser UUID
-    const externalId = product.uuid || null;
+    // Check for duplicate product
     if (externalId) {
-      const existingQuery = await db
+      const existingQuery = await adminDb
         .collection('products')
         .where('metadata.originalId', '==', externalId)
-        .where('metadata.source', '==', 'manual')
+        .where('metadata.source', '==', 'convertiser')
         .limit(1)
         .get();
 
       if (!existingQuery.empty) {
         return NextResponse.json(
-          { error: 'duplicate_product' },
+          { error: 'duplicate_product', existingId: existingQuery.docs[0].id },
           { status: 409 }
         );
       }
     }
 
-    // Create product document
+    // Resolve tracking link if needed
+    let trackingUrl = product.affiliateUrl || product.url || product.direct_link || '';
+    if (!trackingUrl && product.uuid) {
+      try {
+        const client = getConvertiserClient();
+        const trackingRes = await client.generateProductTrackingLink(product.uuid);
+        if (trackingRes?.tracking_link || trackingRes?.url) {
+          trackingUrl = trackingRes.tracking_link || trackingRes.url;
+        }
+      } catch {
+        // fallback
+      }
+    }
+    if (!trackingUrl && product.offerUuid) {
+      try {
+        const client = getConvertiserClient();
+        const offerDetail = await client.getOfferDetail(product.offerUuid);
+        if (offerDetail?.tracking_link) {
+          trackingUrl = offerDetail.tracking_link;
+        }
+      } catch {
+        // fallback
+      }
+    }
+    if (!trackingUrl) {
+      trackingUrl = product.url || `https://convertiser.com/products/${externalId || 'manual'}/`;
+    }
+
+    const merchantName = product.advertiser || product.merchant || 'Partner Convertiser';
+    const priceNum = parseFloat(product.price) || 0;
+    const origPriceNum = parseFloat(product.originalPrice) || 0;
+    const discountPercent = origPriceNum > priceNum ? Math.round(((origPriceNum - priceNum) / origPriceNum) * 100) : 0;
+
+    // 1. Create Product Document
     const productDoc = {
       name: product.name,
-      description: product.description || '',
-      longDescription: product.description || '',
-      price: parseFloat(product.price) || 0,
-      originalPrice: undefined,
-      discountPercent: 0,
+      description: product.description || product.name,
+      longDescription: product.description || product.name,
+      price: priceNum,
+      originalPrice: origPriceNum > priceNum ? origPriceNum : undefined,
+      discountPercent,
       image: product.image || '',
       imageHint: product.name,
-      affiliateUrl: product.offerUuid ? `https://convertiser.com/offers/${product.offerUuid}/` : '',
+      affiliateUrl: trackingUrl,
       mainCategorySlug: mainCategory,
       subCategorySlug: subCategory,
       subSubCategorySlug: subSubCategory || undefined,
-      status: 'draft',
+      status: 'approved',
       rating: 0,
       soldCount: 0,
       merchantRating: 0,
-      merchant: product.advertiser || 'Convertiser',
+      merchant: merchantName,
       gallery: product.image ? [
         {
-          id: `convertiser_${product.uuid}_0`,
+          id: `convertiser_${externalId || 'img'}_0`,
           src: product.image,
           alt: product.name,
           isPrimary: true,
@@ -125,23 +125,76 @@ export async function POST(request: NextRequest) {
         versatility: 0,
       },
       metadata: {
-        source: 'manual',
+        source: 'convertiser',
         originalId: externalId,
         importedAt: new Date().toISOString(),
         importedBy: decoded?.uid || 'system',
-        rawDataStored: false,
         convertiserCommission: product.commission,
-        convertiserAdvertiser: product.advertiser,
+        convertiserAdvertiser: merchantName,
       },
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     };
 
-    const docRef = await db.collection('products').add(productDoc);
+    const docRef = await adminDb.collection('products').add(productDoc);
+
+    // 2. Create Deal Document (Matching AliExpress dual collection pattern)
+    const dealDoc = {
+      productId: docRef.id,
+      mainCategorySlug: mainCategory,
+      subCategorySlug: subCategory,
+      subSubCategorySlug: subSubCategory || undefined,
+      price: {
+        amount: priceNum,
+        currency: 'PLN',
+      },
+      originalPrice: origPriceNum > priceNum ? origPriceNum : undefined,
+      shipping: {
+        cost: 0,
+        fromCountry: 'PL',
+      },
+      source: 'convertiser' as const,
+      affiliateLink: trackingUrl,
+      link: trackingUrl,
+      affiliateUrl: trackingUrl,
+      dealUrl: trackingUrl,
+      merchantName,
+      title: { pl: product.name },
+      dealType: 'deal' as const,
+      freeShipping: false,
+      stockStatus: 'in_stock' as const,
+      isActive: true,
+      priceHistory: [
+        {
+          date: new Date().toISOString().split('T')[0],
+          price: priceNum,
+          currency: 'PLN',
+        },
+      ],
+      voteCount: 0,
+      temperature: 0,
+      commentsCount: 0,
+      status: 'approved',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: decoded?.uid || 'system',
+      sourceProductId: externalId || '',
+      sourceUrl: trackingUrl,
+      metadata: {
+        source: 'convertiser',
+        originalId: externalId,
+        importedAt: new Date().toISOString(),
+        importedBy: decoded?.uid || 'system',
+        merchant: merchantName,
+      },
+    };
+
+    const dealRef = await adminDb.collection('deals').add(dealDoc);
 
     return NextResponse.json({
       success: true,
       productId: docRef.id,
+      dealId: dealRef.id,
     });
   } catch (error: any) {
     console.error('Convertiser import error:', error);
