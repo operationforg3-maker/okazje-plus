@@ -905,7 +905,28 @@ export async function searchProductsForLinking(searchText: string): Promise<Prod
     return querySnapshot.docs.map(docToProduct);
 }
 
+let clientCategoriesCache: Category[] | null = null;
+
 export async function getCategories(): Promise<Category[]> {
+  // Client-side fast path: read from in-memory cache or fast API endpoint
+  if (typeof window !== 'undefined') {
+    if (clientCategoriesCache && clientCategoriesCache.length > 0) {
+      return clientCategoriesCache;
+    }
+    try {
+      const res = await fetch('/api/categories/index');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ok && Array.isArray(data.categories) && data.categories.length > 0) {
+          clientCategoriesCache = data.categories as Category[];
+          return clientCategoriesCache;
+        }
+      }
+    } catch (e) {
+      // Fallback to client SDK if API fetch fails
+    }
+  }
+
   // Check cache first - categories rarely change, so cache for 1 hour
   const cacheKey = 'categories:all:v2';
   const cached = await cacheGet(cacheKey);
