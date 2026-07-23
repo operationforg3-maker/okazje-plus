@@ -785,7 +785,7 @@ export class SmartHarvester {
           ''
         ),
         sourceUrl: previewUrl,
-        merchantName: offer.title || offer.advertiser_name || 'Convertiser',
+        merchantName: offer.advertiser_name || offer.merchant || offer.store_name || offer.advertiser || offer.brand || 'Partner Convertiser',
         merchantRating: 0,
         specs: mergedSpecs,
         discountPercent: typeof discountPercent === 'number' && discountPercent > 0 ? discountPercent : undefined,
@@ -829,7 +829,7 @@ export class SmartHarvester {
             title: '',
             sourceProductId: String(product.id || product.uuid || product.product_id || product.offer_id || product.sku || ''),
             sourceUrl: product.direct_link || product.link || product.url || '',
-            merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
+            merchantName: product.advertiser_name || product.merchant || product.store_name || product.advertiser || product.brand || 'Partner Convertiser',
           },
           query: searchQuery,
         });
@@ -847,7 +847,7 @@ export class SmartHarvester {
             title,
             sourceProductId: String(product.id || product.sku || ''),
             sourceUrl: product.direct_link || product.link || product.url || '',
-            merchantName: product.offer || product.merchant || product.store_name || 'Convertiser',
+            merchantName: product.advertiser_name || product.merchant || product.store_name || product.advertiser || product.brand || 'Partner Convertiser',
           },
           query: searchQuery,
         });
@@ -932,7 +932,7 @@ export class SmartHarvester {
           ''
         ),
         sourceUrl: product.direct_link || product.link || product.url || '',
-        merchantName: product.offer || product.merchant || product.store_name || product.brand || 'Convertiser',
+        merchantName: product.advertiser_name || product.merchant || product.store_name || product.advertiser || product.brand || 'Partner Convertiser',
         merchantRating: Number(product.merchant_rating || 0),
         specs,
         rating: Number(ratingRaw) || 0,

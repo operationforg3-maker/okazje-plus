@@ -564,12 +564,23 @@ export const sanitizeDealPayload = (raw: Partial<Deal>): Omit<Deal, 'id'> => {
     ? (sourceValue as NonNullable<Deal['source']>)
     : undefined;
 
+  const resolvedMerchant = ensureOptionalString((raw as any).merchantName) || ensureOptionalString(raw.merchant) || ensureOptionalString(raw.metadata?.merchant);
+  const rawLinkCandidate = ensureOptionalString(raw.link);
+  const validRawLink = rawLinkCandidate && rawLinkCandidate !== '#' ? rawLinkCandidate : undefined;
+  const resolvedLink = validRawLink ||
+    ensureOptionalString((raw as any).affiliateLink) ||
+    ensureOptionalString((raw as any).affiliateUrl) ||
+    ensureOptionalString((raw as any).dealUrl) ||
+    ensureOptionalString((raw as any).sourceUrl) ||
+    ensureOptionalString((raw as any).url) ||
+    FALLBACK_URL;
+
   return {
     title: sanitizeLocalizedText(raw.title, { pl: '', en: '', de: '' }),
     description: sanitizeLocalizedText(raw.description, { pl: '', en: '', de: '' }),
     price: ensurePrice(raw.price),
     originalPrice: ensureOptionalNumber(raw.originalPrice),
-    link: ensureString(raw.link, FALLBACK_URL) || FALLBACK_URL,
+    link: resolvedLink,
     image: resolveDealImageFallback(raw),
     imageHint: ensureString(raw.imageHint || (typeof raw.title === 'string' ? raw.title : (raw.title as any)?.pl) || 'okazja', 'okazja'),
     postedBy: ensureString(raw.postedBy, 'system'),
@@ -582,7 +593,8 @@ export const sanitizeDealPayload = (raw: Partial<Deal>): Omit<Deal, 'id'> => {
     mainCategorySlug: ensureString(raw.mainCategorySlug, FALLBACK_CATEGORY),
     subCategorySlug: ensureString(raw.subCategorySlug, FALLBACK_CATEGORY),
     subSubCategorySlug: ensureOptionalString(raw.subSubCategorySlug),
-    merchant: ensureOptionalString(raw.merchant),
+    merchant: resolvedMerchant,
+    merchantName: resolvedMerchant,
     shippingCost: ensureOptionalNumber(raw.shippingCost),
     status: normalizedStatus,
     createdBy: ensureOptionalString(raw.createdBy),
@@ -597,12 +609,12 @@ export const sanitizeDealPayload = (raw: Partial<Deal>): Omit<Deal, 'id'> => {
     stockAlert: raw.stockAlert,
     expiryDate: ensureOptionalString(raw.expiryDate),
     // Preserve external link variants used by UI and notifications.
-    affiliateLink: ensureOptionalString((raw as any).affiliateLink),
-    affiliateUrl: ensureString((raw as any).affiliateUrl, FALLBACK_URL) || FALLBACK_URL,
-    dealUrl: ensureOptionalString((raw as any).dealUrl),
-    sourceUrl: ensureOptionalString((raw as any).sourceUrl),
+    affiliateLink: ensureOptionalString((raw as any).affiliateLink) || resolvedLink,
+    affiliateUrl: ensureString((raw as any).affiliateUrl, resolvedLink) || resolvedLink,
+    dealUrl: ensureOptionalString((raw as any).dealUrl) || resolvedLink,
+    sourceUrl: ensureOptionalString((raw as any).sourceUrl) || resolvedLink,
     externalUrl: ensureOptionalString((raw as any).externalUrl),
-    url: ensureOptionalString((raw as any).url),
+    url: ensureOptionalString((raw as any).url) || resolvedLink,
     availableQuantity: ensureOptionalNumber(raw.availableQuantity),
     limitPerUser: ensureOptionalNumber(raw.limitPerUser),
     requiresMembership: ensureOptionalString(raw.requiresMembership),
