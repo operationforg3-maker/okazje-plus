@@ -19,6 +19,45 @@ import { logger } from './logger';
 import { convertPrice } from './fx';
 import { validateMerchantListingInput } from './merchant-center-validator';
 
+export function extractMerchantNameFromUrl(url?: string, fallbackMerchant?: string): string {
+  if (!url || url === '#' || !url.startsWith('http')) return fallbackMerchant || 'Partner Convertiser';
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+
+    const domainMap: Record<string, string> = {
+      'superwnetrze.pl': 'SuperWnętrze',
+      'fabrykaform.pl': 'FabrykaForm.pl',
+      'douglas.pl': 'Douglas.pl',
+      'nikiniki.pl': 'Nikiniki.pl',
+      'youneedit.pl': 'Youneedit.pl',
+      'modasizeplus.pl': 'Moda Size Plus',
+      'komputronik.pl': 'Komputronik',
+      'selsey.pl': 'Selsey.pl',
+      'armodo.pl': 'Armodo.pl',
+      'molly.pl': 'Molly.pl',
+      'rylko.com': 'Ryłko',
+      'velpa.pl': 'Velpa.pl',
+      'bigstar.pl': 'Big Star',
+      'aliexpress.com': 'AliExpress',
+      'allegro.pl': 'Allegro',
+      'amazon.pl': 'Amazon.pl',
+    };
+
+    if (domainMap[host]) return domainMap[host];
+
+    const parts = host.split('.');
+    if (parts.length >= 2) {
+      const name = parts[0];
+      return name.charAt(0).toUpperCase() + name.slice(1) + '.' + parts[1];
+    }
+
+    return host;
+  } catch {
+    return fallbackMerchant || 'Partner Convertiser';
+  }
+}
+
 export interface ConvertiserImportConfig {
   profileId?: string;
   searchQuery?: string;
@@ -403,7 +442,7 @@ export async function importFromConvertiser(
           trackingUrl = rawItem.direct_link || rawItem.link || rawItem.url || `https://convertiser.com/products/${originalId}/`;
         }
 
-        const merchantName = String(
+        const rawMerchantName = String(
           rawItem.advertiser_name ||
           rawItem.merchant ||
           rawItem.store_name ||
@@ -411,6 +450,7 @@ export async function importFromConvertiser(
           rawItem.brand ||
           'Partner Convertiser'
         );
+        const merchantName = extractMerchantNameFromUrl(trackingUrl, rawMerchantName);
 
         const description = stripHtmlTags(rawItem.description || rawItem.short_description || title);
         const existingProductId = candidate.existingProductId;
