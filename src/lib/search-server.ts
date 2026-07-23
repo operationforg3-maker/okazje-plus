@@ -403,12 +403,21 @@ async function searchProductsFirestoreFallback(
             return [...new Set([w, lower, upper, capitalized])];
           };
 
+          const stopWords = new Set(['i', 'a', 'o', 'w', 'z', 'na', 'do', 'dla', 'po', 'ze', 'za', 'lampa', 'lampy', 'produkt', 'okazja', 'meble']);
+          const sortedKeywords = [...keywords].sort((a, b) => {
+            const aStop = stopWords.has(a.toLowerCase()) ? 1 : 0;
+            const bStop = stopWords.has(b.toLowerCase()) ? 1 : 0;
+            if (aStop !== bStop) return aStop - bStop;
+            return b.length - a.length;
+          });
+          const primaryKeyword = sortedKeywords[0] || keywords[0];
+
           let snap;
           try {
             snap = await adminDb.collection('product_cores')
               .where('status', '==', targetStatus)
-              .where('searchTags', 'array-contains-any', getWordVariations(keywords[0]))
-              .limit(100)
+              .where('searchTags', 'array-contains-any', getWordVariations(primaryKeyword))
+              .limit(150)
               .get();
           } catch (queryErr) {
             console.warn('[Search Fallback] tags array-contains-any query failed. Fetching recent products...', queryErr);
@@ -590,13 +599,22 @@ async function searchDealsFirestoreFallback(
             return [...new Set([w, lower, upper, capitalized])];
           };
 
+          const stopWords = new Set(['i', 'a', 'o', 'w', 'z', 'na', 'do', 'dla', 'po', 'ze', 'za', 'lampa', 'lampy', 'produkt', 'okazja', 'meble']);
+          const sortedKeywords = [...keywords].sort((a, b) => {
+            const aStop = stopWords.has(a.toLowerCase()) ? 1 : 0;
+            const bStop = stopWords.has(b.toLowerCase()) ? 1 : 0;
+            if (aStop !== bStop) return aStop - bStop;
+            return b.length - a.length;
+          });
+          const primaryKeyword = sortedKeywords[0] || keywords[0];
+
           const targetStatus = statusFilter === 'waiting_room' ? 'pending' : 'approved';
           let prodSnap;
           try {
             prodSnap = await adminDb.collection('product_cores')
               .where('status', '==', targetStatus)
-              .where('searchTags', 'array-contains-any', getWordVariations(keywords[0]))
-              .limit(20)
+              .where('searchTags', 'array-contains-any', getWordVariations(primaryKeyword))
+              .limit(50)
               .get();
           } catch {
             prodSnap = { docs: [] };
