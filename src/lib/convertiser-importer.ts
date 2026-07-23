@@ -362,8 +362,8 @@ export async function importFromConvertiser(
           continue;
         }
 
-        // Build tracking URL
-        let trackingUrl = rawItem.url || rawItem.direct_link || rawItem.link || rawItem.tracking_link || rawItem.tracking_url || rawItem.affiliate_url || '';
+        // Build tracking URL - prioritize Convertiser tracking domains & API generator
+        let trackingUrl = rawItem.tracking_link || rawItem.tracking_url || rawItem.affiliate_url || rawItem.click_url || '';
 
         if (!trackingUrl && rawItem.id) {
           try {
@@ -376,9 +376,10 @@ export async function importFromConvertiser(
           }
         }
 
-        if (!trackingUrl && rawItem.uuid) {
+        if (!trackingUrl && (rawItem.uuid || rawItem.offer_uuid)) {
           try {
-            const trackingRes = await client.generateOfferTrackingLink(String(rawItem.uuid));
+            const offerUuid = String(rawItem.uuid || rawItem.offer_uuid);
+            const trackingRes = await client.generateOfferTrackingLink(offerUuid);
             if (trackingRes?.tracking_link || trackingRes?.url) {
               trackingUrl = trackingRes.tracking_link || trackingRes.url;
             }
@@ -399,7 +400,7 @@ export async function importFromConvertiser(
         }
 
         if (!trackingUrl) {
-          trackingUrl = rawItem.url || `https://convertiser.com/products/${originalId}/`;
+          trackingUrl = rawItem.direct_link || rawItem.link || rawItem.url || `https://convertiser.com/products/${originalId}/`;
         }
 
         const merchantName = String(
