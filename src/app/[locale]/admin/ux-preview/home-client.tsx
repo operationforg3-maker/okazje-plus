@@ -6,8 +6,8 @@ import dynamic from 'next/dynamic';
 import { useLocale, useTranslations } from 'next-intl';
 import { Deal, Product, Category, Subcategory, SubSubcategory } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { UXRedesignDealCard } from '@/components/ux-redesign/deal-card';
-import { UXRedesignProductCard } from '@/components/ux-redesign/product-card';
+import { DealCard as UXRedesignDealCard } from '@/components/ux-redesign/deal-card';
+import UXRedesignProductCard from '@/components/ux-redesign/product-card';
 import { Flame, ShoppingBag, Sparkles, ArrowRight, TrendingUp, Users, Percent, ChevronDown, ChevronRight, X, Grid3X3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

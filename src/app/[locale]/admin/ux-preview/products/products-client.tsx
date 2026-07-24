@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Product } from '@/lib/types';
-import { UXRedesignProductCard } from '@/components/ux-redesign/product-card';
+import UXRedesignProductCard from '@/components/ux-redesign/product-card';
 import { searchProducts } from '@/lib/search';
 import { ShoppingBag, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';

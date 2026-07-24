@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { buildCategoryPath, getCategoryDisplayName, buildCategoryPathNewUx } from '@/lib/category-routes';
 import { getResolvedProductCategoryRoute } from '@/lib/category-page-data';
-import { ProductsPageContent } from '../../../products/page';
+import { ProductsPageContent } from '@/app/[locale]/products/page';
 import { generateCategoryBreadcrumbJsonLd } from '@/lib/json-ld-generators';
 
 interface CategoryPageProps {

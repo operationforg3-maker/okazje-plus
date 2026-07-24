@@ -12,7 +12,7 @@ import {
   Package, Truck, Users, MessageSquare, ThumbsUp, ThumbsDown, Star,
   ShieldCheck, Zap, ArrowUpRight, TrendingUp, ChevronDown
 } from 'lucide-react';
-import { UXRedesignDealCard } from '@/components/ux-redesign/deal-card';
+import { DealCard as UXRedesignDealCard } from '@/components/ux-redesign/deal-card';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

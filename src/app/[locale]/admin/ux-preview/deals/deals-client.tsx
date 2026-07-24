@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Deal } from '@/lib/types';
-import { UXRedesignDealCard } from '@/components/ux-redesign/deal-card';
+import { DealCard as UXRedesignDealCard } from '@/components/ux-redesign/deal-card';
 import { searchDeals } from '@/lib/search';
 import { Flame, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
