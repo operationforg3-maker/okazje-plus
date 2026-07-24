@@ -43,6 +43,8 @@ function isValidAffiliateUrl(url: string): boolean {
   }
 }
 
+import { buildConvertiserTrackingLink } from '@/lib/integrations/convertiser-affiliate-link';
+
 export async function POST(request: NextRequest) {
   try {
     const body: AffiliateRedirectRequest = await request.json();
@@ -72,13 +74,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Add our affiliate ID to the URL (server-side, hidden from extensions)
-    const affiliateId = process.env.ALIEXPRESS_AFFILIATE_ID || '';
+    // Add Convertiser tracking or AliExpress tracking parameters
+    let finalUrl = buildConvertiserTrackingLink(affiliateUrl);
+    if (finalUrl === affiliateUrl && affiliateUrl.includes('aliexpress.com')) {
+      const trackingToken = generateTrackingToken();
+      const separator = affiliateUrl.includes('?') ? '&' : '?';
+      finalUrl = `${affiliateUrl}${separator}aff_platform=okazjeplus&aff_token=${trackingToken}`;
+    }
+
     const trackingToken = generateTrackingToken();
-    
-    // Append affiliate parameters
-    const separator = affiliateUrl.includes('?') ? '&' : '?';
-    const finalUrl = `${affiliateUrl}${separator}aff_platform=okazjeplus&aff_token=${trackingToken}`;
+    const affiliateId = process.env.ALIEXPRESS_AFFILIATE_ID || '';
 
     // Log the click for conversion tracking
     try {
@@ -95,7 +100,6 @@ export async function POST(request: NextRequest) {
       });
     } catch (error) {
       console.error('Error logging affiliate click:', error);
-      // Don't fail the request if logging fails
     }
 
     // Return redirect response
@@ -158,9 +162,11 @@ export async function GET(request: NextRequest) {
       console.error('Error logging affiliate click:', error);
     }
 
-    // Redirect directly
-    const separator = affiliateUrl.includes('?') ? '&' : '?';
-    const finalUrl = `${affiliateUrl}${separator}aff_platform=okazjeplus&aff_token=${trackingToken}`;
+    let finalUrl = buildConvertiserTrackingLink(affiliateUrl);
+    if (finalUrl === affiliateUrl && affiliateUrl.includes('aliexpress.com')) {
+      const separator = affiliateUrl.includes('?') ? '&' : '?';
+      finalUrl = `${affiliateUrl}${separator}aff_platform=okazjeplus&aff_token=${trackingToken}`;
+    }
 
     return NextResponse.redirect(finalUrl, { status: 301 });
   } catch (error) {

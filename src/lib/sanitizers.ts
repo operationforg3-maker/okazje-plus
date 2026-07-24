@@ -1,6 +1,7 @@
 // @ts-nocheck
 import type { Deal, Product, ProductImageEntry, ProductRatingCard, ProductRatingSources, LocalizedText } from '@/lib/types';
 import { sanitizeTextForGoogleAttribute, sanitizeTextForGoogleTitle } from '@/lib/google-product-text';
+import { buildConvertiserTrackingLink } from './integrations/convertiser-affiliate-link';
 
 type ProductMetadata = NonNullable<Product['metadata']>;
 type DealMetadata = NonNullable<Deal['metadata']>;
@@ -567,13 +568,15 @@ export const sanitizeDealPayload = (raw: Partial<Deal>): Omit<Deal, 'id'> => {
   const resolvedMerchant = ensureOptionalString((raw as any).merchantName) || ensureOptionalString(raw.merchant) || ensureOptionalString(raw.metadata?.merchant);
   const rawLinkCandidate = ensureOptionalString(raw.link);
   const validRawLink = rawLinkCandidate && rawLinkCandidate !== '#' ? rawLinkCandidate : undefined;
-  const resolvedLink = validRawLink ||
+  const rawResolvedLink = validRawLink ||
     ensureOptionalString((raw as any).affiliateLink) ||
     ensureOptionalString((raw as any).affiliateUrl) ||
     ensureOptionalString((raw as any).dealUrl) ||
     ensureOptionalString((raw as any).sourceUrl) ||
     ensureOptionalString((raw as any).url) ||
     FALLBACK_URL;
+
+  const resolvedLink = buildConvertiserTrackingLink(rawResolvedLink, resolvedMerchant);
 
   return {
     title: sanitizeLocalizedText(raw.title, { pl: '', en: '', de: '' }),
@@ -609,10 +612,10 @@ export const sanitizeDealPayload = (raw: Partial<Deal>): Omit<Deal, 'id'> => {
     stockAlert: raw.stockAlert,
     expiryDate: ensureOptionalString(raw.expiryDate),
     // Preserve external link variants used by UI and notifications.
-    affiliateLink: ensureOptionalString((raw as any).affiliateLink) || resolvedLink,
-    affiliateUrl: ensureString((raw as any).affiliateUrl, resolvedLink) || resolvedLink,
-    dealUrl: ensureOptionalString((raw as any).dealUrl) || resolvedLink,
-    sourceUrl: ensureOptionalString((raw as any).sourceUrl) || resolvedLink,
+    affiliateLink: buildConvertiserTrackingLink(ensureOptionalString((raw as any).affiliateLink) || resolvedLink, resolvedMerchant),
+    affiliateUrl: buildConvertiserTrackingLink(ensureString((raw as any).affiliateUrl, resolvedLink) || resolvedLink, resolvedMerchant),
+    dealUrl: buildConvertiserTrackingLink(ensureOptionalString((raw as any).dealUrl) || resolvedLink, resolvedMerchant),
+    sourceUrl: buildConvertiserTrackingLink(ensureOptionalString((raw as any).sourceUrl) || resolvedLink, resolvedMerchant),
     externalUrl: ensureOptionalString((raw as any).externalUrl),
     url: ensureOptionalString((raw as any).url) || resolvedLink,
     availableQuantity: ensureOptionalNumber(raw.availableQuantity),
