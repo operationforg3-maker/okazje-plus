@@ -419,15 +419,8 @@ async function searchProductsFirestoreFallback(
             .limit(150)
             .get();
         } catch (queryErr) {
-          console.warn('[Search Fallback] tags array-contains-any query failed. Fetching recent products...', queryErr);
-        }
-
-        if (!snap || snap.empty) {
-          snap = await adminDb.collection('product_cores')
-            .where('status', '==', targetStatus)
-            .orderBy('createdAt', 'desc')
-            .limit(300)
-            .get();
+          console.warn('[Search Fallback] tags array-contains-any query failed:', queryErr);
+          snap = { docs: [] } as any;
         }
 
         let kwDocs = snap.docs.map((docSnap: any) => {
@@ -567,32 +560,6 @@ async function searchDealsFirestoreFallback(
       if (!vectorSearchSuccess || docs.length === 0) {
         const keywords = query.toLowerCase().split(/\s+/).filter(w => w.trim().length > 1);
         if (keywords.length > 0) {
-          // 1. Direct title/desc match on recent 300 deals
-          const resultsArray = await Promise.all(
-            statuses.map(async (status) => {
-              const snap = await adminDb.collection('deals')
-                .where('status', '==', status)
-                .orderBy('createdAt', 'desc')
-                .limit(300)
-                .get();
-              return snap.docs.map((docSnap: any) => {
-                const data = docSnap.data();
-                delete data.embedding;
-                return { id: docSnap.id, ...data };
-              });
-            })
-          );
-          let recentDeals = resultsArray.flat();
-          
-          // Filter direct matches
-          let directMatchDeals = recentDeals.filter((d: any) => {
-            const titleStr = typeof d.title === 'object' ? String(d.title?.pl || d.title?.en || '').toLowerCase() : String(d.title || '').toLowerCase();
-            const descStr = typeof d.description === 'object' ? String(d.description?.pl || d.description?.en || '').toLowerCase() : String(d.description || '').toLowerCase();
-            return keywords.every(kw => titleStr.includes(kw) || descStr.includes(kw));
-          });
-
-          // 2. Relational match via product search
-          let productMatchDeals: any[] = [];
           const getWordVariations = (word: string) => {
             const w = word.trim();
             if (!w) return [];
@@ -610,6 +577,31 @@ async function searchDealsFirestoreFallback(
             return b.length - a.length;
           });
           const primaryKeyword = sortedKeywords[0] || keywords[0];
+
+          // 1. Direct tag & title match across ENTIRE deals collection in Firestore
+          const resultsArray = await Promise.all(
+            statuses.map(async (status) => {
+              let snap;
+              try {
+                snap = await adminDb.collection('deals')
+                  .where('status', '==', status)
+                  .where('searchTags', 'array-contains-any', getWordVariations(primaryKeyword))
+                  .limit(150)
+                  .get();
+              } catch {
+                snap = { docs: [] };
+              }
+              return snap.docs.map((docSnap: any) => {
+                const data = docSnap.data();
+                delete data.embedding;
+                return { id: docSnap.id, ...data };
+              });
+            })
+          );
+          let directMatchDeals = resultsArray.flat();
+
+          // 2. Relational match via product search
+          let productMatchDeals: any[] = [];
 
           const targetStatus = statusFilter === 'waiting_room' ? 'pending' : 'approved';
           let prodSnap;
