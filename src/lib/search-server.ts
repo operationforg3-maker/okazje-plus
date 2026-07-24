@@ -185,23 +185,28 @@ function normalizeSuggestion(document: any, type: 'product' | 'deal'): Suggestio
   const rawLabel = type === 'deal'
     ? document?.title ?? document?.name ?? document?.description
     : document?.name ?? document?.title ?? document?.description;
-  const rawSubLabel = type === 'deal'
-    ? document?.description ?? document?.title
-    : document?.description ?? document?.name;
 
   const resolvedLabel = resolveLocalizedString(rawLabel);
-  const resolvedSubLabel = resolveLocalizedString(rawSubLabel);
-
   const label = stripHtmlTags(resolvedLabel);
-  const subLabel = stripHtmlTags(resolvedSubLabel);
-
   if (!label) return null;
+
+  const merchant = document?.merchantName || document?.merchant || document?.seller?.name || '';
+  const priceAmount = document?.price?.amount ?? (typeof document?.price === 'number' ? document.price : null) ?? document?.bestPrice?.amount;
+  const currency = document?.price?.currency || 'PLN';
+  const category = document?.mainCategorySlug || document?.category || '';
+
+  const subLabelParts: string[] = [];
+  if (merchant) subLabelParts.push(merchant);
+  if (priceAmount !== null && priceAmount !== undefined) subLabelParts.push(`${priceAmount} ${currency}`);
+  if (!merchant && category) subLabelParts.push(category);
+
+  const subLabel = subLabelParts.join(' • ');
 
   return {
     type,
     id,
     label,
-    subLabel: subLabel && subLabel !== label ? subLabel : undefined,
+    subLabel: subLabel || undefined,
   };
 }
 
@@ -214,91 +219,100 @@ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<
     const qLower = q.toLowerCase().trim();
     if (!qLower) return [];
 
+    const keywords = qLower.split(/\s+/).filter(w => w.length > 0);
+    const stopWords = new Set(['i', 'a', 'o', 'w', 'z', 'na', 'do', 'dla', 'po', 'ze', 'za', 'lampa', 'lampy', 'produkt', 'okazja', 'meble']);
+    const sortedKeywords = [...keywords].sort((a, b) => {
+      const aStop = stopWords.has(a) ? 1 : 0;
+      const bStop = stopWords.has(b) ? 1 : 0;
+      if (aStop !== bStop) return aStop - bStop;
+      return b.length - a.length;
+    });
+    const primaryKeyword = sortedKeywords[0] || keywords[0];
+
+    const getWordVariations = (word: string) => {
+      const w = word.trim();
+      if (!w) return [];
+      const lower = w.toLowerCase();
+      const upper = w.toUpperCase();
+      const capitalized = w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+      return [...new Set([w, lower, upper, capitalized])];
+    };
+
     let queryVector: number[] | null = null;
     try {
       const { generateEmbeddings } = await import('@/ai/embeddings');
       queryVector = await generateEmbeddings(qLower);
     } catch (err) {
-      console.warn('Vector embedding failed for autocomplete:', err);
+      // ignore
     }
 
-    const queries = [];
+    const kwProductQuery = adminDb.collection('product_cores')
+      .where('status', '==', 'approved')
+      .where('searchTags', 'array-contains-any', getWordVariations(primaryKeyword))
+      .limit(30)
+      .get()
+      .catch(() => ({ docs: [] }));
 
-    if (queryVector) {
-      // 1. Vector Search
-      queries.push(
-        adminDb.collection('product_cores')
-          .where('status', '==', 'approved')
-          .findNearest({
-            vectorField: 'embedding',
-            queryVector: FieldValue.vector(queryVector),
-            distanceMeasure: 'COSINE',
-            limit: 20,
-          }).get().catch((err: any) => {
-            console.warn('Vector search failed for product_cores in autocomplete:', err);
-            return { docs: [] };
-          })
-      );
-      queries.push(
-        adminDb.collection('deals')
-          .where('status', '==', 'approved')
-          .findNearest({
-            vectorField: 'embedding',
-            queryVector: FieldValue.vector(queryVector),
-            distanceMeasure: 'COSINE',
-            limit: 20,
-          }).get().catch((err: any) => {
-            console.warn('Vector search failed for deals in autocomplete:', err);
-            return { docs: [] };
-          })
-      );
-    } else {
-      // Fallback: If embedding fails, get most recent items
-      queries.push(
-        adminDb.collection('product_cores')
-          .where('status', '==', 'approved')
-          .orderBy('createdAt', 'desc')
-          .limit(40).get().catch(() => ({ docs: [] }))
-      );
-      queries.push(
-        adminDb.collection('deals')
-          .where('status', '==', 'approved')
-          .orderBy('createdAt', 'desc')
-          .limit(40).get().catch(() => ({ docs: [] }))
-      );
-    }
+    const kwDealQuery = adminDb.collection('deals')
+      .where('status', '==', 'approved')
+      .where('searchTags', 'array-contains-any', getWordVariations(primaryKeyword))
+      .limit(30)
+      .get()
+      .catch(() => ({ docs: [] }));
 
-    const results = await Promise.all(queries);
+    const vectorProdQuery = queryVector ? adminDb.collection('product_cores')
+      .where('status', '==', 'approved')
+      .findNearest({
+        vectorField: 'embedding',
+        queryVector: FieldValue.vector(queryVector),
+        distanceMeasure: 'COSINE',
+        limit: 20,
+      }).get().catch(() => ({ docs: [] })) : Promise.resolve({ docs: [] });
+
+    const vectorDealQuery = queryVector ? adminDb.collection('deals')
+      .where('status', '==', 'approved')
+      .findNearest({
+        vectorField: 'embedding',
+        queryVector: FieldValue.vector(queryVector),
+        distanceMeasure: 'COSINE',
+        limit: 20,
+      }).get().catch(() => ({ docs: [] })) : Promise.resolve({ docs: [] });
+
+    const [kwProds, kwDeals, vecProds, vecDeals] = await Promise.all([
+      kwProductQuery, kwDealQuery, vectorProdQuery, vectorDealQuery
+    ]);
 
     const outMap = new Map<string, Suggestion>();
 
-    const processDocs = (docs: any[], type: 'product' | 'deal', exactMatchFilter: boolean) => {
+    const matchesKeywords = (doc: any) => {
+      const titleStr = typeof doc.title === 'object' ? String(doc.title?.pl || doc.title?.en || '').toLowerCase() : String(doc.title || doc.name || '').toLowerCase();
+      const descStr = typeof doc.description === 'object' ? String(doc.description?.pl || doc.description?.en || '').toLowerCase() : String(doc.description || '').toLowerCase();
+      const tags = Array.isArray(doc.searchTags) ? doc.searchTags.map((t: string) => String(t).toLowerCase()) : [];
+
+      return keywords.every(kw => 
+        titleStr.includes(kw) || descStr.includes(kw) || tags.some(t => t.includes(kw))
+      );
+    };
+
+    const processDocs = (docs: any[], type: 'product' | 'deal', strictCheck: boolean) => {
       docs.forEach((docSnap: any) => {
         const doc = docSnap.data();
-        let shouldInclude = true;
-
-        // If we are doing fallback, we filter locally. If vector, we don't strictly require string match, 
-        // but we might want to prioritize things that actually match the prefix if they exist, or just trust the vector.
-        // For autocomplete, vector might return random similar things. Let's trust the vector.
-        if (exactMatchFilter) {
-           const titleStr = typeof doc.title === 'object' ? String(doc.title?.pl || doc.title?.en || '') : String(doc.title || '');
-           if (!titleStr.toLowerCase().includes(qLower)) {
-             shouldInclude = false;
-           }
+        if (strictCheck && !matchesKeywords(doc)) {
+          return;
         }
 
-        if (shouldInclude) {
-          const suggestion = normalizeSuggestion({ id: docSnap.id, ...doc }, type);
-          if (suggestion && !outMap.has(suggestion.id)) {
-            outMap.set(suggestion.id, suggestion);
-          }
+        const suggestion = normalizeSuggestion({ id: docSnap.id, ...doc }, type);
+        if (suggestion && !outMap.has(suggestion.id)) {
+          outMap.set(suggestion.id, suggestion);
         }
       });
     };
 
-    // Results from vector search or fallback
-    processDocs(results[0].docs, 'product', !queryVector);
-    processDocs(results[1].docs, 'deal', !queryVector);
+    // Prioritize exact keyword matches first, then valid vector matches
+    processDocs(kwProds.docs || [], 'product', true);
+    processDocs(kwDeals.docs || [], 'deal', true);
+    processDocs(vecProds.docs || [], 'product', true);
+    processDocs(vecDeals.docs || [], 'deal', true);
 
     return Array.from(outMap.values()).slice(0, safeLimit);
   } catch (err) {

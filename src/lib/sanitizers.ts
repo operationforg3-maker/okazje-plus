@@ -705,9 +705,11 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
 
   const sanitizeSearchTags = (raw: any): string[] => {
     if (!Array.isArray(raw)) return [];
-    return raw
-      .map(tag => sanitizeTextForGoogleAttribute(ensureString(tag, '')))
-      .filter(Boolean);
+    return Array.from(new Set(
+      raw
+        .map(tag => ensureString(tag, '').toLowerCase().replace(/^[^\w\u00C0-\u024F]+|[^\w\u00C0-\u024F]+$/g, '').trim())
+        .filter(tag => tag.length > 0)
+    ));
   };
 
   const sanitizeLocalizedStringArrays = (value: any): { [locale: string]: string[] } | undefined => {
