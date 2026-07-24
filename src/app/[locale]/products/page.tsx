@@ -387,20 +387,8 @@ export function ProductsPageContent({
 
   // cardDensity persisted via UXContext
 
-  // Filtruj produkty na podstawie wyszukiwania (szukaj w title/shortDescription)
-  const filteredProducts = useMemo(() => {
-    if (!searchTerm) return products;
-    const needle = searchTerm.toLowerCase();
-    return products.filter((product) => {
-      const title = typeof product.title === 'object'
-        ? (product.title.pl || product.title.en || product.title.de || '').toLowerCase()
-        : (product.title || '').toString().toLowerCase();
-      const desc = typeof product.shortDescription === 'object'
-        ? (product.shortDescription.pl || product.shortDescription.en || product.shortDescription.de || '').toLowerCase()
-        : (product.shortDescription || '').toString().toLowerCase();
-      return title.includes(needle) || desc.includes(needle);
-    });
-  }, [products, searchTerm]);
+  // Products are already fetched via server search when searchTerm is provided
+  const filteredProducts = products;
 
   // Helper function to extract price from ProductCore
   const getProductPrice = (product: ProductCore): number => {

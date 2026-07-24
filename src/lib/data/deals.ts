@@ -217,6 +217,20 @@ export async function getDealsByFiltersData(
   limitCount: number = 50
 ): Promise<Deal[]> {
   try {
+    if (filters.searchTerm && filters.searchTerm.trim().length > 0) {
+      const { searchDeals } = await import('@/lib/search-server');
+      return searchDeals(filters.searchTerm.trim(), {
+        mainCategorySlug: filters.categoryId,
+        subCategorySlug: filters.subCategorySlug,
+        subSubCategorySlug: filters.subSubCategorySlug,
+        minPrice: filters.priceRange?.min,
+        maxPrice: filters.priceRange?.max,
+        limit: limitCount,
+        sortBy: sortBy as any,
+        statusFilter: filters.statusFilter,
+      });
+    }
+
     const statuses = filters.statusFilter === 'waiting_room'
       ? ['pending', 'poczekalnia', 'pending_approval', 'approval']
       : ['approved'];

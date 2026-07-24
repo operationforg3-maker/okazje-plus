@@ -121,6 +121,21 @@ export async function getProductCoresByFiltersData(
   limitCount: number = 50
 ): Promise<ProductCore[]> {
   try {
+    if (filters.searchTerm && filters.searchTerm.trim().length > 0) {
+      const { searchProducts } = await import('@/lib/search-server');
+      return searchProducts(filters.searchTerm.trim(), {
+        mainCategorySlug: filters.categoryId,
+        subCategorySlug: filters.subCategorySlug,
+        subSubCategorySlug: filters.subSubCategorySlug,
+        minPrice: filters.priceRange?.min,
+        maxPrice: filters.priceRange?.max,
+        minRating: filters.minRating,
+        limit: limitCount,
+        sortBy: sortBy as any,
+        statusFilter: filters.statusFilter,
+      });
+    }
+
     const statuses = filters.statusFilter === 'waiting_room'
       ? ['pending_approval', 'approval', 'pending', 'poczekalnia']
       : ['approved'];
