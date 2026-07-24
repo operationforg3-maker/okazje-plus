@@ -390,65 +390,68 @@ async function searchProductsFirestoreFallback(
         console.warn('[Search Fallback] Vector search failed or suspended. Falling back to keyword search...', err);
       }
 
-      // Keyword search fallback
-      if (!vectorSearchSuccess || docs.length === 0) {
-        const keywords = q.toLowerCase().split(/\s+/).filter(w => w.trim().length > 1);
-        if (keywords.length > 0) {
-          const getWordVariations = (word: string) => {
-            const w = word.trim();
-            if (!w) return [];
-            const lower = w.toLowerCase();
-            const upper = w.toUpperCase();
-            const capitalized = w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-            return [...new Set([w, lower, upper, capitalized])];
-          };
+      // Always run keyword search to ensure exact text matches are included alongside vector results
+      const keywords = q.toLowerCase().split(/\s+/).filter(w => w.trim().length > 1);
+      if (keywords.length > 0) {
+        const getWordVariations = (word: string) => {
+          const w = word.trim();
+          if (!w) return [];
+          const lower = w.toLowerCase();
+          const upper = w.toUpperCase();
+          const capitalized = w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+          return [...new Set([w, lower, upper, capitalized])];
+        };
 
-          const stopWords = new Set(['i', 'a', 'o', 'w', 'z', 'na', 'do', 'dla', 'po', 'ze', 'za', 'lampa', 'lampy', 'produkt', 'okazja', 'meble']);
-          const sortedKeywords = [...keywords].sort((a, b) => {
-            const aStop = stopWords.has(a.toLowerCase()) ? 1 : 0;
-            const bStop = stopWords.has(b.toLowerCase()) ? 1 : 0;
-            if (aStop !== bStop) return aStop - bStop;
-            return b.length - a.length;
-          });
-          const primaryKeyword = sortedKeywords[0] || keywords[0];
+        const stopWords = new Set(['i', 'a', 'o', 'w', 'z', 'na', 'do', 'dla', 'po', 'ze', 'za', 'lampa', 'lampy', 'produkt', 'okazja', 'meble']);
+        const sortedKeywords = [...keywords].sort((a, b) => {
+          const aStop = stopWords.has(a.toLowerCase()) ? 1 : 0;
+          const bStop = stopWords.has(b.toLowerCase()) ? 1 : 0;
+          if (aStop !== bStop) return aStop - bStop;
+          return b.length - a.length;
+        });
+        const primaryKeyword = sortedKeywords[0] || keywords[0];
 
-          let snap;
-          try {
-            snap = await adminDb.collection('product_cores')
-              .where('status', '==', targetStatus)
-              .where('searchTags', 'array-contains-any', getWordVariations(primaryKeyword))
-              .limit(150)
-              .get();
-          } catch (queryErr) {
-            console.warn('[Search Fallback] tags array-contains-any query failed. Fetching recent products...', queryErr);
-          }
-
-          if (!snap || snap.empty) {
-            console.warn('[Search Fallback] tags array-contains-any returned 0 or failed. Fetching recent products...');
-            snap = await adminDb.collection('product_cores')
-              .where('status', '==', targetStatus)
-              .orderBy('createdAt', 'desc')
-              .limit(300)
-              .get();
-          }
-
-          docs = snap.docs.map((docSnap: any) => {
-            const data = docSnap.data();
-            delete data.embedding;
-            return { id: docSnap.id, ...data };
-          });
-
-          // Post-filter matching all keywords in title, description, or tags
-          docs = docs.filter((d: any) => {
-            const titleStr = typeof d.title === 'object' ? String(d.title?.pl || d.title?.en || '').toLowerCase() : String(d.title || '').toLowerCase();
-            const descStr = typeof d.description === 'object' ? String(d.description?.pl || d.description?.en || '').toLowerCase() : String(d.description || '').toLowerCase();
-            const tags = Array.isArray(d.searchTags) ? d.searchTags.map((t: string) => t.toLowerCase()) : [];
-            
-            return keywords.every(kw => 
-              titleStr.includes(kw) || descStr.includes(kw) || tags.includes(kw)
-            );
-          });
+        let snap;
+        try {
+          snap = await adminDb.collection('product_cores')
+            .where('status', '==', targetStatus)
+            .where('searchTags', 'array-contains-any', getWordVariations(primaryKeyword))
+            .limit(150)
+            .get();
+        } catch (queryErr) {
+          console.warn('[Search Fallback] tags array-contains-any query failed. Fetching recent products...', queryErr);
         }
+
+        if (!snap || snap.empty) {
+          snap = await adminDb.collection('product_cores')
+            .where('status', '==', targetStatus)
+            .orderBy('createdAt', 'desc')
+            .limit(300)
+            .get();
+        }
+
+        let kwDocs = snap.docs.map((docSnap: any) => {
+          const data = docSnap.data();
+          delete data.embedding;
+          return { id: docSnap.id, ...data };
+        });
+
+        kwDocs = kwDocs.filter((d: any) => {
+          const titleStr = typeof d.title === 'object' ? String(d.title?.pl || d.title?.en || '').toLowerCase() : String(d.title || d.name || '').toLowerCase();
+          const descStr = typeof d.description === 'object' ? String(d.description?.pl || d.description?.en || '').toLowerCase() : String(d.description || '').toLowerCase();
+          const tags = Array.isArray(d.searchTags) ? d.searchTags.map((t: string) => String(t).toLowerCase()) : [];
+          
+          return keywords.every(kw => 
+            titleStr.includes(kw) || descStr.includes(kw) || tags.includes(kw)
+          );
+        });
+
+        // Merge exact keyword matches ahead of vector results
+        const combinedMap = new Map<string, any>();
+        for (const d of [...kwDocs, ...docs]) {
+          combinedMap.set(d.id, d);
+        }
+        docs = Array.from(combinedMap.values());
       }
 
       // Post-filtering
