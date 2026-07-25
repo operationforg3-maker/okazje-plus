@@ -1177,6 +1177,30 @@ export class AIRefiner {
   ): Promise<void> {
     const docRef = adminDb.collection('product_cores').doc(productId);
     await docRef.update(updates as any);
+
+    // Automatically sync refined product data to linked deals
+    try {
+      const dealsSnap = await adminDb.collection('deals').where('productCoreId', '==', productId).get();
+      if (!dealsSnap.empty) {
+        const batch = adminDb.batch();
+        const dealUpdates: any = {
+          updatedAt: new Date().toISOString(),
+        };
+        if (updates.title) dealUpdates.title = updates.title;
+        if (updates.description) dealUpdates.description = updates.description;
+        if (updates.fullDescription) dealUpdates.fullDescription = updates.fullDescription;
+        if (updates.specs || updates.specsLocalized) dealUpdates.specs = updates.specs || updates.specsLocalized;
+        if (updates.specsLocalized || updates.specs) dealUpdates.specsLocalized = updates.specsLocalized || updates.specs;
+        if (updates.searchTags) dealUpdates.searchTags = updates.searchTags;
+
+        dealsSnap.docs.forEach((dDoc) => {
+          batch.update(dDoc.ref, dealUpdates);
+        });
+        await batch.commit();
+      }
+    } catch (syncErr) {
+      console.error(`[Refiner] Failed to sync product updates to linked deals for ${productId}:`, syncErr);
+    }
   }
 
   /**

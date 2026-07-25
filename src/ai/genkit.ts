@@ -2,7 +2,8 @@ import { genkit } from 'genkit';
 import { vertexAI } from '@genkit-ai/vertexai';
 import { googleAI } from '@genkit-ai/googleai';
 
-const googleGenAIKey = process.env.GOOGLE_GENAI_API_KEY || '';
+const rawKey = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+const googleGenAIKey = rawKey.replace(/^["']|["']$/g, '');
 
 if (process.env.NODE_ENV !== 'production' || process.env.GENKIT_DEBUG) {
   console.log(`✅ AI Registry: Initializing Vertex AI (Primary) and Google AI (Fallback, Key configured: ${Boolean(googleGenAIKey)})`);
@@ -11,8 +12,8 @@ if (process.env.NODE_ENV !== 'production' || process.env.GENKIT_DEBUG) {
 export const ai = genkit({
   plugins: [
     vertexAI({
-      projectId: 'okazje-plus',
-      location: 'europe-west4' // GCP region matching hosted environment
+      projectId: process.env.GOOGLE_CLOUD_PROJECT || 'okazje-plus',
+      location: process.env.VERTEX_LOCATION || 'us-central1'
     }),
     googleAI({ apiKey: googleGenAIKey }),
   ],
@@ -28,8 +29,8 @@ interface ModelMapping {
 // Google AI Studio (fallback) uses gemini-2.0-flash and gemini-1.5-pro as stable models.
 const modelMapping: Record<string, ModelMapping> = {
   'refine-model': {
-    primary: 'vertexai/gemini-2.0-flash',
-    fallback: 'googleai/gemini-2.0-flash'
+    primary: 'vertexai/gemini-1.5-flash',
+    fallback: 'googleai/gemini-1.5-flash'
   },
   'googleai/gemini-2.5-flash': {
     primary: 'vertexai/gemini-2.5-flash',
