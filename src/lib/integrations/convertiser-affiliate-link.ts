@@ -18,7 +18,12 @@ export function buildConvertiserTrackingLink(
 ): string {
   if (!rawUrl) return '';
 
-  // If already an official converti.se tracking link without missing url param, return as is or check if url needs encoding
+  // If link is already converti.se with ?url=, convert ?url= to ?deep_link=
+  if (rawUrl.includes('converti.se/click/') && rawUrl.includes('?url=')) {
+    return rawUrl.replace('?url=', '?deep_link=').replace('&url=', '&deep_link=');
+  }
+
+  // If already an official converti.se tracking link with deep_link, return as is
   if (rawUrl.startsWith('https://converti.se/click/') || rawUrl.startsWith('https://tracking.convertiser.com/')) {
     return rawUrl;
   }
@@ -52,6 +57,6 @@ export function buildConvertiserTrackingLink(
   targetUrl = targetUrl.replace(/[?&]&+/g, '&').replace(/\?&/g, '?').replace(/[?&]$/, '');
   targetUrl = targetUrl.replace(/\.{3,}$/, '');
 
-  // Construct official Convertiser deep link
-  return `${baseTrackingLink}?url=${encodeURIComponent(targetUrl)}`;
+  // Construct official Convertiser deep link with deep_link parameter
+  return `${baseTrackingLink}?deep_link=${encodeURIComponent(targetUrl)}`;
 }
