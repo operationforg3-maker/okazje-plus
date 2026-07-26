@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getCategories } from '@/lib/data';
-import { searchDeals } from '@/lib/search-server';
+import { adminDb } from '@/lib/firebase-admin';
 import { getGoogleProductPublicationState } from '@/lib/google-product-publication';
 import { getAllApprovedProductsForSitemap } from '@/lib/data-admin';
 
@@ -108,22 +108,53 @@ async function generateStaticAndCategorySitemap(): Promise<MetadataRoute.Sitemap
   return [...staticUrls, ...categoryUrls];
 }
 
+function parseLastModified(val: any): Date {
+  if (!val) return new Date();
+  if (val instanceof Date) return val;
+  if (typeof val === 'string' || typeof val === 'number') {
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? new Date() : d;
+  }
+  if (typeof val === 'object' && typeof val.toDate === 'function') {
+    return val.toDate();
+  }
+  if (typeof val === 'object' && typeof val._seconds === 'number') {
+    return new Date(val._seconds * 1000);
+  }
+  return new Date();
+}
+
 /**
- * Sitemap 1: Deal pages — top 2000 hottest approved deals
+ * Sitemap 1: Deal pages — top 5000 hottest approved deals
  */
 async function generateDealsSitemap(): Promise<MetadataRoute.Sitemap> {
   try {
-    const deals = await searchDeals('*', {
-      limit: 2000,
-      sortBy: 'hot',
-      statusFilter: 'approved',
-    });
+    let dealsSnap;
+    try {
+      dealsSnap = await adminDb
+        .collection('deals')
+        .where('status', '==', 'approved')
+        .orderBy('temperature', 'desc')
+        .limit(5000)
+        .get();
+    } catch (e) {
+      dealsSnap = await adminDb
+        .collection('deals')
+        .where('status', '==', 'approved')
+        .limit(5000)
+        .get();
+    }
+
+    const deals = dealsSnap.docs.map((doc) => ({
+      id: doc.id,
+      updatedAt: doc.data().updatedAt,
+    }));
 
     return SUPPORTED_LOCALES.flatMap(locale => {
       const localizedBase = `${BASE_URL}/${locale}`;
       return deals.map((deal) => ({
         url: `${localizedBase}/deals/${deal.id}`,
-        lastModified: deal.updatedAt ? new Date(deal.updatedAt) : new Date(),
+        lastModified: parseLastModified(deal.updatedAt),
         changeFrequency: 'daily' as const,
         priority: 0.8,
       }));
@@ -140,19 +171,12 @@ async function generateDealsSitemap(): Promise<MetadataRoute.Sitemap> {
 async function generateProductsSitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const products = await getAllApprovedProductsForSitemap(5000);
-    const eligibleProducts = products.filter((product) =>
-      getGoogleProductPublicationState({
-        product,
-        isM6: true,
-        deals: [],
-      }).eligible
-    );
 
     return SUPPORTED_LOCALES.flatMap(locale => {
       const localizedBase = `${BASE_URL}/${locale}`;
-      return eligibleProducts.map((product) => ({
+      return products.map((product) => ({
         url: `${localizedBase}/products/${product.id}`,
-        lastModified: product.updatedAt ? new Date(product.updatedAt) : new Date(),
+        lastModified: parseLastModified(product.updatedAt),
         changeFrequency: 'daily' as const,
         priority: 0.7,
       }));
