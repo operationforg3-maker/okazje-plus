@@ -1279,6 +1279,11 @@ export class AIRefiner {
         timestamp: new Date().toISOString(),
       });
     }
+
+    // Keep logs bounded to max 100 items to prevent Firestore 1MB document size errors
+    if (this.logs.length > 100) {
+      this.logs = this.logs.slice(-100);
+    }
   }
 }
 
