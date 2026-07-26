@@ -3317,7 +3317,8 @@ export class SmartHarvester {
    */
   private async fetchFromConvertiser(searchQuery: string, maxResults: number) {
     try {
-      if (!process.env.CONVERTISER_API_TOKEN) {
+      const convertiserToken = process.env.CONVERTISER_API_TOKEN || 'sE1vVgCO6U7zfl3pN7XsPFFY4Uu9L0';
+      if (!convertiserToken) {
         this.addLog('warn', 'Convertiser API token not configured (CONVERTISER_API_TOKEN env var missing)');
         return [];
       }
@@ -3394,7 +3395,8 @@ export class SmartHarvester {
    */
   private async fetchFromConvertiserOffers(searchQuery: string, maxResults: number) {
     try {
-      if (!process.env.CONVERTISER_API_TOKEN) {
+      const convertiserToken = process.env.CONVERTISER_API_TOKEN || 'sE1vVgCO6U7zfl3pN7XsPFFY4Uu9L0';
+      if (!convertiserToken) {
         this.addLog('warn', 'Convertiser API token not configured (CONVERTISER_API_TOKEN env var missing)');
         return [];
       }
@@ -3473,7 +3475,8 @@ export class SmartHarvester {
     }
 
     try {
-      if (!process.env.CONVERTISER_API_TOKEN) {
+      const convertiserToken = process.env.CONVERTISER_API_TOKEN || 'sE1vVgCO6U7zfl3pN7XsPFFY4Uu9L0';
+      if (!convertiserToken) {
         this.addLog('warn', 'Convertiser API token not configured (CONVERTISER_API_TOKEN env var missing)');
         return [];
       }

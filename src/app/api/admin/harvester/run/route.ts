@@ -84,7 +84,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (source === 'convertiser' && !process.env.CONVERTISER_API_TOKEN) {
+    const convertiserToken = process.env.CONVERTISER_API_TOKEN || 'sE1vVgCO6U7zfl3pN7XsPFFY4Uu9L0';
+    if (source === 'convertiser' && !convertiserToken) {
       return NextResponse.json(
         { error: 'Convertiser API token nie jest skonfigurowany (CONVERTISER_API_TOKEN)' },
         { status: 400 }
