@@ -24,6 +24,6 @@ export const config = {
   // - API routes (/api/...)
   // - Static files (/_next/static/...)
   // - Image optimization files (/_next/image/...)
-  // - Favicon, etc.
-  matcher: ['/((?!api|_next|_vercel|favicon|robots|.*\\..*).*)'],
+  // - Favicon, robots, sitemap, etc.
+  matcher: ['/((?!api|_next|_vercel|favicon|robots|sitemap|.*\\..*).*)'],
 };
