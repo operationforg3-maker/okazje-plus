@@ -732,8 +732,23 @@ export class SmartHarvester {
         offer.end_date
       );
 
+      const extractedGoals: string[] = [];
+      let extractedPayoutText = '';
+      if (Array.isArray(offer.goals)) {
+        for (const g of offer.goals) {
+          if (g.title) extractedGoals.push(g.title);
+          if (g.payout && !extractedPayoutText) {
+            extractedPayoutText = g.payout;
+            const pMatch = String(g.payout).match(/([\d.,]+)%/);
+            if (pMatch && !discountPercent) {
+              discountPercent = Math.round(parseFloat(pMatch[1].replace(',', '.')));
+            }
+          }
+        }
+      }
+
       const rawConditions = offer.terms || offer.conditions || offer.condition || offer.rules;
-      const conditions = Array.isArray(rawConditions)
+      const parsedConditions = Array.isArray(rawConditions)
         ? rawConditions
             .map((c: any) => stripHtml(c))
             .filter(Boolean)
@@ -741,13 +756,18 @@ export class SmartHarvester {
             .split(/\n|\r|•|;|\|/g)
             .map((c) => c.trim())
             .filter(Boolean);
+
+      const conditions = Array.from(new Set([...extractedGoals, ...parsedConditions])).filter(Boolean);
+
       const freeShipping = Boolean(offer.free_shipping || offer.freeShipping || offer.shipping_free || offer.shipping_cost === 0);
       const minOrderValue = parsePrice(offer.min_order_value || offer.minimum_order_value || offer.minimum_purchase);
       const limitPerUser = parsePrice(offer.limit_per_user || offer.max_per_user || offer.user_limit);
       const requiresMembership = offer.requires_membership || offer.membership || offer.membership_required;
 
-      const descriptionRaw = offer.description || offer.product_description || offer.excerpt || offer.short_description || '';
-      let description = stripHtml(descriptionRaw);
+      const excerptText = stripHtml(offer.excerpt || '');
+      const bodyDescText = stripHtml(offer.description || offer.product_description || offer.short_description || '');
+      let description = [excerptText, bodyDescText].filter((t, i, a) => t && a.indexOf(t) === i).join('\n\n');
+
       if (!description) {
         const pieces: string[] = [];
         if (typeof discountPercent === 'number' && discountPercent > 0) {
