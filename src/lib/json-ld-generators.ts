@@ -116,13 +116,11 @@ function extractReturnWindowDays(policyText: string): number | undefined {
   return parsed;
 }
 
-function buildMerchantReturnPolicy(policyText: string) {
-  if (!policyText) {
-    return undefined;
-  }
+function buildMerchantReturnPolicy(policyText?: string) {
+  const text = policyText?.trim() || '14 dni na zwrot';
+  const normalized = text.toLowerCase();
+  const returnDays = extractReturnWindowDays(text) || 14;
 
-  const normalized = policyText.toLowerCase();
-  const returnDays = extractReturnWindowDays(policyText);
   if (normalized.includes('brak zwrot') || normalized.includes('nie podlega zwrotowi')) {
     return {
       '@type': 'MerchantReturnPolicy',
@@ -135,9 +133,7 @@ function buildMerchantReturnPolicy(policyText: string) {
     '@type': 'MerchantReturnPolicy',
     applicableCountry: 'PL',
     returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
-    ...(returnDays && {
-      merchantReturnDays: returnDays,
-    }),
+    merchantReturnDays: returnDays,
     returnMethod: 'https://schema.org/ReturnByMail',
     returnFees: normalized.includes('darmow')
       ? 'https://schema.org/FreeReturn'
@@ -149,11 +145,14 @@ function buildShippingDetails(input: {
   shippingCost?: number;
   freeShipping?: boolean;
   currency?: string;
+  shippingDays?: number;
 }) {
   const hasCost = typeof input.shippingCost === 'number' && Number.isFinite(input.shippingCost);
   const isFreeShipping = input.freeShipping === true || (hasCost && (input.shippingCost || 0) <= 0);
 
   const shippingValue = isFreeShipping ? 0 : (hasCost ? Math.max(0, input.shippingCost || 0) : 0);
+  const transitDays = Math.max(1, Math.min(30, input.shippingDays && input.shippingDays > 0 ? input.shippingDays : 3));
+
   return {
     '@type': 'OfferShippingDetails',
     shippingRate: {
@@ -164,6 +163,21 @@ function buildShippingDetails(input: {
     shippingDestination: {
       '@type': 'DefinedRegion',
       addressCountry: 'PL',
+    },
+    deliveryTime: {
+      '@type': 'ShippingDeliveryTime',
+      handlingTime: {
+        '@type': 'QuantitativeValue',
+        minValue: 0,
+        maxValue: 1,
+        unitCode: 'DAY',
+      },
+      transitTime: {
+        '@type': 'QuantitativeValue',
+        minValue: 1,
+        maxValue: transitDays,
+        unitCode: 'DAY',
+      },
     },
   };
 }
@@ -370,13 +384,17 @@ export function generateProductJsonLd(
   const upc = productData.metadata?.upc || (productData as any).upc || product?.metadata?.upc || productCore?.metadata?.upc;
   const isbn = productData.metadata?.isbn || (productData as any).isbn || product?.metadata?.isbn || productCore?.metadata?.isbn;
 
+  // Truncate name to 145 chars if necessary to avoid GSC "Invalid string length in field name" warning
+  const cleanProductName = productName.length > 145 ? `${productName.slice(0, 142)}...` : productName;
+  const cleanProductDescription = (productDescription?.trim() || cleanProductName).slice(0, 500);
+
   const baseSchema = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     '@id': `${PRODUCT_BASE_URL}/${productId}`,
     url: `${PRODUCT_BASE_URL}/${productId}`,
-    name: productName,
-    description: productDescription.slice(0, 500),
+    name: cleanProductName,
+    description: cleanProductDescription,
     image: images,
     sku: productId,
     brand: {
@@ -432,6 +450,7 @@ export function generateProductJsonLd(
               : 'https://schema.org/OutOfStock',
           shippingDetails: buildShippingDetails({
             shippingCost: deal?.shipping?.cost,
+            shippingDays: (deal as any)?.shipping?.timeDays,
             freeShipping: (deal?.shipping?.cost || 0) <= 0,
             currency: deal?.price?.currency || priceCurrency,
           }),
