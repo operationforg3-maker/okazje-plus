@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
-import { useParams } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { Category } from '@/lib/types';
 import { buildCategoryPath } from '@/lib/category-routes';
 import { ChevronRight, Grid3x3, Package } from 'lucide-react';
@@ -26,8 +25,8 @@ export default function CategoryGrid({ categories }: CategoryGridProps) {
   const t = useTranslations('home.browseCategories');
   const [activeCategory, setActiveCategory] = useState<Category | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const params = useParams();
-  const locale = typeof params?.locale === 'string' ? params.locale : 'pl';
+  const rawLocale = useLocale();
+  const locale = (rawLocale as SupportedLanguage) || 'pl';
 
   // Count total products in category (including all subcategories)
   const getTotalProducts = (category: Category) => {

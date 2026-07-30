@@ -13,7 +13,9 @@ import { Separator } from '@/components/ui/separator';
 import { useNotifications } from '@/hooks/use-notifications';
 import { MessageSquare, Flame, Check, AlertCircle, Info, Calendar, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
+import { formatTimeAgo } from '@/lib/format-relative-time';
 import { Notification } from '@/lib/types';
 import { deleteNotification } from '@/lib/data';
 import { toast } from 'sonner';
@@ -26,13 +28,14 @@ export function NotificationBell() {
   const { notifications: rawNotifications, unreadCount, markAsRead } = useNotifications();
   const [notifications, setNotifications] = useState<NotificationWithRelativeTime[]>([]);
   const recentNotifications = notifications.slice(0, 5);
+  const t = useTranslations('common');
 
   // Calculate relative times on client side to prevent hydration mismatch
   useEffect(() => {
     const updateRelativeTimes = () => {
       setNotifications(rawNotifications.map(notif => ({
         ...notif,
-        relativeTime: formatRelativeTime(notif.createdAt)
+        relativeTime: formatTimeAgoText(new Date(notif.createdAt))
       })));
     };
 
@@ -91,21 +94,8 @@ export function NotificationBell() {
     }
   };
 
-  const formatRelativeTime = (date: string) => {
-    const now = new Date();
-    const notificationDate = new Date(date);
-    const diffInMinutes = Math.floor((now.getTime() - notificationDate.getTime()) / 60000);
-
-    if (diffInMinutes < 1) return 'przed chwilą';
-    if (diffInMinutes < 60) return `${diffInMinutes} min temu`;
-    
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours} godz. temu`;
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays} dni temu`;
-    
-    return notificationDate.toLocaleDateString('pl-PL', { month: 'short', day: 'numeric' });
+  const formatTimeAgoText = (date: Date) => {
+    return formatTimeAgo(date, t) || date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   };
 
   return (
@@ -126,7 +116,7 @@ export function NotificationBell() {
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
         <div className="flex items-center justify-between p-4 pb-3">
-          <h3 className="font-semibold text-sm">Powiadomienia</h3>
+          <h3 className="font-semibold text-sm">{t('notifications')}</h3>
           {unreadCount > 0 && (
             <Badge variant="secondary" className="text-xs">
               {unreadCount} nowych
@@ -203,7 +193,7 @@ export function NotificationBell() {
             <div className="p-2">
               <Button asChild variant="ghost" className="w-full text-sm" size="sm">
                 <Link href="/profile?tab=notifications">
-                  Zobacz wszystkie powiadomienia
+                  {t('labels.seeAllNotifications')}
                 </Link>
               </Button>
             </div>

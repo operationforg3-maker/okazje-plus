@@ -93,11 +93,12 @@ export async function searchDeals(
   }
 }
 
-export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<Suggestion[]> {
+export async function getAutocompleteSuggestions(q: string, limit = 5, locale = 'pl'): Promise<Suggestion[]> {
   try {
     const params = new URLSearchParams();
     params.set('q', q);
     params.set('limit', String(limit));
+    params.set('locale', locale);
 
     const baseUrl = typeof window === 'undefined' ? (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000') : '';
     const res = await fetch(`${baseUrl}/api/search/autocomplete?${params.toString()}`);

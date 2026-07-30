@@ -5,11 +5,7 @@ import { useParams } from 'next/navigation';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
-interface CategoryLabel {
-  pl: string;
-  en: string;
-  de: string;
-}
+type CategoryLabel = Record<string, string>;
 
 /**
  * Hook to fetch and display localized category name from slug
@@ -44,10 +40,15 @@ export function useCategoryName(
           const mainDoc = await getDoc(doc(db, 'categories', mainCategorySlug));
           if (mainDoc.exists()) {
             const data = mainDoc.data();
+            const trans = data.translations || {};
             newLabels.main = {
               pl: data.name || mainCategorySlug,
-              en: data.translations?.en?.name || data.name || mainCategorySlug,
-              de: data.translations?.de?.name || data.name || mainCategorySlug,
+              en: trans.en?.name || data.name || mainCategorySlug,
+              de: trans.de?.name || data.name || mainCategorySlug,
+              fr: trans.fr?.name || data.name || mainCategorySlug,
+              es: trans.es?.name || data.name || mainCategorySlug,
+              uk: trans.uk?.name || trans.ua?.name || data.name || mainCategorySlug,
+              it: trans.it?.name || data.name || mainCategorySlug,
             };
           }
         }
@@ -59,10 +60,15 @@ export function useCategoryName(
           );
           if (subDoc.exists()) {
             const data = subDoc.data();
+            const trans = data.translations || {};
             newLabels.sub = {
               pl: data.name || subCategorySlug,
-              en: data.translations?.en?.name || data.name || subCategorySlug,
-              de: data.translations?.de?.name || data.name || subCategorySlug,
+              en: trans.en?.name || data.name || subCategorySlug,
+              de: trans.de?.name || data.name || subCategorySlug,
+              fr: trans.fr?.name || data.name || subCategorySlug,
+              es: trans.es?.name || data.name || subCategorySlug,
+              uk: trans.uk?.name || trans.ua?.name || data.name || subCategorySlug,
+              it: trans.it?.name || data.name || subCategorySlug,
             };
           }
         }
@@ -82,10 +88,15 @@ export function useCategoryName(
           );
           if (subSubDoc.exists()) {
             const data = subSubDoc.data();
+            const trans = data.translations || {};
             newLabels.subsub = {
               pl: data.name || subSubCategorySlug,
-              en: data.translations?.en?.name || data.name || subSubCategorySlug,
-              de: data.translations?.de?.name || data.name || subSubCategorySlug,
+              en: trans.en?.name || data.name || subSubCategorySlug,
+              de: trans.de?.name || data.name || subSubCategorySlug,
+              fr: trans.fr?.name || data.name || subSubCategorySlug,
+              es: trans.es?.name || data.name || subSubCategorySlug,
+              uk: trans.uk?.name || trans.ua?.name || data.name || subSubCategorySlug,
+              it: trans.it?.name || data.name || subSubCategorySlug,
             };
           }
         }
@@ -104,7 +115,7 @@ export function useCategoryName(
   // Get text for current locale
   const getText = (label?: CategoryLabel) => {
     if (!label) return '';
-    return label[locale as keyof CategoryLabel] || label.pl;
+    return label[locale] || label.en || label.pl;
   };
 
   // Return localized names with fallback to slugs

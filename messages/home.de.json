@@ -11,13 +11,25 @@
     "searchButton": "Suchen",
     "dealOfWeek": "Angebot der Woche",
     "browseDeals": "Angebote durchsuchen",
-    "catalog": "Produktkatalog"
+    "catalog": "Produktkatalog",
+    "titleLine1": "Finde die besten",
+    "titleHighlight": "Angebote & Aktionen",
+    "description": "Eine Community von Schnäppchenjägern, die geprüfte Angebote, Rabattcodes und Ausverkäufe teilt. Kaufe klüger!",
+    "soldCount": "{count}+ Stk. gekauft",
+    "checkPrice": "Prüfen",
+    "claimDeal": "Angebot sichern",
+    "prevDeal": "Vorheriges Angebot",
+    "nextDeal": "Nächstes Angebot",
+    "dealNumber": "Angebot {number}"
   },
   "stats": {
     "hotDealsCount": "Heiße Angebote",
     "products": "Produkte",
     "community": "Community",
-    "savings": "Ersparnisse"
+    "savings": "Ersparnisse",
+    "verifiedDeals": "Verifizierte Angebote",
+    "monitoredProducts": "Überwachte Produkte",
+    "activeHunters": "Aktive Schnäppchenjäger"
   },
   "categories": {
     "title": "Kategorien durchsuchen",
@@ -30,13 +42,17 @@
     "title": "Heißeste Angebote",
     "subtitle": "Von der Community geprüft",
     "viewAll": "Alle anzeigen",
-    "empty": "Die heißesten Angebote erscheinen hier bald!"
+    "empty": "Die heißesten Angebote erscheinen hier bald!",
+    "viewAllTitle": "Alle heißen Angebote",
+    "viewAllSub": "Durchsuche Tausende von Rabatten und Ausverkäufen der Jäger-Community"
   },
   "topProducts": {
     "title": "Bestbewertete Produkte",
     "subtitle": "Qualität von unserer Community geprüft",
     "viewAll": "Katalog ansehen",
-    "empty": "Die besten Produkte erscheinen hier bald!"
+    "empty": "Die besten Produkte erscheinen hier bald!",
+    "viewAllTitle": "Vollständiger Produktkatalog",
+    "viewAllSub": "Entdecke und vergleiche Hunderte geprüfter Produkte zu den niedrigsten Preisen"
   },
   "recommendedProducts": "Empfohlene Produkte",
   "noDeals": "Keine genehmigten Angebote zum Anzeigen.",
@@ -79,8 +95,10 @@
         "description": "Prioritätszugang zu von Moderatoren geprüften Angeboten"
       }
     },
-    "joinButton": "Kostenlos beitreten",
-    "joinSubtext": "Registrierung dauert weniger als eine Minute. Keine Verpflichtungen."
+    "joinButton": "Kostenlos registrieren",
+    "joinSubtext": "Die Registrierung dauert weniger als eine Minute. Keine Verpflichtungen.",
+    "gdpr": "DSGVO-konform",
+    "ssl": "Verschlüsselte SSL-Verbindung"
   },
   "forum": {
     "title": "Tritt der Forum-Diskussion bei",
@@ -95,7 +113,31 @@
   },
   "about": {
     "badge": "Unsere Mission",
-    "title": "Wir helfen dir zu sparen",
-    "titleHighlight": "clever und effektiv"
+    "title": "Wir helfen Ihnen zu sparen",
+    "titleHighlight": "klug und effektiv",
+    "text1": "Okazje Plus ist eine Plattform von und für die Schnäppchenjäger-Community. Unser Ziel ist es, Ihnen dabei zu helfen, die besten Angebote, Produkte und Sonderaktionen an einem Ort zu finden.",
+    "text2": "Wir glauben, dass intelligentes Einkaufen nicht nur Ersparnisse bedeutet, sondern auch gesparte Zeit. Dank unserer aktiven Community und KI bieten wir Ihnen nur geprüfte und wertvolle Angebote.",
+    "freePlatform": "100% kostenlose Plattform",
+    "verifiedByCommunity": "Von der Community geprüft",
+    "aiSupport": "KI-Qualitätsunterstützung",
+    "cards": {
+      "aiTitle": "Geprüfte KI",
+      "aiDesc": "Algorithmen prüfen Angebotsqualität",
+      "communityTitle": "Community",
+      "communityDesc": "Tausende Nutzer teilen Funde",
+      "moderationTitle": "Moderation",
+      "moderationDesc": "Jedes Angebot wird überprüft",
+      "realtimeTitle": "Echtzeit",
+      "realtimeDesc": "Sofortige Benachrichtigungen"
+    }
+  },
+  "cta": {
+    "title": "Bereit für die besten Angebote?",
+    "subtitle": "Schließen Sie sich Tausenden Nutzern an, die bereits mit Okazje Plus sparen.",
+    "browseDeals": "Angebote durchsuchen",
+    "catalog": "Produktkatalog"
+  },
+  "viewAllCard": {
+    "cta": "Alle anzeigen"
   }
 }

@@ -17,6 +17,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const q = url.searchParams.get('q') || '';
   const limit = Number(url.searchParams.get('limit') || '5');
+  const locale = url.searchParams.get('locale') || 'pl';
 
   if (!q || q.trim().length < 2) return NextResponse.json([], { status: 200 });
 
@@ -30,12 +31,12 @@ export async function GET(request: Request) {
     );
   }
 
-  const key = `autocomplete:${q}:${limit}`;
+  const key = `autocomplete:${locale}:${q}:${limit}`;
   const cached = await cacheGet(key);
   if (cached) return NextResponse.json(cached);
 
   try {
-    const out = await getAutocompleteSuggestions(q, limit);
+    const out = await getAutocompleteSuggestions(q, limit, locale);
     await cacheSet(key, out, DEFAULT_TTL);
     return NextResponse.json(out);
   } catch (e) {

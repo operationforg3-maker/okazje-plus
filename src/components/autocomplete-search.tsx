@@ -8,10 +8,11 @@ import { Search, Loader2, Flame, ShoppingBag, ArrowLeft, X } from 'lucide-react'
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { trackSearch } from '@/lib/analytics';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 export function AutocompleteSearch({ className }: { className?: string }) {
   const t = useTranslations('common');
+  const locale = useLocale();
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
@@ -78,9 +79,9 @@ export function AutocompleteSearch({ className }: { className?: string }) {
     }
     let cancelled = false;
     setLoading(true);
-    const t = setTimeout(async () => {
+    const tTimer = setTimeout(async () => {
       try {
-        const data = await getAutocompleteSuggestions(query.trim(), 6);
+        const data = await getAutocompleteSuggestions(query.trim(), 6, locale);
         if (!cancelled) {
           setSuggestions(data);
           if (!isMobile) {
@@ -91,14 +92,14 @@ export function AutocompleteSearch({ className }: { className?: string }) {
         if (!cancelled) setLoading(false);
       }
     }, 250);
-    return () => { cancelled = true; clearTimeout(t); };
-  }, [query, isMobile]);
+    return () => { cancelled = true; clearTimeout(tTimer); };
+  }, [query, isMobile, locale]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
       trackSearch(query.trim(), suggestions.length);
-      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+      router.push(`/${locale}/search?q=${encodeURIComponent(query.trim())}`);
       setOpen(false);
       setIsMobileOverlayOpen(false);
     }
@@ -106,9 +107,9 @@ export function AutocompleteSearch({ className }: { className?: string }) {
 
   const handlePick = (s: Suggestion) => {
     if (s.type === 'deal') {
-      router.push(`/deals/${s.id}`);
+      router.push(`/${locale}/deals/${s.id}`);
     } else {
-      router.push(`/products/${s.id}`);
+      router.push(`/${locale}/products/${s.id}`);
     }
     setOpen(false);
     setIsMobileOverlayOpen(false);
@@ -198,7 +199,7 @@ export function AutocompleteSearch({ className }: { className?: string }) {
               size="icon"
               className="rounded-full shrink-0"
               onClick={() => setIsMobileOverlayOpen(false)}
-              aria-label="Cofnij"
+              aria-label={t('search.backLabel')}
             >
               <ArrowLeft className="h-5 w-5 text-foreground" />
             </Button>
@@ -222,7 +223,7 @@ export function AutocompleteSearch({ className }: { className?: string }) {
                     size="icon"
                     className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full p-0 hover:bg-transparent"
                     onClick={() => setQuery('')}
-                    aria-label="Wyczyść szukanie"
+                    aria-label={t('search.clearSearch')}
                   >
                     <X className="h-4 w-4 text-muted-foreground" />
                   </Button>
@@ -276,7 +277,7 @@ export function AutocompleteSearch({ className }: { className?: string }) {
               <div className="text-center py-12 text-sm text-muted-foreground bg-background rounded-xl p-6 border border-border/40 shadow-sm">
                 <Search className="h-8 w-8 text-muted-foreground/60 mx-auto mb-2" />
                 <p className="font-medium text-foreground">{t('search.placeholder')}</p>
-                <p className="text-xs text-muted-foreground mt-1">Wpisz co najmniej 2 znaki, aby zobaczyć podpowiedzi</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('search.typeAtLeastTwoChars')}</p>
               </div>
             )}
           </div>

@@ -1,0 +1,38 @@
+{
+  "title": "Politica dei Cookie",
+  "lastUpdated": "Ultimo aggiornamento: 29 gennaio 2026",
+  "intro": {
+    "title": "Cosa sono i cookie?",
+    "description": "I cookie sono piccoli file di testo che vengono salvati sul tuo dispositivo (computer, tablet, smartphone) quando visiti i siti web. Permettono al sito di ricordare le tue azioni e preferenze per un certo periodo di tempo."
+  },
+  "usage": {
+    "title": "Come utilizziamo i cookie?",
+    "description": "Utilizziamo i cookie per i seguenti scopi:",
+    "categories": {
+      "necessary": {
+        "title": "Necessari",
+        "description": "Questi cookie sono essenziali per il funzionamento del sito web. Includono sessione utente, sicurezza e funzionalità di base.",
+        "examples": "Autenticazione, preferenze linguistiche, sicurezza"
+      },
+      "analytics": {
+        "title": "Analitici",
+        "description": "Ci aiutano a capire come i visitatori utilizzano il nostro sito web per poterlo migliorare.",
+        "examples": "Google Analytics, statistiche visite, comportamento utenti"
+      },
+      "marketing": {
+        "title": "Marketing",
+        "description": "Utilizzati per mostrare annunci personalizzati in base ai tuoi interessi.",
+        "examples": "Cookie di remarketing, annunci personalizzati"
+      }
+    }
+  },
+  "control": {
+    "title": "Come controllare i cookie?",
+    "description": "Puoi controllare e/o eliminare i cookie come desideri. Puoi eliminare tutti i cookie dal tuo computer, e la maggior parte dei browser ti permette di bloccare la loro memorizzazione.",
+    "settings": "Per modificare le tue preferenze sui cookie su questo sito, clicca il pulsante 'Gestisci preferenze' nel banner dei cookie o nel footer del sito."
+  },
+  "more": {
+    "title": "Maggiori informazioni",
+    "description": "Se hai domande sulla nostra politica dei cookie, contattaci tramite il modulo di contatto."
+  }
+}

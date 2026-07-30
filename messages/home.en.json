@@ -11,13 +11,25 @@
     "searchButton": "Search",
     "dealOfWeek": "Deal of the Week",
     "browseDeals": "Browse Deals",
-    "catalog": "Product Catalog"
+    "catalog": "Product Catalog",
+    "titleLine1": "Find the best",
+    "titleHighlight": "Deals & Promotions",
+    "description": "A community of deal hunters sharing verified offers, discount codes and sales. Shop smarter!",
+    "soldCount": "Bought {count}+ pcs",
+    "checkPrice": "Check",
+    "claimDeal": "Claim deal",
+    "prevDeal": "Previous deal",
+    "nextDeal": "Next deal",
+    "dealNumber": "Deal {number}"
   },
   "stats": {
     "hotDealsCount": "Hot deals",
     "products": "Products",
     "community": "Community",
-    "savings": "Savings"
+    "savings": "Savings",
+    "verifiedDeals": "Verified deals",
+    "monitoredProducts": "Monitored products",
+    "activeHunters": "Active deal hunters"
   },
   "categories": {
     "title": "Browse categories",
@@ -30,13 +42,17 @@
     "title": "Hottest deals",
     "subtitle": "Verified by the community",
     "viewAll": "View all",
-    "empty": "The hottest deals will appear here soon!"
+    "empty": "The hottest deals will appear here soon!",
+    "viewAllTitle": "All Hot Deals",
+    "viewAllSub": "Browse thousands of discounts and sales from the hunter community"
   },
   "topProducts": {
     "title": "Top rated products",
     "subtitle": "Quality verified by our community",
     "viewAll": "Browse catalog",
-    "empty": "The best products will appear here soon!"
+    "empty": "The best products will appear here soon!",
+    "viewAllTitle": "Full Product Catalog",
+    "viewAllSub": "Discover and compare hundreds of verified products at the lowest prices"
   },
   "recommendedProducts": "Recommended Products",
   "noDeals": "No approved deals to display.",
@@ -80,7 +96,9 @@
       }
     },
     "joinButton": "Join for free",
-    "joinSubtext": "Registration takes less than a minute. No obligations."
+    "joinSubtext": "Registration takes less than a minute. No obligation.",
+    "gdpr": "GDPR Compliant",
+    "ssl": "Encrypted SSL Connection"
   },
   "forum": {
     "title": "Join the forum discussion",
@@ -94,8 +112,32 @@
     }
   },
   "about": {
-    "badge": "Our mission",
-    "title": "We help you save",
-    "titleHighlight": "smart and effectively"
+    "badge": "Our Mission",
+    "title": "Helping you save",
+    "titleHighlight": "smartly and effectively",
+    "text1": "Okazje Plus is a platform created by and for a community of deal hunters. Our goal is to help you find the best promotions, products, and special offers all in one place.",
+    "text2": "We believe smart shopping is not just about financial savings, but also time saved browsing dozens of stores. Thanks to an active community and advanced AI, we deliver only verified and valuable deals.",
+    "freePlatform": "100% free platform",
+    "verifiedByCommunity": "Community verified",
+    "aiSupport": "AI quality support",
+    "cards": {
+      "aiTitle": "Verified AI",
+      "aiDesc": "Algorithms verify deal quality",
+      "communityTitle": "Community",
+      "communityDesc": "Thousands of users share their finds",
+      "moderationTitle": "Moderation",
+      "moderationDesc": "Every deal undergoes verification",
+      "realtimeTitle": "Real-time",
+      "realtimeDesc": "Instant notifications for new deals"
+    }
+  },
+  "cta": {
+    "title": "Ready for the best deals?",
+    "subtitle": "Join thousands of users who are already saving with Okazje Plus.",
+    "browseDeals": "Browse deals",
+    "catalog": "Product catalog"
+  },
+  "viewAllCard": {
+    "cta": "View all"
   }
 }

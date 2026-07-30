@@ -1,0 +1,15 @@
+{
+  "title": "Classifica utenti",
+  "subtitle": "I migliori cacciatori di offerte nella community Okazje Plus",
+  "leaderboard": "Classifica",
+  "leaderboardDesc": "Guadagna punti aggiungendo offerte, commentando e partecipando alla community",
+  "rank": "Posizione",
+  "user": "Utente",
+  "points": "Punti",
+  "kingOfDeals": "👑 Re delle offerte",
+  "viceChampion": "🥈 Vicecampione",
+  "thirdPlace": "🥉 3° posto",
+  "topTen": "Top 10",
+  "loading": "Caricamento...",
+  "noData": "Nessun dato disponibile"
+}

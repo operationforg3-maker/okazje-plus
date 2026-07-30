@@ -27,12 +27,13 @@ import { useState, useEffect } from 'react';
 import { AccountMenuPanel } from '@/components/layout/account-menu-panel';
 import ErrorBoundary from './error-boundary';
 import { useNotifications } from '@/hooks/use-notifications';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 export function UserNav() {
   const { user, loading } = useAuth();
   const { unreadCount } = useNotifications();
   const locale = useLocale();
+  const t = useTranslations('nav');
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -80,7 +81,7 @@ export function UserNav() {
       <ErrorBoundary>
         <div className="flex items-center gap-2">
           <Button variant="outline" className="rounded-full bg-background/50 border-border/60 hover:bg-muted/50 hover:border-primary/60 transition-all font-semibold" asChild>
-            <Link href={`/${locale}/login`}>Login</Link>
+            <Link href={`/${locale}/login`}>{t('login')}</Link>
           </Button>
           
           <DropdownMenu open={open} onOpenChange={setOpen}>

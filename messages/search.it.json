@@ -1,0 +1,38 @@
+{
+  "title": "Risultati della ricerca",
+  "subtitle": "Cerca offerte e prodotti",
+  "tabs": {
+    "products": "Prodotti",
+    "deals": "Offerte"
+  },
+  "filters": {
+    "search": "Inserisci un termine di ricerca...",
+    "sort": "Ordina",
+    "quickFilters": {
+      "all": "Filtri rapidi",
+      "freeShipping": "Spedizione gratuita",
+      "highRating": "Voto alto",
+      "onSale": "In saldo"
+    },
+    "advanced": "Filtri avanzati",
+    "clearAll": "Cancella filtri"
+  },
+  "savedSearches": {
+    "title": "Ricerche salvate",
+    "save": "Salva ricerca",
+    "delete": "Elimina",
+    "empty": "Nessuna ricerca salvata"
+  },
+  "results": {
+    "found": "Trovati {count} risultati",
+    "empty": "Nessun risultato trovato",
+    "emptyDescription": "Prova a usare parole chiave diverse o sfoglia le categorie"
+  },
+  "loading": "Ricerca in corso...",
+  "placeholder": "Cerca prodotti e offerte...",
+  "minChars": "Inserisci almeno 2 caratteri per vedere i risultati.",
+  "all": "Tutti",
+  "viewAllResults": "Vedi tutti i risultati",
+  "noDeals": "Nessuna offerta trovata per questa ricerca.",
+  "noProducts": "Nessun prodotto trovato per questa ricerca."
+}

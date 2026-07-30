@@ -23,13 +23,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import ShareButton from '@/components/share-button';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import ShareButton from '@/components/share-button';
 import React, { useEffect, useState } from 'react';
 import { trackFirestoreView, trackFirestoreClick, trackFirestoreShare } from '@/lib/analytics';
 import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
@@ -498,8 +498,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
         "ux-card-container p-4 w-full relative min-w-0 text-left group flex cursor-pointer overflow-hidden",
         isList ? "flex-row items-center gap-6 h-auto" : "flex-col justify-between",
         !isList && !isMasonry ? (details === 'compact' ? "h-[370px]" : "h-[440px]") : "",
-        isMasonry ? "h-auto" : "",
-        !isList && "max-w-[280px]"
+        isMasonry ? "h-auto" : ""
       )}
       onClick={() => {
         router.push(productUrl);
@@ -616,7 +615,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
                 "text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1.5 leading-none",
                 isList && "justify-end"
               )}>
-                <span>Zaoszczędź {priceData.savings}</span>
+                <span>{t('labels.saveAmount', { amount: priceData.savings })}</span>
                 {typeof priceData.discount === 'number' && priceData.discount > 0 && (
                   <span className="bg-emerald-500/10 px-1 py-0.5 rounded text-[8px] font-black">-{priceData.discount}%</span>
                 )}
@@ -639,10 +638,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
             </div>
 
             {/* Right: Actions */}
-            <div className={cn(
-              "flex items-center gap-1 transition-all duration-300",
-              !isList && "translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100"
-            )} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               <button 
                 className={cn("ux-action-btn", isFavorited && "text-red-500 bg-red-500/10 opacity-100")}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(); }}
@@ -658,6 +654,15 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
               >
                 <Scale className="h-3.5 w-3.5" />
               </button>
+              <ShareButton
+                type="product"
+                itemId={productId}
+                title={displayTitle}
+                url={`/products/${productId}`}
+                variant="ghost"
+                size="icon"
+                className="ux-action-btn"
+              />
               <button 
                 className={cn("ux-action-btn", inCart && "text-emerald-500 bg-emerald-500/10 opacity-100")}
                 onClick={(e) => {
@@ -672,14 +677,14 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
               </button>
               {productExternalUrl ? (
                 <button 
-                  className="ux-action-btn bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-md opacity-90 hover:opacity-100 hover:scale-110 animate-bounce"
+                  className="ux-action-btn bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/35 border border-orange-400/30 opacity-95 hover:opacity-100 hover:scale-110 animate-bounce transition-all"
                   onClick={(e) => {
                     e.stopPropagation();
                     window.open(productExternalUrl, '_blank', 'noopener,noreferrer');
                   }}
                   title="Kup teraz"
                 >
-                  <ArrowUp className="h-3.5 w-3.5 rotate-90" />
+                  <ArrowUp className="h-3.5 w-3.5 rotate-90 stroke-[2.5]" />
                 </button>
               ) : (
                 <button 
@@ -688,7 +693,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
                     e.stopPropagation();
                     router.push(productUrl);
                   }}
-                  title="Zobacz produkt"
+                  title={t('labels.viewProduct')}
                 >
                   <ArrowUp className="h-3.5 w-3.5 rotate-90" />
                 </button>

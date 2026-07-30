@@ -1,0 +1,143 @@
+{
+  "hero": {
+    "badge": "Le offerte più calde del web",
+    "title": {
+      "discover": "Scopri",
+      "best": "le migliori",
+      "deals": "offerte"
+    },
+    "subtitle": "Una community che condivide le migliori scoperte, promozioni e prodotti. Risparmia in modo intelligente! 💰",
+    "searchPlaceholder": "Cosa cerchi? (es. iPhone, scarpe sportive, elettrodomestici...)",
+    "searchButton": "Cerca",
+    "dealOfWeek": "Offerta della Settimana",
+    "browseDeals": "Sfoglia offerte",
+    "catalog": "Catalogo prodotti",
+    "titleLine1": "Trova le migliori",
+    "titleHighlight": "Offerte e Promozioni",
+    "description": "Una community di cacciatori di affari che condivide offerte verificate, codici sconto e saldi. Acquista in modo più intelligente!",
+    "soldCount": "{count}+ acquistati",
+    "checkPrice": "Verifica",
+    "claimDeal": "Approfitta dell'offerta",
+    "prevDeal": "Offerta precedente",
+    "nextDeal": "Offerta successiva",
+    "dealNumber": "Offerta {number}"
+  },
+  "stats": {
+    "hotDealsCount": "Offerte calde",
+    "products": "Prodotti",
+    "community": "Community",
+    "savings": "Risparmi",
+    "verifiedDeals": "Offerte verificate",
+    "monitoredProducts": "Prodotti monitorati",
+    "activeHunters": "Cacciatori di affari attivi"
+  },
+  "categories": {
+    "title": "Esplora le categorie",
+    "subtitle": "Trova quello che cerchi",
+    "subcategories": "sottocategorie",
+    "viewAll": "Vedi tutte le categorie",
+    "empty": "Le categorie saranno presto disponibili"
+  },
+  "hotDeals": {
+    "title": "Le offerte più calde",
+    "subtitle": "Verificate dalla community",
+    "viewAll": "Vedi tutte",
+    "empty": "Le offerte più calde appariranno presto qui!",
+    "viewAllTitle": "Tutte le offerte calde",
+    "viewAllSub": "Sfoglia migliaia di sconti e saldi dalla community dei cacciatori"
+  },
+  "topProducts": {
+    "title": "Prodotti più votati",
+    "subtitle": "Qualità verificata dalla nostra community",
+    "viewAll": "Sfoglia il catalogo",
+    "empty": "I migliori prodotti appariranno presto qui!",
+    "viewAllTitle": "Catalogo completo dei prodotti",
+    "viewAllSub": "Scopri e confronta centinaia di prodotti verificati ai prezzi più bassi"
+  },
+  "recommendedProducts": "Prodotti consigliati",
+  "noDeals": "Nessuna offerta approvata da visualizzare.",
+  "noProducts": "Nessun prodotto approvato da visualizzare.",
+  "browseCategories": {
+    "viewSubcategories": "Vedi sottocategorie",
+    "subcategoryCount": "{count, plural, one {# sottocategoria} other {# sottocategorie}}",
+    "productsCount": "{count, plural, one {# prodotto} other {# prodotti}}",
+    "browseAll": "Sfoglia tutto",
+    "allCategories": "Tutte le categorie",
+    "moreCategories": "+{count} altre categorie"
+  },
+  "benefits": {
+    "badge": "Unisciti alla community",
+    "title": "Perché registrarsi?",
+    "subtitle": "Sblocca tutte le funzionalità e ottieni vantaggi esclusivi",
+    "items": {
+      "notifications": {
+        "title": "Notifiche sulle offerte",
+        "description": "Ricevi avvisi sulle migliori promozioni nelle tue categorie preferite"
+      },
+      "favorites": {
+        "title": "Preferiti e liste",
+        "description": "Salva prodotti interessanti e monitora le variazioni di prezzo"
+      },
+      "exclusive": {
+        "title": "Offerte esclusive",
+        "description": "Accesso a promozioni speciali riservate ai membri"
+      },
+      "community": {
+        "title": "Community",
+        "description": "Condividi scoperte, commenta e valuta le offerte"
+      },
+      "points": {
+        "title": "Sistema a punti",
+        "description": "Guadagna punti per la tua attività e ricevi premi"
+      },
+      "verified": {
+        "title": "Offerte verificate",
+        "description": "Accesso prioritario alle offerte verificate dai moderatori"
+      }
+    },
+    "joinButton": "Iscriviti gratis",
+    "joinSubtext": "La registrazione richiede meno di un minuto. Senza impegno.",
+    "gdpr": "Conforme al GDPR",
+    "ssl": "Connessione SSL crittografata"
+  },
+  "forum": {
+    "title": "Partecipa alla discussione nel forum",
+    "subtitle": "La community condivide conoscenze, consigli e le migliori scoperte. Fai una domanda, aiuta gli altri o leggi semplicemente discussioni interessanti!",
+    "browseButton": "Sfoglia il forum",
+    "createButton": "Crea discussione",
+    "stats": {
+      "threads": "Discussioni attive",
+      "users": "Utenti",
+      "replies": "Risposte giornaliere"
+    }
+  },
+  "about": {
+    "badge": "La nostra missione",
+    "title": "Ti aiutiamo a risparmiare",
+    "titleHighlight": "in modo intelligente ed efficace",
+    "text1": "Okazje Plus è una piattaforma creata da e per una community di cacciatori di affari. Il nostro obiettivo è aiutarti a trovare le migliori promozioni, prodotti e offerte speciali in un unico posto.",
+    "text2": "Crediamo che acquistare in modo intelligente non sia solo un risparmio economico, ma anche di tempo. Grazie a una community attiva e all'IA avanzata, ti offriamo solo offerte verificate e di valore.",
+    "freePlatform": "Piattaforma 100% gratuita",
+    "verifiedByCommunity": "Verificata dalla community",
+    "aiSupport": "Supporto qualità IA",
+    "cards": {
+      "aiTitle": "IA verificata",
+      "aiDesc": "Gli algoritmi verificano la qualità delle offerte",
+      "communityTitle": "Community",
+      "communityDesc": "Migliaia di utenti condividono le loro scoperte",
+      "moderationTitle": "Moderazione",
+      "moderationDesc": "Ogni offerta viene sottoposta a verifica",
+      "realtimeTitle": "Tempo reale",
+      "realtimeDesc": "Notifiche istantanee per nuove offerte"
+    }
+  },
+  "cta": {
+    "title": "Pronto per le migliori offerte?",
+    "subtitle": "Unisciti a migliaia di utenti che stanno già risparmiando con Okazje Plus.",
+    "browseDeals": "Sfoglia offerte",
+    "catalog": "Catalogo prodotti"
+  },
+  "viewAllCard": {
+    "cta": "Vedi tutti"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "title": "Forum della Community",
+  "subtitle": "Discussioni su offerte, consigli per gli acquisti e altro",
+  "newThread": "Nuova discussione",
+  "searchPlaceholder": "Cerca discussioni...",
+  "sortBy": "Ordina",
+  "filterBy": "Filtra",
+  "newest": "Più recenti",
+  "popular": "Popolari",
+  "unanswered": "Senza risposta",
+  "all": "Tutti",
+  "answered": "Con risposta",
+  "pinned": "In evidenza",
+  "replies": "risposte",
+  "views": "visualizzazioni",
+  "solved": "Risolto",
+  "noThreads": "Nessuna discussione",
+  "noThreadsDesc": "Nessuna discussione trovata con i tuoi criteri."
+}

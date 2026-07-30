@@ -39,11 +39,13 @@ import { useCurrency } from '@/lib/unified-currency';
 import { extractPriceInfo, getDiscountPercent } from '@/lib/i18n-utils';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 import { useCardBaseState } from '@/hooks/use-card-base-state';
+import { formatTimeAgo } from '@/lib/format-relative-time';
 import { CardHeader } from '@/components/ui/card-header';
 import { getExternalUrl } from '@/lib/external-url';
 import { Sparkline, generateSmartBadges } from '@/components/product/Sparkline';
 import { SpecsTeaserInline } from '@/components/product/SpecificationsTable';
 import { useUX } from '@/context/UXContext';
+import { AuthModal } from '@/components/auth/auth-modal';
 
 interface DealCardProps {
   deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
@@ -183,7 +185,8 @@ function toTimestampSafe(value: any): number {
   return 0;
 }
 
-function getRelativeTime(when: any): string {
+function getRelativeTime(when: any, t?: any): string {
+  if (t) return formatTimeAgo(when, t);
   const now = new Date();
   const ts = toTimestampSafe(when);
   const posted = ts ? new Date(ts) : new Date(0);
@@ -192,12 +195,12 @@ function getRelativeTime(when: any): string {
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
 
-  if (diffMinutes < 60) return `${diffMinutes} min temu`;
-  if (diffHours < 24) return `${diffHours} godz. temu`;
-  if (diffDays === 1) return 'wczoraj';
-  if (diffDays < 7) return `${diffDays} dni temu`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} tyg. temu`;
-  return `${Math.floor(diffDays / 30)} mies. temu`;
+  if (diffMinutes < 60) return `${diffMinutes} min`;
+  if (diffHours < 24) return `${diffHours}h`;
+  if (diffDays === 1) return '1d';
+  if (diffDays < 7) return `${diffDays}d`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w`;
+  return `${Math.floor(diffDays / 30)}mo`;
 }
 
 function DealCard({ deal, product, priority = false, layoutMode = 'grid', index = 0 }: DealCardProps) {
@@ -225,6 +228,8 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
   const [isVoting, setIsVoting] = useState(false);
   const [userVote, setUserVote] = useState<1 | -1 | null>(null); // Śledzimy głos użytkownika
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalActionType, setAuthModalActionType] = useState<'vote' | 'favorite' | 'alert' | 'comment' | 'general'>('general');
   const [isNew, setIsNew] = useState(false); // Will be calculated in useEffect
   const [relativeTime, setRelativeTime] = useState(''); // Will be calculated in useEffect
   const { currency, formatPrice, convertToPLN } = useCurrency();
@@ -430,7 +435,8 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
 
   const handleVote = async (action: 'up' | 'down') => {
     if (!user) {
-      toast.error(t('auth.loginToVote'));
+      setAuthModalActionType('vote');
+      setAuthModalOpen(true);
       return;
     }
 
@@ -604,14 +610,22 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
   const isList = layoutMode === 'list';
   const isMasonry = layoutMode === 'masonry';
 
+  const ambientBgStyle = temperature >= 500
+    ? 'bg-gradient-to-r from-red-500/10 via-orange-500/5 to-card dark:from-red-500/15 dark:via-orange-500/8 dark:to-card border-orange-500/35 dark:border-orange-500/45 hover:border-orange-500/60'
+    : temperature >= 300
+    ? 'bg-gradient-to-r from-orange-500/8 via-amber-500/4 to-card dark:from-orange-500/12 dark:via-amber-500/6 dark:to-card border-amber-500/30 dark:border-amber-500/40 hover:border-amber-500/50'
+    : temperature >= 100
+    ? 'bg-gradient-to-r from-amber-500/4 via-yellow-500/2 to-card dark:from-amber-500/6 dark:via-yellow-500/3 dark:to-card border-amber-500/20 dark:border-amber-500/25 hover:border-amber-500/35'
+    : '';
+
   return (
     <div 
       className={cn(
-        "ux-card-container p-4 w-full relative min-w-0 text-left group flex cursor-pointer overflow-hidden",
+        "ux-card-container p-4 w-full relative min-w-0 text-left group flex cursor-pointer overflow-hidden transition-all duration-300",
+        ambientBgStyle,
         isList ? "flex-row items-center gap-6 h-auto" : "flex-col justify-between",
         !isList && !isMasonry ? (details === 'compact' ? "h-[370px]" : "h-[440px]") : "",
-        isMasonry ? "h-auto" : "",
-        !isList && "max-w-[280px]"
+        isMasonry ? "h-auto" : ""
       )}
       onClick={() => {
         router.push(`${prefix}/deals/${deal.id}`);
@@ -726,7 +740,7 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
                 "text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold flex items-center gap-1.5 leading-none",
                 isList && "justify-end"
               )}>
-                <span>Zaoszczędź {priceData.formattedSavings}</span>
+                <span>{t('labels.saveAmount', { amount: priceData.formattedSavings })}</span>
                 {typeof priceData.discount === 'number' && priceData.discount > 0 && (
                   <span className="bg-emerald-500/10 px-1 py-0.5 rounded text-[8px] font-black">-{priceData.discount}%</span>
                 )}
@@ -745,9 +759,8 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
               <div className="ux-vote-pill" onClick={(e) => e.stopPropagation()}>
                 <button 
                   className={cn(
-                    "flex items-center justify-center transition-all duration-300 font-black text-xs h-5",
-                    (!isList && !isMasonry) ? "w-5" : "w-0 opacity-0 scale-0 group-hover:w-5 group-hover:opacity-100 group-hover:scale-100",
-                    userVote === 1 ? "bg-primary text-primary-foreground font-black" : "",
+                    "flex items-center justify-center transition-all duration-300 font-black text-xs h-5 overflow-hidden",
+                    userVote === 1 ? "w-5 bg-primary text-primary-foreground font-black opacity-100 scale-100" : "w-0 opacity-0 scale-0 group-hover:w-5 group-hover:opacity-100 group-hover:scale-100",
                     "hover:opacity-100 disabled:opacity-50"
                   )}
                   style={{ borderRadius: 'var(--ux-radius-btn)' }}
@@ -763,9 +776,8 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
                 </span>
                 <button 
                   className={cn(
-                    "flex items-center justify-center transition-all duration-300 font-black text-xs h-5",
-                    (!isList && !isMasonry) ? "w-5" : "w-0 opacity-0 scale-0 group-hover:w-5 group-hover:opacity-100 group-hover:scale-100",
-                    userVote === -1 ? "bg-red-500 text-white font-black" : "",
+                    "flex items-center justify-center transition-all duration-300 font-black text-xs h-5 overflow-hidden",
+                    userVote === -1 ? "w-5 bg-red-500 text-white font-black opacity-100 scale-100" : "w-0 opacity-0 scale-0 group-hover:w-5 group-hover:opacity-100 group-hover:scale-100",
                     "hover:opacity-100 disabled:opacity-50"
                   )}
                   style={{ borderRadius: 'var(--ux-radius-btn)' }}
@@ -779,10 +791,7 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
             </div>
 
             {/* Right: Actions */}
-            <div className={cn(
-              "flex items-center gap-1 transition-all duration-300",
-              !isList && "translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100"
-            )} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               <button 
                 className={cn("ux-action-btn", isFavorited && "text-red-500 bg-red-500/10 opacity-100")}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(); }}
@@ -798,6 +807,15 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
               >
                 <Scale className="h-3.5 w-3.5" />
               </button>
+              <ShareButton
+                type="deal"
+                itemId={deal.id}
+                title={dealTitle || t('labels.deal')}
+                url={`/deals/${deal.id}`}
+                variant="ghost"
+                size="icon"
+                className="ux-action-btn"
+              />
               <button 
                 className={cn("ux-action-btn", inCart && "text-green-600 bg-green-50")}
                 onClick={(e) => {
@@ -825,20 +843,26 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
                 />
               ) : dealExternalUrl ? (
                 <button 
-                  className="ux-action-btn bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-md opacity-90 hover:opacity-100 hover:scale-110 animate-bounce"
+                  className="ux-action-btn bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/35 border border-orange-400/30 opacity-95 hover:opacity-100 hover:scale-110 animate-bounce transition-all"
                   onClick={(e) => {
                     e.stopPropagation();
                     window.open(dealExternalUrl, '_blank', 'noopener,noreferrer');
                   }}
                   title={t('actions.goTo')}
                 >
-                  <ArrowUp className="h-3.5 w-3.5 rotate-90" />
+                  <ArrowUp className="h-3.5 w-3.5 rotate-90 stroke-[2.5]" />
                 </button>
               ) : null}
             </div>
           </div>
         </div>
       </div>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        actionType={authModalActionType}
+      />
     </div>
   );
 }

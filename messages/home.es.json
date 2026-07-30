@@ -11,13 +11,25 @@
     "searchButton": "Buscar",
     "dealOfWeek": "Oferta de la semana",
     "browseDeals": "Explorar ofertas",
-    "catalog": "Catálogo de productos"
+    "catalog": "Catálogo de productos",
+    "titleLine1": "Encuentra las mejores",
+    "titleHighlight": "Ofertas y Promociones",
+    "description": "Una comunidad de cazadores de ofertas compartiendo ofertas verificadas, códigos de descuento y rebajas. ¡Compra más inteligente!",
+    "soldCount": "{count}+ comprados",
+    "checkPrice": "Ver",
+    "claimDeal": "Aprovechar oferta",
+    "prevDeal": "Oferta anterior",
+    "nextDeal": "Siguiente oferta",
+    "dealNumber": "Oferta {number}"
   },
   "stats": {
     "hotDealsCount": "Ofertas irresistibles",
     "products": "Productos",
     "community": "Comunidad",
-    "savings": "Ahorros"
+    "savings": "Ahorros",
+    "verifiedDeals": "Ofertas verificadas",
+    "monitoredProducts": "Productos monitoreados",
+    "activeHunters": "Cazadores de ofertas activos"
   },
   "categories": {
     "title": "Explorar categorías",
@@ -30,13 +42,17 @@
     "title": "Las mejores ofertas",
     "subtitle": "Verificado por la comunidad",
     "viewAll": "Ver todos",
-    "empty": "¡Pronto encontrarás aquí las ofertas más irresistibles!"
+    "empty": "¡Pronto encontrarás aquí las ofertas más irresistibles!",
+    "viewAllTitle": "Todas las ofertas calientes",
+    "viewAllSub": "Explora miles de descuentos y rebajas de la comunidad de cazadores"
   },
   "topProducts": {
     "title": "Productos mejor valorados",
     "subtitle": "Calidad comprobada por nuestra comunidad.",
     "viewAll": "Ver el catálogo",
-    "empty": "¡Pronto encontrarás aquí los mejores productos!"
+    "empty": "¡Pronto encontrarás aquí los mejores productos!",
+    "viewAllTitle": "Catálogo completo de productos",
+    "viewAllSub": "Descubre y compara cientos de productos verificados a los mejores precios"
   },
   "recommendedProducts": "Productos recomendados",
   "noDeals": "No hay oportunidades de visualización aprobadas.",
@@ -79,8 +95,10 @@
         "description": "Acceso prioritario a ofertas verificadas por moderadores."
       }
     },
-    "joinButton": "Únete gratis",
-    "joinSubtext": "El registro toma menos de un minuto. Sin compromiso."
+    "joinButton": "Registrarse gratis",
+    "joinSubtext": "El registro lleva menos de un minuto.",
+    "gdpr": "Cumple con el RGPD",
+    "ssl": "Conexión SSL encriptada"
   },
   "forum": {
     "title": "Únete a la conversación en el foro.",
@@ -96,6 +114,30 @@
   "about": {
     "badge": "Nuestra misión",
     "title": "Ayudamos a ahorrar.",
-    "titleHighlight": "de manera inteligente y eficiente"
+    "titleHighlight": "de manera inteligente y eficiente",
+    "text1": "Okazje Plus es una plataforma creada por y para la comunidad de cazadores de ofertas. Nuestro objetivo es ayudarte a encontrar las mejores promociones, productos y ofertas especiales en un solo lugar.",
+    "text2": "Creemos que comprar de forma inteligente no es solo ahorrar dinero, sino también tiempo. Gracias a una comunidad activa y a la IA avanzada, te ofrecemos solo ofertas verificadas y valiosas.",
+    "freePlatform": "Plataforma 100% gratuita",
+    "verifiedByCommunity": "Verificado por la comunidad",
+    "aiSupport": "Soporte de calidad IA",
+    "cards": {
+      "aiTitle": "IA verificada",
+      "aiDesc": "Los algoritmos verifican la calidad de las ofertas",
+      "communityTitle": "Comunidad",
+      "communityDesc": "Miles de usuarios comparten sus hallazgos",
+      "moderationTitle": "Moderación",
+      "moderationDesc": "Cada oferta pasa por verificación",
+      "realtimeTitle": "Tiempo real",
+      "realtimeDesc": "Notificaciones instantáneas de nuevas ofertas"
+    }
+  },
+  "cta": {
+    "title": "¿Listo para las mejores ofertas?",
+    "subtitle": "Únete a miles de usuarios que ya están ahorrando con Okazje Plus.",
+    "browseDeals": "Explorar ofertas",
+    "catalog": "Catálogo de productos"
+  },
+  "viewAllCard": {
+    "cta": "Ver todos"
   }
 }

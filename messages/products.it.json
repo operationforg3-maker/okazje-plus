@@ -1,0 +1,173 @@
+{
+  "title": "Prodotti",
+  "subtitle": "I migliori prodotti da AliExpress",
+  "recommendations": "Pannello consigli",
+  "insights": {
+    "seeOffer": "Vedi offerta",
+    "seeMore": "Vedi altro",
+    "bestOffersTitle": "Migliori offerte",
+    "bestOffersDesc": "Scopri i nostri prodotti consigliati con le valutazioni più alte",
+    "seeDeals": "Vedi offerte"
+  },
+  "viewToggle": {
+    "grid": "Vista griglia",
+    "list": "Vista lista"
+  },
+  "filters": {
+    "search": "Cerca prodotti...",
+    "title": "Categorie e filtri",
+    "sort": "Ordina",
+    "sortOptions": {
+      "popular": "Più popolari",
+      "newest": "Più recenti",
+      "price_asc": "Prezzo: dal più basso",
+      "price_desc": "Prezzo: dal più alto",
+      "rating": "Più votati"
+    },
+    "category": "Categoria",
+    "priceRange": "Fascia di prezzo",
+    "min": "Min",
+    "max": "Max",
+    "priceLimits": "Limiti fascia di prezzo",
+    "minLimit": "Limite min:",
+    "maxLimit": "Limite max:",
+    "quickFilters": {
+      "freeShipping": "Spedizione gratuita",
+      "highRating": "Voto alto",
+      "topRated": "Più votati (4.5+)",
+      "newArrivals": "Nuovi arrivi",
+      "onSale": "In saldo",
+      "bestsellers": "Bestseller"
+    },
+    "clearAll": "Cancella filtri",
+    "savedLabel": "Filtri salvati:",
+    "saveFilter": "Salva filtri attuali",
+    "authRequiredToSave": "Accedi per salvare i filtri",
+    "promptFilterName": "Inserisci un nome per questo set di filtri:",
+    "savedSuccess": "Filtro \"{name}\" salvato!",
+    "saveError": "Impossibile salvare il filtro",
+    "loadedSuccess": "Filtro caricato: {name}",
+    "deletedSuccess": "Filtro eliminato",
+    "deleteError": "Impossibile eliminare il filtro"
+  },
+  "statusView": {
+    "visibilityPlaceholder": "Visibilità",
+    "approvedView": "Vista: Approvati",
+    "waitingRoomView": "Vista: Sala d'attesa",
+    "waitingRoomSuffix": "sala d'attesa",
+    "autoSwitchToWaitingRoom": "Nessun prodotto approvato trovato, passato alla sala d'attesa.",
+    "autoSwitchToApproved": "Nessun prodotto in sala d'attesa, passato agli approvati."
+  },
+  "viewMode": {
+    "list": "Lista",
+    "grid": "Griglia"
+  },
+  "density": {
+    "standard": "Standard",
+    "compact": "Compatto"
+  },
+  "categories": {
+    "title": "Categorie",
+    "showAll": "Mostra tutte",
+    "hideEmpty": "Nascondi vuote",
+    "allProducts": "Tutti i prodotti"
+  },
+  "breadcrumbs": {
+    "home": "Home",
+    "catalog": "Catalogo prodotti"
+  },
+  "empty": {
+    "title": "Nessun prodotto",
+    "description": "Nessun prodotto trovato con i tuoi criteri.",
+    "inCategory": "Nessun prodotto in questa categoria",
+    "cta": "Torna a tutti i prodotti"
+  },
+  "loading": "Caricamento prodotti...",
+  "loadingMore": "Caricamento altri prodotti...",
+  "addToCart": "Aggiungi al carrello",
+  "list": {
+    "titleWithCount": "Prodotti ({count})"
+  },
+  "showing": "Mostrando tutti i {count} prodotti",
+  "card": {
+    "new": "Nuovo",
+    "price": "Prezzo",
+    "go": "Vai",
+    "offer": "Offerta",
+    "details": "Dettagli",
+    "info": "Info",
+    "cart": "Carrello",
+    "inCart": "Nel carrello",
+    "toCart": "Aggiungi al carrello",
+    "favorite": "Preferiti",
+    "favoriteAdd": "Aggiungi ai preferiti",
+    "favoriteRemove": "Rimuovi dai preferiti",
+    "compare": "Confronta",
+    "compareTitle": "Confronta prezzi"
+  },
+  "productDetail": {
+    "m6": {
+      "dealsAvailable": "{count, plural, one {# offerta disponibile} other {# offerte disponibili}}",
+      "compareHint": "Confronta i prezzi di diversi venditori qui sotto",
+      "videoTitle": "Video prodotto",
+      "videoDesc": "Video sorgente (AliExpress)"
+    },
+    "simple": {
+      "loading": "Caricamento prodotto...",
+      "notFound": "Prodotto non trovato",
+      "error": "Impossibile caricare il prodotto",
+      "reviews": "{count, plural, one {# recensione} other {# recensioni}}",
+      "verified": "Verificato",
+      "bestPriceAt": "Miglior offerta su",
+      "totalPrice": "Totale",
+      "productPrice": "Prezzo prodotto",
+      "shipping": "Spedizione",
+      "freeShipping": "GRATIS",
+      "estimatedDelivery": "Consegna stimata: {days, plural, one {# giorno} other {# giorni}}",
+      "buyNow": "Acquista ora",
+      "whatUsersSay": "Cosa dicono gli utenti",
+      "overview": "Panoramica",
+      "details": "Dettagli"
+    },
+    "priceComparison": {
+      "title": "Confronto prezzi",
+      "storesCount": "{count, plural, one {# negozio} other {# negozi}}",
+      "store": "Negozio",
+      "price": "Prezzo",
+      "shipping": "Spedizione",
+      "total": "Totale",
+      "delivery": "Consegna",
+      "rating": "Valutazione",
+      "action": "Azione",
+      "bestPriceBadge": "Miglior prezzo",
+      "freeShipping": "GRATIS",
+      "deliveryDays": "{count, plural, one {# giorno} other {# giorni}}",
+      "deliveryDash": "—",
+      "buy": "Acquista",
+      "lowestInfo": "Prezzo più basso: risparmia rispetto ad altri negozi. La consegna gratuita potrebbe essere disponibile.",
+      "marketPrice": {
+        "label": "Media di mercato",
+        "savings": "Risparmi",
+        "note": "*Prezzo medio stimato da altre piattaforme (Allegro/Amazon)"
+      },
+      "loading": "Caricamento offerte...",
+      "empty": "Nessuna offerta per questo prodotto"
+    },
+    "priceHistory": {
+      "title": "Storico prezzi (30 giorni)",
+      "noDataTitle": "Nessuno storico prezzi",
+      "noDataDescription": "Dati insufficienti per visualizzare lo storico prezzi",
+      "description": "Prezzo giornaliero più basso - ultimi 30 giorni ({points} punti dati) - valuta: {currency}",
+      "stats": {
+        "min": "Prezzo più basso",
+        "max": "Prezzo più alto",
+        "avg": "Prezzo medio",
+        "change": "Variazione"
+      },
+      "axisLabel": "Prezzo ({currency})",
+      "omnibusTitle": "Direttiva Omnibus",
+      "omnibusText": "Il grafico mostra il prezzo più basso negli ultimi 30 giorni per garantire trasparenza e conformità UE.",
+      "price": "Prezzo"
+    }
+  }
+}

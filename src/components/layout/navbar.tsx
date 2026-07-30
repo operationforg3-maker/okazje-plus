@@ -2,12 +2,12 @@
 
 import React from 'react';
 import Link from 'next/link';
-import {useParams, usePathname} from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { Menu, ShoppingBag, Scale, Trash2, Search } from 'lucide-react';
 import { useComparison } from '@/components/deal-comparison-tool';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { useTranslations } from 'next-intl';
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -88,8 +88,8 @@ export function Navbar() {
     }
   }, [user, loading, isMounted]);
 
-  const params = useParams();
-  const locale = (params?.locale as string) || 'pl';
+  const rawLocale = useLocale();
+  const locale = (rawLocale as string) || 'pl';
   const prefix = `/${locale}`;
 
   return (
@@ -109,7 +109,7 @@ export function Navbar() {
               <SheetHeader>
                 <SheetTitle>
                   <Link href={`${prefix}/`} className="flex items-center gap-2" onClick={() => setIsOpen(false)}>
-                    <img src="/icon_okazjeplus.svg" alt="Okazje+ logo" className="h-8 w-8" />
+                    <img src="/icon_okazjeplus.svg" alt="Okazje+ logo" className="h-8 w-8 max-w-[32px] max-h-[32px] shrink-0 object-contain" />
                     <span className="font-bold font-headline text-xl">Okazje+</span>
                   </Link>
                 </SheetTitle>
@@ -130,7 +130,7 @@ export function Navbar() {
               <img
                 src="/icon_okazjeplus.svg"
                 alt="Okazje+"
-                className="h-8 w-8 flex-shrink-0 md:hidden"
+                className="h-8 w-8 max-w-[32px] max-h-[32px] shrink-0 object-contain md:hidden"
               />
               <LogoSVGWrapper className="hidden h-8 flex-shrink-0 md:block md:h-9 lg:h-10" />
             </div>

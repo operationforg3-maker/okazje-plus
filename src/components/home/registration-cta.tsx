@@ -52,11 +52,11 @@ export default function RegistrationCTA() {
                 <div className="flex items-center gap-4 mt-6 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-green-500" />
-                    <span>Zgodne z RODO / GDPR</span>
+                    <span>{t('benefits.gdpr')}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <svg className="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                    <span>Szyfrowane połączenie SSL</span>
+                    <span>{t('benefits.ssl')}</span>
                   </div>
                 </div>
               </div>

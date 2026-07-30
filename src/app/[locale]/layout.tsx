@@ -60,6 +60,11 @@ const SEO_BY_LOCALE: Record<string, {
     description: 'Відкривайте найкращі онлайн-акції, знижки та розпродажі. Спільнота Okazje+ щодня ділиться перевіреними вигідними пропозиціями.',
     keywords: ['акції', 'знижки', 'розпродаж', 'онлайн покупки', 'купони', 'кращі ціни', 'вигідні пропозиції'],
   },
+  it: {
+    title: 'Okazje+ - Le migliori offerte di shopping online',
+    description: 'Scopri le migliori offerte, promozioni e sconti online. La community Okazje+ condivide ogni giorno offerte verificate e risparmi intelligenti.',
+    keywords: ['offerte', 'promozioni', 'sconti', 'shopping online', 'coupon', 'migliori prezzi', 'affari'],
+  },
 };
 
 export async function generateMetadata({

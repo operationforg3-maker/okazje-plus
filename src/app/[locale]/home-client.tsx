@@ -75,6 +75,7 @@ function calcDiscount(deal: Deal): number {
 // Karuzela "Okazja Tygodnia" — stała wysokość, cross-fade bez skoków
 // ============================================================
 function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: string }) {
+  const t = useTranslations('home');
   const [active, setActive] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -155,7 +156,7 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
                   <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-20">
                     <span className="bg-orange-500 text-white text-[10px] md:text-xs font-black px-3 py-1.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 shadow-lg">
                       <Flame className="h-3.5 w-3.5 animate-pulse" />
-                      Okazja Tygodnia
+                      {t('hero.dealOfWeek')}
                     </span>
                     <div className="flex flex-col items-end gap-1.5">
                       {discount > 0 && (
@@ -166,7 +167,7 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
                       )}
                       {sales > 10 && (
                         <span className="bg-background/95 backdrop-blur-sm text-foreground text-[10px] md:text-xs font-bold px-2.5 py-1 rounded-full shadow-md">
-                          Kupiono {sales}+ szt.
+                          {t('hero.soldCount', { count: sales })}
                         </span>
                       )}
                     </div>
@@ -182,7 +183,7 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
                   <div className="flex items-center justify-between mt-3">
                     <div className="flex flex-col">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-2xl font-black text-primary">{price || 'Sprawdź'}</span>
+                        <span className="text-2xl font-black text-primary">{price || t('hero.checkPrice')}</span>
                         {origPrice && origPrice !== price && (
                           <span className="text-sm text-muted-foreground line-through opacity-70">{origPrice}</span>
                         )}
@@ -190,7 +191,7 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
                     </div>
                     {/* Fake button purely for UI */}
                     <div className="rounded-xl font-bold bg-primary text-primary-foreground shadow-md text-sm px-4 py-2 flex items-center transition-transform group-hover:scale-105">
-                      Odbierz okazję
+                      {t('hero.claimDeal')}
                     </div>
                   </div>
                 </div>
@@ -202,14 +203,14 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
                   <button
                     onClick={(e) => { e.preventDefault(); prev(); resetTimer(); }}
                     className="absolute left-3 top-[35%] p-2.5 rounded-full bg-background/80 backdrop-blur-md shadow-xl hover:bg-background hover:scale-110 transition-all z-30"
-                    aria-label="Poprzednia okazja"
+                    aria-label={t('hero.prevDeal')}
                   >
                     <ChevronLeft className="h-5 w-5 text-foreground" />
                   </button>
                   <button
                     onClick={(e) => { e.preventDefault(); next(); resetTimer(); }}
                     className="absolute right-3 top-[35%] p-2.5 rounded-full bg-background/80 backdrop-blur-md shadow-xl hover:bg-background hover:scale-110 transition-all z-30"
-                    aria-label="Następna okazja"
+                    aria-label={t('hero.nextDeal')}
                   >
                     <ChevronRight className="h-5 w-5 text-foreground" />
                   </button>
@@ -229,12 +230,85 @@ function WeeklyShowcaseCarousel({ deals, locale }: { deals: Deal[]; locale: stri
                 'h-1.5 rounded-full transition-all duration-300 pointer-events-auto',
                 i === active ? 'w-5 bg-primary' : 'w-1.5 bg-border/80 hover:bg-primary/50'
               )}
-              aria-label={`Okazja ${i + 1}`}
+              aria-label={t('hero.dealNumber', { number: i + 1 })}
             />
           ))}
         </div>
       </div>
     </div>
+  );
+}
+
+
+function ViewAllCard({
+  type,
+  href,
+  title,
+  subtitle,
+}: {
+  type: 'deals' | 'products';
+  href: string;
+  title: string;
+  subtitle: string;
+}) {
+  const t = useTranslations('home');
+  const isDeals = type === 'deals';
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "group relative w-full h-[440px] rounded-2xl border border-border/60 bg-gradient-to-b transition-all duration-300 hover:scale-[1.02] hover:shadow-xl flex flex-col justify-between p-6 overflow-hidden text-center cursor-pointer",
+        isDeals
+          ? "from-orange-500/10 via-amber-500/5 to-card hover:border-orange-500/50 hover:shadow-orange-500/10"
+          : "from-primary/10 via-accent/5 to-card hover:border-primary/50 hover:shadow-primary/10"
+      )}
+    >
+      {/* Background ambient glow effect */}
+      <div
+        className={cn(
+          "absolute -top-16 -right-16 w-44 h-44 rounded-full blur-3xl transition-opacity opacity-40 group-hover:opacity-80 pointer-events-none",
+          isDeals ? "bg-orange-500/30" : "bg-primary/30"
+        )}
+      />
+
+      <div className="my-auto flex flex-col items-center justify-center space-y-4 relative z-10">
+        {/* Glowing Icon Container */}
+        <div
+          className={cn(
+            "w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3",
+            isDeals
+              ? "bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-orange-500/25"
+              : "bg-gradient-to-br from-teal-500 to-emerald-500 text-white shadow-teal-500/25"
+          )}
+        >
+          {isDeals ? <Flame className="h-10 w-10 animate-pulse" /> : <ShoppingBag className="h-10 w-10" />}
+        </div>
+
+        <div className="space-y-2 px-2">
+          <h3 className="font-headline text-xl font-black text-foreground group-hover:text-primary transition-colors leading-tight">
+            {title}
+          </h3>
+          <p className="text-xs text-muted-foreground leading-relaxed max-w-[210px] mx-auto">
+            {subtitle}
+          </p>
+        </div>
+      </div>
+
+      {/* CTA Button at bottom */}
+      <div className="relative z-10 w-full pt-4 border-t border-border/30">
+        <div
+          className={cn(
+            "w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all duration-300 group-hover:shadow-lg",
+            isDeals
+              ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white group-hover:from-orange-600 group-hover:to-amber-600"
+              : "bg-gradient-to-r from-teal-600 to-emerald-600 text-white group-hover:from-teal-700 group-hover:to-emerald-700"
+          )}
+        >
+          <span>{t('viewAllCard.cta')}</span>
+          <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -249,8 +323,8 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
   const [isMounted, setIsMounted] = useState(false);
   const [showSecondarySections, setShowSecondarySections] = useState(false);
 
-  const visibleHotDeals = initialHotDeals.slice(0, 12);
-  const visibleTopProducts = initialTopProducts.slice(0, 12);
+  const visibleHotDeals = initialHotDeals.slice(0, 11);
+  const visibleTopProducts = initialTopProducts.slice(0, 11);
   const showcaseDeals = weeklyDeals.length > 0 ? weeklyDeals : initialHotDeals.slice(0, 5);
 
   useEffect(() => { setIsMounted(true); }, []);
@@ -299,14 +373,14 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
               </div>
 
               <h1 className="font-headline text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] text-foreground">
-                Znajduj najlepsze <br />
+                {t('hero.titleLine1')} <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-red-500 to-amber-500">
-                  Okazje i Promocje
+                  {t('hero.titleHighlight')}
                 </span>
               </h1>
 
               <p className="text-base sm:text-lg text-muted-foreground max-w-lg font-medium leading-relaxed">
-                Społeczność łowców okazji dzieląca się sprawdzonymi ofertami, kodami rabatowymi i wyprzedażami. Kupuj mądrzej!
+                {t('hero.description')}
               </p>
 
               {/* Search Bar — z-index 40 żeby dropdown był nad karuzelą i innymi elementami */}
@@ -323,13 +397,13 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
                 <Button size="sm" variant="outline" className="rounded-full font-semibold border-border/60 hover:bg-muted text-xs px-4" asChild>
                   <Link href={`/${locale}/deals`}>
                     <Flame className="mr-1.5 h-3.5 w-3.5 text-orange-500" />
-                    Przeglądaj okazje
+                    {t('hero.browseDeals') || 'Przeglądaj okazje'}
                   </Link>
                 </Button>
                 <Button size="sm" variant="outline" className="rounded-full font-semibold border-border/60 hover:bg-muted text-xs px-4" asChild>
                   <Link href={`/${locale}/products`}>
                     <ShoppingBag className="mr-1.5 h-3.5 w-3.5 text-primary" />
-                    Katalog produktów
+                    {t('hero.catalog') || 'Katalog produktów'}
                   </Link>
                 </Button>
               </div>
@@ -353,21 +427,21 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
               <Flame className="h-5 w-5" />
             </div>
             <span className="text-2xl font-black tracking-tight text-foreground">12 690+</span>
-            <span className="text-xs text-muted-foreground font-medium">Zweryfikowanych okazji</span>
+            <span className="text-xs text-muted-foreground font-medium">{t('stats.verifiedDeals')}</span>
           </div>
           <div className="space-y-1 flex flex-col items-center border-y md:border-y-0 md:border-x border-border/40 py-4 md:py-0">
             <div className="bg-primary/10 p-2.5 rounded-2xl text-primary mb-2">
               <ShoppingBag className="h-5 w-5" />
             </div>
             <span className="text-2xl font-black tracking-tight text-foreground">4 640+</span>
-            <span className="text-xs text-muted-foreground font-medium">Monitorowanych produktów</span>
+            <span className="text-xs text-muted-foreground font-medium">{t('stats.monitoredProducts')}</span>
           </div>
           <div className="space-y-1 flex flex-col items-center">
             <div className="bg-violet-500/10 p-2.5 rounded-2xl text-violet-500 mb-2">
               <Users className="h-5 w-5" />
             </div>
             <span className="text-2xl font-black tracking-tight text-foreground">15 400+</span>
-            <span className="text-xs text-muted-foreground font-medium">Aktywnych łowców okazji</span>
+            <span className="text-xs text-muted-foreground font-medium">{t('stats.activeHunters')}</span>
           </div>
         </div>
       </section>
@@ -399,24 +473,36 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             <div className="space-y-1 text-left">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="h-6 w-6 text-primary" />
-                <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight">Katalog Produktów</h2>
+                <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight">
+                  {t('topProducts.title') || 'Katalog Produktów'}
+                </h2>
               </div>
-              <p className="text-xs text-muted-foreground">Porównuj oferty i znajduj najtańsze sklepy</p>
+              <p className="text-xs text-muted-foreground">
+                {t('topProducts.subtitle') || 'Porównuj oferty i znajduj najtańsze sklepy'}
+              </p>
             </div>
             <Button variant="outline" className="rounded-xl border-border/60 hover:bg-muted text-xs" asChild>
               <Link href={`/${locale}/products`}>
-                Zobacz wszystkie
+                {t('topProducts.viewAll') || 'Zobacz wszystkie'}
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </Link>
             </Button>
           </div>
           {visibleTopProducts.length > 0 ? (
-            <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-6 space-y-6 w-full">
-              {visibleTopProducts.map((product, idx) => (
-                <div key={product.id} className="break-inside-avoid">
-                  <ProductCard product={product} layoutMode="masonry" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-6 w-full items-stretch">
+              {visibleTopProducts.map((product) => (
+                <div key={product.id} className="w-full flex">
+                  <ProductCard product={product} layoutMode="grid" />
                 </div>
               ))}
+              <div className="w-full flex">
+                <ViewAllCard
+                  type="products"
+                  href={`/${locale}/products`}
+                  title={t('topProducts.viewAllTitle')}
+                  subtitle={t('topProducts.viewAllSub')}
+                />
+              </div>
             </div>
           ) : (
             <Card className="p-12 text-center">
@@ -437,24 +523,36 @@ export default function HomeClient({ initialHotDeals, initialTopProducts, catego
             <div className="space-y-1 text-left">
               <div className="flex items-center gap-2">
                 <Flame className="h-6 w-6 text-orange-500" />
-                <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight">Gorące Okazje</h2>
+                <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight">
+                  {t('hotDeals.title') || 'Gorące Okazje'}
+                </h2>
               </div>
-              <p className="text-xs text-muted-foreground">Najwyżej ocenione i najbardziej opłacalne znaleziska</p>
+              <p className="text-xs text-muted-foreground">
+                {t('hotDeals.subtitle') || 'Najwyżej ocenione i najbardziej opłacalne znaleziska'}
+              </p>
             </div>
             <Button variant="outline" className="rounded-xl border-border/60 hover:bg-muted text-xs" asChild>
               <Link href={`/${locale}/deals`}>
-                Zobacz wszystkie
+                {t('hotDeals.viewAll') || 'Zobacz wszystkie'}
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </Link>
             </Button>
           </div>
           {visibleHotDeals.length > 0 ? (
-            <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-6 space-y-6 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-6 w-full items-stretch">
               {visibleHotDeals.map((deal, idx) => (
-                <div key={deal.id} className="break-inside-avoid">
-                  <DealCard deal={deal} priority={idx === 0} layoutMode="masonry" index={idx} />
+                <div key={deal.id} className="w-full flex">
+                  <DealCard deal={deal} priority={idx === 0} layoutMode="grid" index={idx} />
                 </div>
               ))}
+              <div className="w-full flex">
+                <ViewAllCard
+                  type="deals"
+                  href={`/${locale}/deals`}
+                  title={t('hotDeals.viewAllTitle')}
+                  subtitle={t('hotDeals.viewAllSub')}
+                />
+              </div>
             </div>
           ) : (
             <Card className="p-12 text-center">

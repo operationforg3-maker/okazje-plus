@@ -1,0 +1,29 @@
+{
+  "title": "Il tuo carrello",
+  "subtitle": "I tuoi prodotti selezionati",
+  "empty": {
+    "title": "Il tuo carrello è vuoto",
+    "description": "Aggiungi prodotti al carrello per generare i link di acquisto in seguito.",
+    "cta": "Sfoglia prodotti"
+  },
+  "item": {
+    "remove": "Rimuovi",
+    "quantity": "Quantità"
+  },
+  "summary": {
+    "title": "Riepilogo",
+    "subtotal": "Subtotale",
+    "shipping": "Spedizione",
+    "free": "Gratis",
+    "total": "Totale",
+    "finalize": "Vai al checkout"
+  },
+  "toast": {
+    "added": "Aggiunto al carrello",
+    "removed": "Rimosso dal carrello",
+    "updated": "Quantità aggiornata",
+    "error": "Si è verificato un errore"
+  },
+  "loading": "Caricamento carrello...",
+  "clearCart": "Svuota carrello"
+}

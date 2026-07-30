@@ -7,9 +7,16 @@
   },
   "time": {
     "days": "Jours",
-    "hours": "Dieu",
-    "minutes": "Minute",
-    "seconds": "sexe"
+    "hours": "Heures",
+    "minutes": "Minutes",
+    "seconds": "Secondes",
+    "justNow": "à l'instant",
+    "yesterday": "hier",
+    "minutesAgo": "il y a {count} min",
+    "hoursAgo": "il y a {count} h",
+    "daysAgo": "il y a {count} j",
+    "weeksAgo": "il y a {count} sem",
+    "monthsAgo": "il y a {count} mois"
   },
   "search": {
     "placeholder": "Rechercher des produits ou des offres...",
@@ -18,7 +25,10 @@
     "noResults": "Aucun résultat",
     "searching": "Recherche...",
     "searchBarLabel": "Rechercher des produits et des offres",
-    "resultsLabel": "Résultats de recherche"
+    "resultsLabel": "Résultats de recherche",
+    "typeAtLeastTwoChars": "Saisissez au moins 2 caractères pour voir des suggestions",
+    "clearSearch": "Effacer la recherche",
+    "backLabel": "Retour"
   },
   "breadcrumb": {
     "home": "Accueil",
@@ -109,7 +119,10 @@
     "dealPreview": "Aperçu de l'offre",
     "lowStock": "Stock faible",
     "more": "plus",
-    "coupon": "Coupon"
+    "coupon": "Coupon",
+    "saveAmount": "Économisez {amount}",
+    "seeAllNotifications": "Voir toutes les notifications",
+    "goToCheckout": "Passer à la caisse"
   },
   "comments": {
     "title": "Commentaires",

@@ -7,9 +7,16 @@
   },
   "time": {
     "days": "Дні",
-    "hours": "Годз",
-    "minutes": "Хв.",
-    "seconds": "Сек"
+    "hours": "Год",
+    "minutes": "Хв",
+    "seconds": "Сек",
+    "justNow": "щойно",
+    "yesterday": "вчора",
+    "minutesAgo": "{count} хв тому",
+    "hoursAgo": "{count} год тому",
+    "daysAgo": "{count} дн тому",
+    "weeksAgo": "{count} тиж тому",
+    "monthsAgo": "{count} міс тому"
   },
   "search": {
     "placeholder": "Шукайте товари або пропозиції...",
@@ -17,8 +24,11 @@
     "enterToSearch": "Натисніть Enter для повнотекстового пошуку",
     "noResults": "Немає результатів",
     "searching": "Пошук...",
-    "searchBarLabel": "Шукати продукти та пропозиції",
-    "resultsLabel": "Результати пошуку"
+    "searchBarLabel": "Пошук товарів та пропозицій",
+    "resultsLabel": "Результати пошуку",
+    "typeAtLeastTwoChars": "Введіть щонайменше 2 символи, щоб побачити підказки",
+    "clearSearch": "Очистити пошук",
+    "backLabel": "Назад"
   },
   "breadcrumb": {
     "home": "Головна сторінка",
@@ -109,7 +119,10 @@
     "dealPreview": "Перегляд пропозиції",
     "lowStock": "Мало в наявності",
     "more": "більше",
-    "coupon": "Купон"
+    "coupon": "Купон",
+    "saveAmount": "Заощадьте {amount}",
+    "seeAllNotifications": "Переглянути всі сповіщення",
+    "goToCheckout": "Перейти до оформлення"
   },
   "comments": {
     "title": "Коментарі",

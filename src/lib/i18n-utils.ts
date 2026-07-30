@@ -8,7 +8,7 @@
 import type { LocalizedText, SmartPrice } from './types';
 
 export type { LocalizedText, SmartPrice };
-export type SupportedLanguage = 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk';
+export type SupportedLanguage = 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk' | 'it';
 
 /**
  * Get localized text with fallback chain
@@ -99,7 +99,7 @@ export function getAvailableLanguages(text: LocalizedText | undefined): Supporte
   if (!text) return [];
   
   const languages: SupportedLanguage[] = [];
-  const supportedLangs: SupportedLanguage[] = ['pl', 'en', 'de', 'fr', 'es', 'uk'];
+  const supportedLangs: SupportedLanguage[] = ['pl', 'en', 'de', 'fr', 'es', 'uk', 'it'];
   
   for (const lang of supportedLangs) {
     if (hasTranslation(text, lang)) {
@@ -157,6 +157,7 @@ export function getLanguageLabel(lang: SupportedLanguage): string {
     fr: 'Français',
     es: 'Español',
     uk: 'Українська',
+    it: 'Italiano',
   };
   
   return labels[lang];
@@ -173,6 +174,7 @@ export function getLanguageFlag(lang: SupportedLanguage): string {
     fr: '🇫🇷',
     es: '🇪🇸',
     uk: '🇺🇦',
+    it: '🇮🇹',
   };
   
   return flags[lang];
@@ -351,21 +353,61 @@ export function getLocalizedField<T extends Record<string, any>>(
  * @param lang Requested language
  * @returns Localized category name
  */
+const CATEGORY_LOCALIZATIONS: Record<string, Record<SupportedLanguage, string>> = {
+  'electronics': { pl: 'Elektronika', en: 'Electronics', de: 'Elektronik', fr: 'Électronique', es: 'Electrónica', uk: 'Електроніка', it: 'Elettronica' },
+  'elektronika': { pl: 'Elektronika', en: 'Electronics', de: 'Elektronik', fr: 'Électronique', es: 'Electrónica', uk: 'Електроніка', it: 'Elettronica' },
+  
+  'home and garden': { pl: 'Dom i ogród', en: 'Home & Garden', de: 'Haus & Garten', fr: 'Maison & Jardin', es: 'Hogar y Jardín', uk: 'Дім і сад', it: 'Casa e Giardino' },
+  'dom-ogrod': { pl: 'Dom i ogród', en: 'Home & Garden', de: 'Haus & Garten', fr: 'Maison & Jardin', es: 'Hogar y Jardín', uk: 'Дім і сад', it: 'Casa e Giardino' },
+  'dom-i-ogrod': { pl: 'Dom i ogród', en: 'Home & Garden', de: 'Haus & Garten', fr: 'Maison & Jardin', es: 'Hogar y Jardín', uk: 'Дім і сад', it: 'Casa e Giardino' },
+
+  'fashion and beauty': { pl: 'Moda i uroda', en: 'Fashion & Beauty', de: 'Mode & Beauty', fr: 'Mode & Beauté', es: 'Moda y Belleza', uk: 'Мода та краса', it: 'Moda e Bellezza' },
+  'moda-uroda': { pl: 'Moda i uroda', en: 'Fashion & Beauty', de: 'Mode & Beauty', fr: 'Mode & Beauté', es: 'Moda y Belleza', uk: 'Мода та краса', it: 'Moda e Bellezza' },
+  'fashion': { pl: 'Moda i uroda', en: 'Fashion & Beauty', de: 'Mode & Beauty', fr: 'Mode & Beauté', es: 'Moda y Belleza', uk: 'Мода та краса', it: 'Moda e Bellezza' },
+
+  'sports and recreation': { pl: 'Sport i rekreacja', en: 'Sports & Recreation', de: 'Sport & Freizeit', fr: 'Sports & Loisirs', es: 'Deportes y Ocio', uk: 'Спорт і відпочинок', it: 'Sport e Tempo libero' },
+  'sport-rekreacja': { pl: 'Sport i rekreacja', en: 'Sports & Recreation', de: 'Sport & Freizeit', fr: 'Sports & Loisirs', es: 'Deportes y Ocio', uk: 'Спорт і відпочинок', it: 'Sport e Tempo libero' },
+  'sport-i-rekreacja': { pl: 'Sport i rekreacja', en: 'Sports & Recreation', de: 'Sport & Freizeit', fr: 'Sports & Loisirs', es: 'Deportes y Ocio', uk: 'Спорт і відпочинок', it: 'Sport e Tempo libero' },
+
+  'health and beauty': { pl: 'Zdrowie i uroda', en: 'Health & Beauty', de: 'Gesundheit & Beauty', fr: 'Santé & Beauté', es: 'Salud y Belleza', uk: "Здоров'я та краса", it: 'Salute e Bellezza' },
+  'zdrowie-uroda': { pl: 'Zdrowie i uroda', en: 'Health & Beauty', de: 'Gesundheit & Beauty', fr: 'Santé & Beauté', es: 'Salud y Belleza', uk: "Здоров'я та краса", it: 'Salute e Bellezza' },
+  'zdrowie-i-uroda': { pl: 'Zdrowie i uroda', en: 'Health & Beauty', de: 'Gesundheit & Beauty', fr: 'Santé & Beauté', es: 'Salud y Belleza', uk: "Здоров'я та краса", it: 'Salute e Bellezza' },
+
+  'kids and toys': { pl: 'Dla dzieci i zabawki', en: 'Kids & Toys', de: 'Kinder & Spielzeug', fr: 'Enfants & Jouets', es: 'Niños y Juguetes', uk: 'Діти та іграшки', it: 'Bambini e Giocattoli' },
+  'dla-dzieci': { pl: 'Dla dzieci i zabawki', en: 'Kids & Toys', de: 'Kinder & Spielzeug', fr: 'Enfants & Jouets', es: 'Niños y Juguetes', uk: 'Діти та іграшки', it: 'Bambini e Giocattoli' },
+  'dzieci-zabawki': { pl: 'Dla dzieci i zabawki', en: 'Kids & Toys', de: 'Kinder & Spielzeug', fr: 'Enfants & Jouets', es: 'Niños y Juguetes', uk: 'Діти та іграшки', it: 'Bambini e Giocattoli' },
+
+  'books and media': { pl: 'Książki i media', en: 'Books & Media', de: 'Bücher & Medien', fr: 'Livres & Médias', es: 'Libros y Medios', uk: 'Книги та медіа', it: 'Libri e Media' },
+  'ksiazki-media': { pl: 'Książki i media', en: 'Books & Media', de: 'Bücher & Medien', fr: 'Livres & Médias', es: 'Libros y Medios', uk: 'Книги та медіа', it: 'Libri e Media' },
+  'ksiazki-i-media': { pl: 'Książki i media', en: 'Books & Media', de: 'Bücher & Medien', fr: 'Livres & Médias', es: 'Libros y Medios', uk: 'Книги та медіа', it: 'Libri e Media' },
+
+  'automotive': { pl: 'Motoryzacja', en: 'Automotive', de: 'Automobil & Motorrad', fr: 'Automobile', es: 'Automoción', uk: 'Автотовари', it: 'Automotive' },
+  'motoryzacja': { pl: 'Motoryzacja', en: 'Automotive', de: 'Automobil & Motorrad', fr: 'Automobile', es: 'Automoción', uk: 'Автотовари', it: 'Automotive' },
+
+  'services and subscription': { pl: 'Usługi i subskrypcje', en: 'Services & Subscriptions', de: 'Dienste & Abos', fr: 'Services & Abonnements', es: 'Servicios y Suscripciones', uk: 'Послуги та передплати', it: 'Servizi e Abbonamenti' },
+  'uslugi-subskrypcje': { pl: 'Usługi i subskrypcje', en: 'Services & Subscriptions', de: 'Dienste & Abos', fr: 'Services & Abonnements', es: 'Servicios y Suscripciones', uk: 'Послуги та передплати', it: 'Servizi e Abbonamenti' },
+  'uslugi-i-subskrypcje': { pl: 'Usługi i subskrypcje', en: 'Services & Subscriptions', de: 'Dienste & Abos', fr: 'Services & Abonnements', es: 'Servicios y Suscripciones', uk: 'Послуги та передплати', it: 'Servizi e Abbonamenti' },
+
+  'supermarket': { pl: 'Artykuły spożywcze', en: 'Groceries & Supermarket', de: 'Lebensmittel', fr: 'Épicerie', es: 'Supermercado', uk: 'Продукти харчування', it: 'Supermercato' },
+  'gaming': { pl: 'Gry i konsole', en: 'Gaming & Consoles', de: 'Gaming & Konsolen', fr: 'Jeux vidéo & Consoles', es: 'Videojuegos y Consolas', uk: 'Ігри та консолі', it: 'Videogiochi e Console' },
+  'travel': { pl: 'Podróże i turystyka', en: 'Travel & Tourism', de: 'Reisen & Tourismus', fr: 'Voyages & Tourisme', es: 'Viajes y Turismo', uk: 'Подорожі та туризм', it: 'Viaggi e Turismo' },
+};
+
 export function getLocalizedCategoryName(
-  category: { name: string; translations?: Record<string, { name: string; description?: string }> } | undefined,
+  category: { name: string; slug?: string; id?: string; translations?: Record<string, { name: string; description?: string }> } | undefined,
   lang: SupportedLanguage = 'pl'
 ): string {
   if (!category) return '';
 
   const translations = category.translations || {};
 
-  // Preferred locale
+  // 1. Preferred locale from Firestore document
   const preferred = translations[lang]?.name;
   if (preferred && preferred.trim().length > 0) {
     return preferred;
   }
 
-  // Legacy compatibility for Ukrainian locale keyed as ua.
+  // 2. Legacy compatibility for Ukrainian locale keyed as ua in Firestore
   if (lang === 'uk') {
     const ua = translations.ua?.name;
     if (ua && ua.trim().length > 0) {
@@ -373,7 +415,20 @@ export function getLocalizedCategoryName(
     }
   }
 
-  // Fallback chain for non-PL routes: en -> pl -> base name
+  // 3. Fallback to static category dictionary matching by name, slug, or ID
+  const keyCandidates = [
+    category.name?.toLowerCase(),
+    category.slug?.toLowerCase(),
+    category.id?.toLowerCase()
+  ].filter(Boolean) as string[];
+
+  for (const key of keyCandidates) {
+    if (CATEGORY_LOCALIZATIONS[key]?.[lang]) {
+      return CATEGORY_LOCALIZATIONS[key][lang];
+    }
+  }
+
+  // 4. Fallback chain for non-PL routes: en -> pl -> base name
   const english = translations.en?.name;
   if (english && english.trim().length > 0) {
     return english;

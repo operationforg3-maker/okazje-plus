@@ -9,7 +9,14 @@
     "days": "Days",
     "hours": "Hours",
     "minutes": "Minutes",
-    "seconds": "Seconds"
+    "seconds": "Seconds",
+    "justNow": "just now",
+    "yesterday": "yesterday",
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago",
+    "daysAgo": "{count}d ago",
+    "weeksAgo": "{count}w ago",
+    "monthsAgo": "{count}mo ago"
   },
   "search": {
     "placeholder": "Search for products or deals...",
@@ -18,7 +25,10 @@
     "noResults": "No results",
     "searching": "Searching...",
     "searchBarLabel": "Search products and deals",
-    "resultsLabel": "Search results"
+    "resultsLabel": "Search results",
+    "typeAtLeastTwoChars": "Type at least 2 characters to see suggestions",
+    "clearSearch": "Clear search",
+    "backLabel": "Back"
   },
   "breadcrumb": {
     "home": "Home",
@@ -109,7 +119,10 @@
     "dealPreview": "Deal preview",
     "lowStock": "Low stock",
     "more": "more",
-    "coupon": "Coupon"
+    "coupon": "Coupon",
+    "saveAmount": "Save {amount}",
+    "seeAllNotifications": "See all notifications",
+    "goToCheckout": "Go to checkout"
   },
   "comments": {
     "title": "Comments",

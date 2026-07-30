@@ -48,9 +48,9 @@ export function AccountMenuPanel({ user, loading, onLogout, onNavigate, unreadCo
     setIsMountedLang(true);
   }, []);
   
-  const pathnameWithoutLocale = pathname.replace(/^\/(pl|en|de|fr|es|uk)(\/|$)/, '/');
+  const pathnameWithoutLocale = pathname.replace(/^\/(pl|en|de|fr|es|uk|it)(\/|$)/, '/');
   const basePath = pathnameWithoutLocale || '/';
-  const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['pl', 'en', 'de', 'fr', 'es', 'uk'];
+  const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['pl', 'en', 'de', 'fr', 'es', 'uk', 'it'];
   
   const switchLanguage = () => {
     const currentIdx = SUPPORTED_LANGUAGES.indexOf(locale);

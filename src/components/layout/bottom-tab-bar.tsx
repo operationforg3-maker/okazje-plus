@@ -11,7 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 
 import { useAuth } from '@/lib/auth';
 import { auth } from '@/lib/firebase';
@@ -33,12 +33,13 @@ type BottomNavItem = {
 
 export function BottomTabBar() {
   const t = useTranslations('nav');
+  const tCommon = useTranslations('common');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
-  const params = useParams();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const locale = (params?.locale as string) || 'pl';
+  const rawLocale = useLocale();
+  const locale = (rawLocale as string) || 'pl';
   const prefix = `/${locale}`;
 
   const { user, loading } = useAuth();
@@ -95,7 +96,7 @@ export function BottomTabBar() {
         <SheetContent side="bottom" className="md:hidden rounded-t-2xl p-4 max-h-[85vh] overflow-y-auto bg-background/95 backdrop-blur-xl flex flex-col">
           <SheetHeader className="mb-4">
             <SheetTitle className="text-left flex items-center justify-between">
-              <span>Koszyk</span>
+              <span>{t('cart')}</span>
               <span className="text-xs font-normal text-muted-foreground">{itemCount} szt.</span>
             </SheetTitle>
           </SheetHeader>
@@ -173,7 +174,7 @@ export function BottomTabBar() {
                   onClick={() => setIsCartOpen(false)}
                   className="flex-1 text-center py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all text-sm"
                 >
-                  Przejdź do kasy
+                  {tCommon('labels.goToCheckout')}
                 </Link>
                 <button
                   type="button"

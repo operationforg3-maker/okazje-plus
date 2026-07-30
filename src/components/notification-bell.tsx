@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/lib/auth';
+import { formatTimeAgo } from '@/lib/format-relative-time';
 import { getUnreadNotifications, markNotificationAsRead } from '@/lib/data';
 import { Notification } from '@/lib/types';
 import { Bell } from 'lucide-react';
@@ -103,20 +105,9 @@ export function NotificationBell() {
     }
   };
 
+  const t = useTranslations('common');
   function getRelativeTime(isoDate: string): string {
-    const now = new Date();
-    const posted = new Date(isoDate);
-    const diffMs = now.getTime() - posted.getTime();
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffMinutes < 1) return 'teraz';
-    if (diffMinutes < 60) return `${diffMinutes} min temu`;
-    if (diffHours < 24) return `${diffHours} godz. temu`;
-    if (diffDays === 1) return 'wczoraj';
-    if (diffDays < 7) return `${diffDays} dni temu`;
-    return new Date(isoDate).toLocaleDateString('pl-PL');
+    return formatTimeAgo(isoDate, t) || new Date(isoDate).toLocaleDateString();
   }
 
   if (!user) return null;
@@ -138,7 +129,7 @@ export function NotificationBell() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
-        <DropdownMenuLabel>Powiadomienia</DropdownMenuLabel>
+        <DropdownMenuLabel>{t('notifications')}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         
         {notifications.length === 0 ? (

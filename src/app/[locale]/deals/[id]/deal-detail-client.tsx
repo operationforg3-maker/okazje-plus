@@ -62,6 +62,7 @@ import { useComparison } from '@/components/deal-comparison-tool';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useContentLanguage } from '@/hooks/use-content-language';
 import { SpecCardGrid } from '@/components/spec-card-grid';
+import { AuthModal } from '@/components/auth/auth-modal';
 import {
   Tooltip,
   TooltipContent,
@@ -202,6 +203,8 @@ export default function DealDetailClient({ deal, product, relatedDeals, initialC
   const { addToComparison } = useComparison();
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(deal.id, 'deal');
   const [activeTab, setActiveTab] = useState<'discussion' | 'specifications'>('discussion');
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalActionType, setAuthModalActionType] = useState<'vote' | 'favorite' | 'alert' | 'comment' | 'general'>('general');
 
   const deepDataBadges = useMemo(() => {
     const _rawPrice = typeof deal.price === 'number' ? deal.price
@@ -415,12 +418,16 @@ export default function DealDetailClient({ deal, product, relatedDeals, initialC
     if (deal.couponCode) {
       navigator.clipboard.writeText(deal.couponCode);
       toast.success('Kod skopiowany do schowka!');
+      if (outboundUrl) {
+        window.open(outboundUrl, '_blank', 'noopener,noreferrer');
+      }
     }
   };
 
   const handleVote = async (action: 'up' | 'down') => {
     if (!user) {
-      toast.error('Musisz być zalogowany, aby głosować.');
+      setAuthModalActionType('vote');
+      setAuthModalOpen(true);
       return;
     }
 
@@ -1149,7 +1156,7 @@ export default function DealDetailClient({ deal, product, relatedDeals, initialC
       </div>
 
       {/* PROGRESSIVE SIMILAR DEALS STREAM */}
-      <div className="border-t border-border/40 pt-12 mt-12">
+      <div className="border-t border-border/40 pt-12 mt-12 mb-20 lg:mb-0">
         <h3 className="font-headline text-2xl font-bold mb-6 flex items-center gap-2">
           <Flame className="h-6 w-6 text-orange-500" />
           Więcej podobnych okazji
@@ -1160,6 +1167,83 @@ export default function DealDetailClient({ deal, product, relatedDeals, initialC
           excludeId={deal.id}
         />
       </div>
+
+      {/* MOBILE STICKY ACTION BAR */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t border-border p-3 shadow-2xl flex items-center justify-between gap-2.5">
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-lg font-black text-foreground tracking-tight">
+              {priceData.formattedPrice || 'N/A'}
+            </span>
+            {priceData.discount && priceData.discount > 0 && (
+              <Badge className="bg-red-500 text-white font-bold text-[10px] px-1.5 py-0.2">
+                -{priceData.discount}%
+              </Badge>
+            )}
+          </div>
+          {priceData.formattedOriginal && (
+            <span className="text-[11px] text-muted-foreground line-through">
+              {priceData.formattedOriginal}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5 border rounded-lg p-0.5 bg-muted/40">
+            <Button
+              variant={userVote === 1 ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => {
+                if (!user) {
+                  setAuthModalActionType('vote');
+                  setAuthModalOpen(true);
+                  return;
+                }
+                handleVote('up');
+              }}
+              className="h-8 px-2 text-xs font-bold gap-1 rounded-md"
+            >
+              <ArrowUp className="h-3.5 w-3.5" />
+            </Button>
+            <span className="font-bold text-xs px-1 min-w-[22px] text-center">{temperature}°</span>
+            <Button
+              variant={userVote === -1 ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => {
+                if (!user) {
+                  setAuthModalActionType('vote');
+                  setAuthModalOpen(true);
+                  return;
+                }
+                handleVote('down');
+              }}
+              className="h-8 px-2 text-xs font-bold gap-1 rounded-md"
+            >
+              <ArrowDown className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+
+          {outboundUrl ? (
+            <Button size="sm" asChild className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold h-9 text-xs px-3 shadow-md">
+              <a href={outboundUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="mr-1 h-3.5 w-3.5" />
+                Idź do okazji
+              </a>
+            </Button>
+          ) : (
+            <Button size="sm" disabled className="h-9 text-xs">
+              Brak linku
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* AUTH MODAL */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        actionType={authModalActionType}
+      />
     </div>
   );
 }

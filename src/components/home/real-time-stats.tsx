@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Flame, ShoppingBag, Users, Trophy, TrendingUp, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -117,31 +118,32 @@ export function RealTimeStats() {
     };
   }, []);
 
+  const t = useTranslations('home');
   const statsItems = [
     {
       icon: Flame,
-      label: 'Gorących okazji',
+      label: t('stats.hotDealsCount'),
       value: stats.dealsCount,
       color: 'from-orange-500 to-red-500',
       textColor: 'text-orange-600',
     },
     {
       icon: ShoppingBag,
-      label: 'Produktów',
+      label: t('stats.products'),
       value: stats.productsCount,
       color: 'from-blue-500 to-cyan-500',
       textColor: 'text-blue-600',
     },
     {
       icon: Users,
-      label: 'Użytkowników',
+      label: t('stats.community'),
       value: stats.usersCount,
       color: 'from-green-500 to-emerald-500',
       textColor: 'text-green-600',
     },
     {
       icon: Trophy,
-      label: 'Oszczędności',
+      label: t('stats.savings'),
       value: `${Math.floor(stats.totalSavings / 1000)}k+`,
       color: 'from-purple-500 to-pink-500',
       textColor: 'text-purple-600',
@@ -182,6 +184,7 @@ export function RealTimeStats() {
 }
 
 export function ForumStats() {
+  const t = useTranslations('home');
   const [stats, setStats] = useState({ threads: 0, users: 0, replies: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -235,9 +238,9 @@ export function ForumStats() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
       {[
-        { label: 'Aktywnych wątków', value: stats.threads, icon: TrendingUp, color: 'bg-primary/10 text-primary border-primary/20' },
-        { label: 'Użytkowników', value: stats.users, icon: Users, color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
-        { label: 'Odpowiedzi dziennie', value: stats.replies, icon: Clock, color: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
+        { label: t('forum.stats.threads'), value: stats.threads, icon: TrendingUp, color: 'bg-primary/10 text-primary border-primary/20' },
+        { label: t('forum.stats.users'), value: stats.users, icon: Users, color: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' },
+        { label: t('forum.stats.replies'), value: stats.replies, icon: Clock, color: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
       ].map((stat, idx) => {
         const Icon = stat.icon;
         return (

@@ -2,7 +2,8 @@
 
 import React, { useRef } from 'react';
 import Link from 'next/link';
-import { useParams, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { useLocale, useTranslations } from 'next-intl';
 import { Category } from '@/lib/types';
 import { getCategoryStyle } from '@/lib/category-theme';
 import { getLocalizedCategoryName, type SupportedLanguage } from '@/lib/i18n-utils';
@@ -15,9 +16,10 @@ interface SubNavbarProps {
 }
 
 export function SubNavbar({ categories }: SubNavbarProps) {
-  const params = useParams();
+  const tNav = useTranslations('nav');
+  const rawLocale = useLocale();
   const pathname = usePathname();
-  const locale = (params?.locale as string) || 'pl';
+  const locale = (rawLocale as SupportedLanguage) || 'pl';
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: 'left' | 'right') => {
@@ -60,7 +62,7 @@ export function SubNavbar({ categories }: SubNavbarProps) {
                 : "bg-background hover:bg-muted border-border/40 text-muted-foreground hover:text-foreground"
             )}
           >
-            🔥 Wszystkie okazje
+            {tNav('allDeals')}
           </Link>
 
           {categories.map((category) => {

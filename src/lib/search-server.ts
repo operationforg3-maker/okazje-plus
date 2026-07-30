@@ -162,23 +162,33 @@ function stripHtmlTags(value: unknown): string {
     .trim();
 }
 
-function resolveLocalizedString(value: unknown): string {
+function resolveLocalizedString(value: unknown, locale: string = 'pl'): string {
   if (!value) return '';
   if (typeof value === 'string') return value;
   if (typeof value === 'object') {
     const obj = value as Record<string, unknown>;
-    const candidate = obj.pl || obj.en || obj.de || obj.fr || obj.es || obj.uk;
-    if (typeof candidate === 'string') return candidate;
+    const preferred = obj[locale] || (locale === 'uk' ? obj.ua : undefined);
+    if (typeof preferred === 'string' && preferred.trim().length > 0) {
+      return preferred;
+    }
+    const english = obj.en;
+    if (typeof english === 'string' && english.trim().length > 0) {
+      return english;
+    }
+    const polish = obj.pl;
+    if (typeof polish === 'string' && polish.trim().length > 0) {
+      return polish;
+    }
     
     // Fallback to any string property
     for (const val of Object.values(obj)) {
-      if (typeof val === 'string') return val;
+      if (typeof val === 'string' && val.trim().length > 0) return val;
     }
   }
   return '';
 }
 
-function normalizeSuggestion(document: any, type: 'product' | 'deal'): Suggestion | null {
+function normalizeSuggestion(document: any, type: 'product' | 'deal', locale: string = 'pl'): Suggestion | null {
   const id = typeof document?.id === 'string' ? document.id : '';
   if (!id) return null;
 
@@ -186,7 +196,7 @@ function normalizeSuggestion(document: any, type: 'product' | 'deal'): Suggestio
     ? document?.title ?? document?.name ?? document?.description
     : document?.name ?? document?.title ?? document?.description;
 
-  const resolvedLabel = resolveLocalizedString(rawLabel);
+  const resolvedLabel = resolveLocalizedString(rawLabel, locale);
   const label = stripHtmlTags(resolvedLabel);
   if (!label) return null;
 
@@ -210,7 +220,7 @@ function normalizeSuggestion(document: any, type: 'product' | 'deal'): Suggestio
   };
 }
 
-export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<Suggestion[]> {
+export async function getAutocompleteSuggestions(q: string, limit = 5, locale = 'pl'): Promise<Suggestion[]> {
   const safeLimit = clampPageSize(limit, 5);
 
   try {
@@ -301,7 +311,7 @@ export async function getAutocompleteSuggestions(q: string, limit = 5): Promise<
           return;
         }
 
-        const suggestion = normalizeSuggestion({ id: docSnap.id, ...doc }, type);
+        const suggestion = normalizeSuggestion({ id: docSnap.id, ...doc }, type, locale);
         if (suggestion && !outMap.has(suggestion.id)) {
           outMap.set(suggestion.id, suggestion);
         }

@@ -1,0 +1,48 @@
+{
+  "title": "Bentornato",
+  "subtitle": "Accedi o crea un account per scoprire le migliori offerte.",
+  "noAccount": "Non hai ancora un account?",
+  "signUp": "Registrati",
+  "forgotPassword": "Password dimenticata?",
+  "termsText": "Cliccando Continua, accetti i nostri",
+  "termsLink": "Termini di servizio",
+  "and": "e",
+  "privacyLink": "Informativa sulla privacy",
+  "brand": {
+    "kicker": "Marketplace di confronto prezzi",
+    "title": "Accedi con l'identità Okazje Plus",
+    "subtitle": "Un account per confronti prezzi, avvisi di prezzo e ricerche salvate.",
+    "points": {
+      "quality": "Offerte curate e recensioni verificate",
+      "secure": "Login sicuro e protezione account",
+      "fast": "Accesso rapido alle ultime offerte"
+    },
+    "footer": "Okazje Plus — shopping intelligente in un unico posto"
+  },
+  "tabs": {
+    "login": "Accedi",
+    "register": "Registrati"
+  },
+  "labels": {
+    "email": "Email",
+    "password": "Password"
+  },
+  "placeholders": {
+    "email": "nome@esempio.com",
+    "password": "Password"
+  },
+  "buttons": {
+    "login": "Accedi",
+    "register": "Crea account"
+  },
+  "social": {
+    "continueWith": "Oppure continua con",
+    "continueGoogle": "Continua con Google",
+    "continueFacebook": "Continua con Facebook",
+    "google": "Google",
+    "github": "GitHub"
+  },
+  "errors": {
+    "title": "Errore"
+  }
+}

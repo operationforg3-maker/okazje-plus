@@ -14,6 +14,7 @@ import { trackShare } from "@/lib/analytics";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getApp } from "firebase/app";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 
 interface ShareButtonProps {
   type: 'deal' | 'product';
@@ -22,6 +23,7 @@ interface ShareButtonProps {
   url: string;
   variant?: 'default' | 'ghost' | 'outline';
   size?: 'default' | 'sm' | 'lg' | 'icon';
+  className?: string;
   onShared?: (method: 'facebook' | 'twitter' | 'copy_link' | 'whatsapp' | 'telegram') => void;
 }
 
@@ -32,6 +34,7 @@ export default function ShareButton({
   url,
   variant = 'outline',
   size = 'sm',
+  className,
   onShared
 }: ShareButtonProps) {
   const isIconOnly = size === 'icon';
@@ -113,8 +116,8 @@ export default function ShareButton({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant={variant} size={size}>
-          <Share2 className={`h-4 w-4${isIconOnly ? '' : ' mr-2'}`} />
+        <Button variant={variant} size={size} className={cn(className)}>
+          <Share2 className={`h-3.5 w-3.5${isIconOnly ? '' : ' mr-2'}`} />
           {!isIconOnly && t('share.share')}
         </Button>
       </DropdownMenuTrigger>

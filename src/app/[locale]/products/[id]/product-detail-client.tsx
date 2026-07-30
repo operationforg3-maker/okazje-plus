@@ -60,6 +60,7 @@ import { useFavorites } from '@/hooks/use-favorites';
 import { useSmartCart } from '@/lib/cart-context';
 import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 import { getExternalUrl } from '@/lib/external-url';
+import { AuthModal } from '@/components/auth/auth-modal';
 
 interface Props {
   product: Product;
@@ -78,6 +79,8 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
   const { isFavorited, isLoading: isFavoriteLoading, toggleFavorite } = useFavorites(product.id, 'product');
   const { addItem, isInCart } = useSmartCart();
   const [activeTab, setActiveTab] = useState<'description' | 'reviews' | 'rate' | 'external-reviews'>('description');
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalActionType, setAuthModalActionType] = useState<'vote' | 'favorite' | 'alert' | 'comment' | 'general'>('general');
   const outboundUrl = getExternalUrl(
     (product as any)?.affiliateLink,
     (product as any)?.affiliateUrl,
@@ -973,7 +976,7 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
       <Separator className="my-12" />
       
       {/* Infinite Scroll Feed */}
-      <section>
+      <section className="mb-20 lg:mb-0">
         <h2 className="font-headline text-2xl font-bold mb-6 flex items-center gap-2">
           <Package className="h-6 w-6 text-primary" />
           Więcej podobnych produktów
@@ -984,6 +987,66 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
           excludeId={product.id}
         />
       </section>
+
+      {/* MOBILE STICKY ACTION BAR */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t border-border p-3 shadow-2xl flex items-center justify-between gap-3">
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-lg font-black text-foreground tracking-tight">
+              {price || 'N/A'}
+            </span>
+            {discount && discount > 0 && (
+              <Badge className="bg-red-500 text-white font-bold text-[10px] px-1.5 py-0.2">
+                -{discount}%
+              </Badge>
+            )}
+          </div>
+          {originalPrice && (
+            <span className="text-[11px] text-muted-foreground line-through">
+              {originalPrice}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant={isFavorited ? 'secondary' : 'outline'}
+            size="icon"
+            onClick={() => {
+              if (!user) {
+                setAuthModalActionType('favorite');
+                setAuthModalOpen(true);
+                return;
+              }
+              toggleFavorite();
+            }}
+            disabled={isFavoriteLoading}
+            className="h-9 w-9 border-border/80"
+          >
+            <Heart className={`h-4 w-4 ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
+          </Button>
+
+          {outboundUrl ? (
+            <Button size="sm" asChild className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold h-9 text-xs px-3 shadow-md">
+              <a href={outboundUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="mr-1 h-3.5 w-3.5" />
+                Sprawdź w sklepie
+              </a>
+            </Button>
+          ) : (
+            <Button size="sm" disabled className="h-9 text-xs">
+              Brak linku
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* AUTH MODAL */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        actionType={authModalActionType}
+      />
     </div>
   );
 }

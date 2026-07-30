@@ -1,0 +1,15 @@
+{
+  "confirmCreateCategories": "Verrà creata la struttura delle categorie. Continuare?",
+  "creatingCategories": "📁 Creazione struttura categorie...\n\nPotrebbe richiedere un momento...",
+  "logStartCategories": "Avviata la creazione della struttura categorie",
+  "error": "Errore",
+  "unknownServerError": "Errore server sconosciuto",
+  "categoriesCreated": "✅ Struttura categorie creata!",
+  "logCategoriesCreated": "Struttura categorie creata con successo",
+  "checkInternet": "Controlla la tua connessione internet",
+  "connectionError": "Errore di connessione",
+  "logErrorCategories": "Errore durante la creazione delle categorie",
+  "confirmFillProducts": "Verranno aggiunti prodotti nelle categorie esistenti dall'API AliExpress. Continuare?",
+  "fetchingProducts": "📦 Recupero prodotti da AliExpress...\n\nPotrebbe richiedere alcuni minuti. Attendere prego...",
+  "logStartProducts": "Avviato il recupero prodotti da AliExpress"
+}

@@ -91,30 +91,25 @@ export default function HomeSecondarySections() {
                 </h2>
                 <div className="space-y-4 text-muted-foreground">
                   <p className="text-lg">
-                    <strong className="text-foreground">Okazje Plus</strong> to polska platforma stworzona przez i dla społeczności
-                    łowców okazji. Naszym celem jest pomóc Ci znaleźć najlepsze promocje,
-                    produkty i oferty specjalne w jednym miejscu.
+                    {t('about.text1')}
                   </p>
                   <p className="text-lg">
-                    Wierzymy, że mądre zakupy to nie tylko oszczędności finansowe, ale także
-                    czas zaoszczędzony na przeglądaniu dziesiątek sklepów. Dzięki aktywnej
-                    społeczności i zaawansowanej sztucznej inteligencji, dostarczamy Ci
-                    tylko <strong className="text-foreground">sprawdzone i wartościowe okazje</strong>.
+                    {t('about.text2')}
                   </p>
                 </div>
 
                 <div className="flex flex-wrap gap-4 pt-2">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <CheckCircle className="h-5 w-5 text-primary" />
-                    <span>100% darmowa platforma</span>
+                    <span>{t('about.freePlatform')}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <CheckCircle className="h-5 w-5 text-primary" />
-                    <span>Sprawdzone przez społeczność</span>
+                    <span>{t('about.verifiedByCommunity')}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <CheckCircle className="h-5 w-5 text-primary" />
-                    <span>AI wspierające jakość</span>
+                    <span>{t('about.aiSupport')}</span>
                   </div>
                 </div>
               </div>
@@ -124,10 +119,10 @@ export default function HomeSecondarySections() {
                   <CardContent className="p-8 space-y-6">
                     <div className="space-y-4">
                       {[
-                        { icon: Sparkles, title: 'Sprawdzone AI', desc: 'Algorytmy weryfikują jakość ofert' },
-                        { icon: Users, title: 'Społeczność', desc: 'Tysiące użytkowników dzieli się znaleziskami' },
-                        { icon: ShieldCheck, title: 'Moderacja', desc: 'Każda okazja przechodzi weryfikację' },
-                        { icon: Zap, title: 'Real-time', desc: 'Natychmiastowe powiadomienia o nowych okazjach' },
+                        { icon: Sparkles, title: t('about.cards.aiTitle'), desc: t('about.cards.aiDesc') },
+                        { icon: Users, title: t('about.cards.communityTitle'), desc: t('about.cards.communityDesc') },
+                        { icon: ShieldCheck, title: t('about.cards.moderationTitle'), desc: t('about.cards.moderationDesc') },
+                        { icon: Zap, title: t('about.cards.realtimeTitle'), desc: t('about.cards.realtimeDesc') },
                       ].map((item, idx) => (
                         <div key={idx} className="flex items-start gap-4">
                           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -154,22 +149,22 @@ export default function HomeSecondarySections() {
         <div className="page-container text-center relative z-10">
           <div className="max-w-3xl mx-auto space-y-6">
             <h2 className="font-headline text-3xl md:text-5xl font-black tracking-tight">
-              Gotowy na najlepsze okazje?
+              {t('cta.title')}
             </h2>
             <p className="text-base sm:text-xl opacity-90 max-w-xl mx-auto font-medium">
-              Dołącz do tysięcy użytkowników, którzy już oszczędzają z Okazje Plus.
+              {t('cta.subtitle')}
             </p>
             <div className="flex flex-wrap justify-center gap-4 pt-6">
               <Button size="lg" variant="secondary" className="text-sm font-bold px-8 py-6 rounded-xl hover:shadow-lg transition-all" asChild>
                 <Link href={`/${locale}/deals`}>
                   <Flame className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary fill-primary" />
-                  Przeglądaj okazje
+                  {t('cta.browseDeals')}
                 </Link>
               </Button>
               <Button size="lg" variant="outline" className="text-sm font-bold px-8 py-6 rounded-xl border-white/40 bg-black/15 backdrop-blur-[2px] text-white hover:bg-black/35 hover:border-white transition-all shadow-sm" asChild>
                 <Link href={`/${locale}/products`}>
                   <ShoppingBag className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  Katalog produktów
+                  {t('cta.catalog')}
                 </Link>
               </Button>
             </div>

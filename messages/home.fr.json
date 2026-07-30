@@ -11,13 +11,25 @@
     "searchButton": "Rechercher",
     "dealOfWeek": "Offre de la semaine",
     "browseDeals": "Parcourir les offres",
-    "catalog": "Catalogue de produits"
+    "catalog": "Catalogue de produits",
+    "titleLine1": "Trouvez les meilleures",
+    "titleHighlight": "Offres & Promotions",
+    "description": "Une communauté de chasseurs de bonnes affaires partageant des offres vérifiées, des codes promo et des soldes. Achetez malin !",
+    "soldCount": "{count}+ achetés",
+    "checkPrice": "Vérifier",
+    "claimDeal": "Profiter de l'offre",
+    "prevDeal": "Offre précédente",
+    "nextDeal": "Offre suivante",
+    "dealNumber": "Offre {number}"
   },
   "stats": {
-    "hotDealsCount": "Offres exceptionnelles",
+    "hotDealsCount": "Offres chaudes",
     "products": "Produits",
     "community": "Communauté",
-    "savings": "Économies"
+    "savings": "Économies",
+    "verifiedDeals": "Offres vérifiées",
+    "monitoredProducts": "Produits surveillés",
+    "activeHunters": "Chasseurs de bonnes affaires actifs"
   },
   "categories": {
     "title": "Parcourir les catégories",
@@ -30,13 +42,17 @@
     "title": "Les meilleures offres du moment",
     "subtitle": "Testé par la communauté",
     "viewAll": "Voir tout",
-    "empty": "Les meilleures affaires arrivent bientôt !"
+    "empty": "Les meilleures offres apparaîtront bientôt ici !",
+    "viewAllTitle": "Toutes les offres chaudes",
+    "viewAllSub": "Parcourez des milliers de remises et de soldes de la communauté"
   },
   "topProducts": {
     "title": "Meilleurs produits",
     "subtitle": "Testé et approuvé par notre communauté.",
     "viewAll": "Consultez le catalogue",
-    "empty": "Bientôt, vous trouverez ici les meilleurs produits !"
+    "empty": "Bientôt, vous trouverez ici les meilleurs produits !",
+    "viewAllTitle": "Catalogue complet",
+    "viewAllSub": "Découvrez et comparez des centaines de produits vérifiés aux meilleurs prix"
   },
   "recommendedProducts": "Produits recommandés",
   "noDeals": "Aucune opportunité d'affichage acceptée.",
@@ -79,8 +95,10 @@
         "description": "Accès prioritaire aux offres vérifiées par les modérateurs"
       }
     },
-    "joinButton": "Rejoignez-nous gratuitement",
-    "joinSubtext": "L'inscription prend moins d'une minute. Sans engagement."
+    "joinButton": "S'inscrire gratuitement",
+    "joinSubtext": "L'inscription prend moins d'une minute. Sans engagement.",
+    "gdpr": "Conforme au RGPD",
+    "ssl": "Connexion SSL sécurisée"
   },
   "forum": {
     "title": "Participez à la discussion sur le forum",
@@ -96,6 +114,30 @@
   "about": {
     "badge": "Notre mission",
     "title": "Nous vous aidons à économiser.",
-    "titleHighlight": "intelligemment et efficacement"
+    "titleHighlight": "intelligemment et efficacement",
+    "text1": "Okazje Plus est une plateforme créée par et pour une communauté de chasseurs de bonnes affaires. Notre objectif est de vous aider à trouver les meilleures promotions, produits et offres spéciales au même endroit.",
+    "text2": "Nous pensons qu'acheter malin n'est pas seulement une économie d'argent, mais aussi du temps gagné. Grâce à une communauté active et à une IA avancée, nous vous livrons uniquement des offres vérifiées et de qualité.",
+    "freePlatform": "Plateforme 100% gratuite",
+    "verifiedByCommunity": "Vérifiée par la communauté",
+    "aiSupport": "IA d'assistance qualité",
+    "cards": {
+      "aiTitle": "IA vérifiée",
+      "aiDesc": "Des algorithmes vérifient la qualité des offres",
+      "communityTitle": "Communauté",
+      "communityDesc": "Des milliers d'utilisateurs partagent leurs trouvailles",
+      "moderationTitle": "Modération",
+      "moderationDesc": "Chaque offre est soumise à vérification",
+      "realtimeTitle": "Temps réel",
+      "realtimeDesc": "Notifications instantanées des nouvelles offres"
+    }
+  },
+  "cta": {
+    "title": "Prêt pour les meilleures offres ?",
+    "subtitle": "Rejoignez des milliers d'utilisateurs qui économisent déjà avec Okazje Plus.",
+    "browseDeals": "Parcourir les offres",
+    "catalog": "Catalogue de produits"
+  },
+  "viewAllCard": {
+    "cta": "Voir tout"
   }
 }

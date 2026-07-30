@@ -9,7 +9,15 @@ interface CategoryContentIndex {
   sub: Set<string>;
 }
 
+let indexCache: Record<string, { data: CategoryContentIndex; timestamp: number }> = {};
+const INDEX_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 async function buildCategoryContentIndex(contentType: ContentType): Promise<CategoryContentIndex> {
+  const now = Date.now();
+  if (indexCache[contentType] && (now - indexCache[contentType].timestamp < INDEX_CACHE_TTL_MS)) {
+    return indexCache[contentType].data;
+  }
+
   const main = new Set<string>();
   const sub = new Set<string>();
 
@@ -35,14 +43,9 @@ async function buildCategoryContentIndex(contentType: ContentType): Promise<Cate
     if (subSlug) sub.add(subSlug);
   });
 
-  if (snapshot.size >= sampleLimit) {
-    console.warn(
-      `[categories-content] Reached sample limit (${sampleLimit}) for ${collectionName}. ` +
-        'Consider paginated aggregation for very large datasets.'
-    );
-  }
-
-  return { main, sub };
+  const result = { main, sub };
+  indexCache[contentType] = { data: result, timestamp: now };
+  return result;
 }
 
 export async function filterCategoriesByContent(

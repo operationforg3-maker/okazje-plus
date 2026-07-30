@@ -11,13 +11,25 @@
     "searchButton": "Szukaj",
     "dealOfWeek": "Okazja Tygodnia",
     "browseDeals": "Przeglądaj okazje",
-    "catalog": "Katalog produktów"
+    "catalog": "Katalog produktów",
+    "titleLine1": "Znajduj najlepsze",
+    "titleHighlight": "Okazje i Promocje",
+    "description": "Społeczność łowców okazji dzieląca się sprawdzonymi ofertami, kodami rabatowymi i wyprzedażami. Kupuj mądrzej!",
+    "soldCount": "Kupiono {count}+ szt.",
+    "checkPrice": "Sprawdź",
+    "claimDeal": "Odbierz okazję",
+    "prevDeal": "Poprzednia okazja",
+    "nextDeal": "Następna okazja",
+    "dealNumber": "Okazja {number}"
   },
   "stats": {
     "hotDealsCount": "Gorących okazji",
     "products": "Produktów",
     "community": "Społeczność",
-    "savings": "Oszczędności"
+    "savings": "Oszczędności",
+    "verifiedDeals": "Zweryfikowanych okazji",
+    "monitoredProducts": "Monitorowanych produktów",
+    "activeHunters": "Aktywnych łowców okazji"
   },
   "categories": {
     "title": "Przeglądaj kategorie",
@@ -30,13 +42,17 @@
     "title": "Najgorętsze okazje",
     "subtitle": "Sprawdzone przez społeczność",
     "viewAll": "Zobacz wszystkie",
-    "empty": "Wkrótce pojawią się tutaj najgorętsze okazje!"
+    "empty": "Wkrótce pojawią się tutaj najgorętsze okazje!",
+    "viewAllTitle": "Wszystkie Gorące Okazje",
+    "viewAllSub": "Przeglądaj tysiące rabatów i wyprzedaży od społeczności łowców"
   },
   "topProducts": {
     "title": "Najlepiej oceniane produkty",
     "subtitle": "Sprawdzone jakościowo przez naszą społeczność",
     "viewAll": "Zobacz katalog",
-    "empty": "Wkrótce pojawią się tutaj najlepsze produkty!"
+    "empty": "Wkrótce pojawią się tutaj najlepsze produkty!",
+    "viewAllTitle": "Pełny Katalog Produktów",
+    "viewAllSub": "Odkryj i porównaj setki sprawdzonych produktów w najniższych cenach"
   },
   "recommendedProducts": "Polecane produkty",
   "noDeals": "Brak zaakceptowanych okazji do wyświetlenia.",
@@ -79,8 +95,10 @@
         "description": "Priorytetowy dostęp do sprawdzonych przez moderatorów okazji"
       }
     },
-    "joinButton": "Dołącz za darmo",
-    "joinSubtext": "Rejestracja trwa mniej niż minutę. Bez zobowiązań."
+    "joinButton": "Zapisz się bezpłatnie",
+    "joinSubtext": "Rejestracja zajmuje mniej niż minutę. Bez zobowiązań.",
+    "gdpr": "Zgodne z RODO / GDPR",
+    "ssl": "Szyfrowane połączenie SSL"
   },
   "forum": {
     "title": "Dołącz do dyskusji na forum",
@@ -95,7 +113,31 @@
   },
   "about": {
     "badge": "Nasza misja",
-    "title": "Pomagamy oszczędzać",
-    "titleHighlight": "mądrze i efektywnie"
+    "title": "Pomagamy oszczędzać.",
+    "titleHighlight": "mądrze i skutecznie",
+    "text1": "Okazje Plus to polska platforma stworzona przez i dla społeczności łowców okazji. Naszym celem jest pomóc Ci znaleźć najlepsze promocje, produkty i oferty specjalne w jednym miejscu.",
+    "text2": "Wierzymy, że mądre zakupy to nie tylko oszczędności finansowe, ale także czas zaoszczędzony na przeglądaniu dziesiątek sklepów. Dzięki aktywnej społeczności i zaawansowanej sztucznej inteligencji, dostarczamy Ci tylko sprawdzone i wartościowe okazje.",
+    "freePlatform": "100% darmowa platforma",
+    "verifiedByCommunity": "Sprawdzone przez społeczność",
+    "aiSupport": "AI wspierające jakość",
+    "cards": {
+      "aiTitle": "Sprawdzone AI",
+      "aiDesc": "Algorytmy weryfikują jakość ofert",
+      "communityTitle": "Społeczność",
+      "communityDesc": "Tysiące użytkowników dzieli się znaleziskami",
+      "moderationTitle": "Moderacja",
+      "moderationDesc": "Każda okazja przechodzi weryfikację",
+      "realtimeTitle": "Real-time",
+      "realtimeDesc": "Natychmiastowe powiadomienia o nowych okazjach"
+    }
+  },
+  "cta": {
+    "title": "Gotowy na najlepsze okazje?",
+    "subtitle": "Dołącz do tysięcy użytkowników, którzy już oszczędzają z Okazje Plus.",
+    "browseDeals": "Przeglądaj okazje",
+    "catalog": "Katalog produktów"
+  },
+  "viewAllCard": {
+    "cta": "Zobacz wszystkie"
   }
 }

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/lib/auth';
+import { formatTimeAgo } from '@/lib/format-relative-time';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -208,20 +210,9 @@ export function ActivityFeed({ userId, maxItems = 20, showTitle = true }: Activi
     }
   };
 
+  const t = useTranslations('common');
   const formatTimestamp = (date: Date): string => {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'przed chwilą';
-    if (diffMins < 60) return `${diffMins} min temu`;
-    if (diffHours < 24) return `${diffHours} godz. temu`;
-    if (diffDays === 1) return 'wczoraj';
-    if (diffDays < 7) return `${diffDays} dni temu`;
-    
-    return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+    return formatTimeAgo(date, t) || date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   };
 
   if (loading) {

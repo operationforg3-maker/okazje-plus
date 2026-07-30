@@ -20,7 +20,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Search, ChevronRight, ChevronDown, Flame, Sparkles, ArrowRight, Filter, Menu, LayoutGrid, List as ListIcon, Columns, TrendingUp, Clock, Star, DollarSign, Package, Truck, Tag, Calendar, Save, Bookmark, Loader2 } from 'lucide-react';
+import { Search, ChevronRight, ChevronDown, Flame, Sparkles, ArrowRight, Filter, Menu, LayoutGrid, List as ListIcon, Columns, TrendingUp, Clock, Star, DollarSign, Package, Truck, Tag, Calendar, Save, Bookmark, Loader2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { List as VirtualizedList } from 'react-window';
@@ -132,6 +132,7 @@ function DealsPageContent() {
   }, [router, searchParams]);
   
   const [typeFilter, setTypeFilter] = useState<DealTypeFilter>('all');
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const [dealStatusView, setDealStatusView] = useState<DealStatusView>('approved');
   const [quickFilters, setQuickFilters] = useState({
     freeShipping: false,
@@ -622,10 +623,14 @@ function DealsPageContent() {
     currency: 'PLN',
   });
 
-  const gridWrapperClass = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
-  const masonryWrapperClass = 'columns-2 lg:columns-3 xl:columns-4 gap-4 space-y-4';
-  const listWrapperClass = 'space-y-4';
-  const cardWrapperClass = '';
+  const gridWrapperClass = isSidebarVisible
+    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 w-full'
+    : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5 w-full';
+  const masonryWrapperClass = isSidebarVisible
+    ? 'columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-5 space-y-5 w-full'
+    : 'columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6 gap-5 space-y-5 w-full';
+  const listWrapperClass = 'space-y-4 w-full';
+  const cardWrapperClass = 'w-full';
 
   // Funkcja zapisywania filtrów
   const saveCurrentFilter = async () => {
@@ -1082,8 +1087,22 @@ function DealsPageContent() {
               </Sheet>
             </div>
 
-            {/* Left Sidebar - Categories (Desktop only) */}
-            <div className="hidden lg:block lg:col-span-3">
+            {/* Left Sidebar - Categories (Desktop only) - Sticky */}
+            <div className={cn(
+              "space-y-4 sticky top-20 self-start max-h-[calc(100vh-6rem)] overflow-y-auto pr-1.5 custom-scrollbar transition-all duration-300",
+              isSidebarVisible ? "hidden lg:block lg:col-span-3" : "hidden"
+            )}>
+              {/* Sidebar header with collapse button */}
+              <div className="flex items-center justify-between pb-2 border-b border-border/50">
+                <span className="text-sm font-semibold text-foreground">Filtry i kategorie</span>
+                <button
+                  onClick={() => setIsSidebarVisible(false)}
+                  className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all"
+                  title="Ukryj panel boczny"
+                >
+                  <PanelLeftClose className="h-4 w-4" />
+                </button>
+              </div>
               <div className="space-y-4">
                 {/* Categories */}
                 <div suppressHydrationWarning>
@@ -1132,7 +1151,10 @@ function DealsPageContent() {
             </div>
 
             {/* Center Content - Subcategories & Deals */}
-            <div className="col-span-1 lg:col-span-9">
+            <div className={cn(
+              "col-span-1 transition-all duration-300",
+              isSidebarVisible ? "lg:col-span-9" : "lg:col-span-12"
+            )}>
               {/* Mobile horizontal category scroller (V5 style with Icons) */}
               <div className="flex gap-2 overflow-x-auto pb-3 mb-4 lg:hidden no-scrollbar scroll-smooth">
                 <button
@@ -1227,6 +1249,18 @@ function DealsPageContent() {
                   </h3>
 
                   <div className="flex items-center gap-2">
+                    {!isSidebarVisible && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="hidden lg:inline-flex h-9 text-xs gap-1.5 border-border"
+                        onClick={() => setIsSidebarVisible(true)}
+                        title="Pokaż filtry i kategorie"
+                      >
+                        <PanelLeftOpen className="h-4 w-4 text-primary" />
+                        <span>Pokaż filtry</span>
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
