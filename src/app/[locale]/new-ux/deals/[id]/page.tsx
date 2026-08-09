@@ -9,7 +9,9 @@ import { buildCategoryPath, humanizeCategorySlug, buildCategoryPathNewUx } from 
 import DealDetailClient from './deal-detail-client';
 
 // Wymuszamy dynamiczne renderowanie (on-demand), co pozwoli na bezproblemowy odczyt nagłówków autoryzacyjnych i zlikwiduje błędy 500.
-export const dynamic = 'force-dynamic';
+// ISR: revalidate co 5 minut — pozwala Next.js cache'ować strony na CDN.
+// NIE używamy force-dynamic, bo to blokuje edge cache i blokuje indeksowanie Google (zbyt wolne działanie).
+export const revalidate = 300;
 
 interface PageProps {
   params: { id: string; locale: string };

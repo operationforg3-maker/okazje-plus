@@ -6,7 +6,8 @@ import Image from 'next/image';
 import { Clock, User } from 'lucide-react';
 import { Metadata } from 'next';
 
-export const dynamic = 'force-dynamic';
+// ISR: revalidate co 5 minut
+export const revalidate = 300;
 
 interface PageProps {
   params: { locale: string };

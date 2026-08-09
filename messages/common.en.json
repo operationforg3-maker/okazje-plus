@@ -108,6 +108,7 @@
     "temperature": "Temperature",
     "boughtCount": "{count} bought",
     "youSave": "You save {amount}",
+    "saveAmount": "Save {amount}",
     "isNew": "New",
     "viewProduct": "View product",
     "by": "by",

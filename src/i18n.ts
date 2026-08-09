@@ -27,20 +27,27 @@ async function loadMessagesForLocale(locale: string) {
   const messages: Record<string, any> = {};
 
   for (const ns of namespaces) {
-    const filename = locale === 'pl'
-      ? `${ns}.json`
-      : `${ns}.${locale}.json`;
+    let baseMod: any = {};
+    let localeMod: any = {};
 
     try {
-      // Dynamic import keeps us compatible with the Edge runtime (no fs/path/process)
-      const mod = await import(`../messages/${filename}`);
-      messages[ns] = mod.default;
-    } catch (error) {
-      // If a namespace is missing, skip it to avoid breaking the whole app.
-      if (process.env.NODE_ENV === 'development') {
-        console.warn(`[i18n] Missing messages for ${ns} (${locale}) at messages/${filename}`);
-      }
+      const mod = await import(`../messages/${ns}.json`);
+      baseMod = mod.default || {};
+    } catch {}
+
+    if (locale !== 'pl') {
+      try {
+        const mod = await import(`../messages/${ns}.${locale}.json`);
+        localeMod = mod.default || {};
+      } catch {}
+    } else {
+      try {
+        const mod = await import(`../messages/${ns}.pl.json`);
+        localeMod = mod.default || {};
+      } catch {}
     }
+
+    messages[ns] = { ...baseMod, ...localeMod };
   }
 
   return messages;

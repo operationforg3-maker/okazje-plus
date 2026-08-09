@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Deal, ProductCore } from '@/lib/types';
-import DealCard from '@/components/new-ux/deal-card';
-import ProductCard from '@/components/new-ux/product-card';
+import DealCard from '@/components/deal-card';
+import ProductCard from '@/components/product-card';
 import { Loader2 } from 'lucide-react';
 
 interface InfiniteSimilarFeedProps {

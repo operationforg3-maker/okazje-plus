@@ -108,6 +108,7 @@
     "temperature": "Temperatura",
     "boughtCount": "{count} kupiło",
     "youSave": "Oszczędzasz {amount}",
+    "saveAmount": "Oszczędzasz {amount}",
     "isNew": "Nowość",
     "viewProduct": "Zobacz produkt",
     "by": "przez",

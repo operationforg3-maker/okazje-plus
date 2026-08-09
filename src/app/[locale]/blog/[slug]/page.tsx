@@ -9,7 +9,8 @@ import { Metadata } from 'next';
 import CommentSection from '@/components/comment-section';
 import { getCommentsAdmin } from '@/lib/data-admin';
 
-export const dynamic = 'force-dynamic';
+// ISR: revalidate co 5 minut
+export const revalidate = 300;
 
 interface PageProps {
   params: { locale: string; slug: string };

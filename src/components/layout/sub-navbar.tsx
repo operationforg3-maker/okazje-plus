@@ -62,7 +62,7 @@ export function SubNavbar({ categories }: SubNavbarProps) {
                 : "bg-background hover:bg-muted border-border/40 text-muted-foreground hover:text-foreground"
             )}
           >
-            {tNav('allDeals')}
+            {tNav.has && tNav.has('allDeals') ? tNav('allDeals') : '🔥 Wszystkie okazje'}
           </Link>
 
           {categories.map((category) => {
