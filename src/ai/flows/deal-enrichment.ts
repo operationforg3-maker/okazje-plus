@@ -28,6 +28,7 @@ export const dealEnrichmentOutputSchema = z.object({
   titleFR: z.string().describe('Title in French'),
   titleES: z.string().describe('Title in Spanish'),
   titleUK: z.string().describe('Title in Ukrainian'),
+  titleIT: z.string().optional().describe('Title in Italian'),
   sellingPoints: z.object({
     pl: z.array(z.string()),
     en: z.array(z.string()),
@@ -35,6 +36,7 @@ export const dealEnrichmentOutputSchema = z.object({
     fr: z.array(z.string()),
     es: z.array(z.string()),
     uk: z.array(z.string()),
+    it: z.array(z.string()).optional(),
   }).describe('Key selling points per language'),
   offerSummary: z.object({
     pl: z.string(),
@@ -43,6 +45,7 @@ export const dealEnrichmentOutputSchema = z.object({
     fr: z.string(),
     es: z.string(),
     uk: z.string(),
+    it: z.string().optional(),
   }).describe('Short offer summary per language'),
   description: z.object({
     pl: z.string().describe('Formatted HTML description (Polish)'),
@@ -51,6 +54,7 @@ export const dealEnrichmentOutputSchema = z.object({
     fr: z.string().describe('Formatted HTML description (French)'),
     es: z.string().describe('Formatted HTML description (Spanish)'),
     uk: z.string().describe('Formatted HTML description (Ukrainian)'),
+    it: z.string().optional().describe('Formatted HTML description (Italian)'),
   }).optional().describe('Rich formatted deal description with HTML markup'),
   highlights: z.object({
     pl: z.array(z.string()),
@@ -59,6 +63,7 @@ export const dealEnrichmentOutputSchema = z.object({
     fr: z.array(z.string()),
     es: z.array(z.string()),
     uk: z.array(z.string()),
+    it: z.array(z.string()).optional(),
   }).optional().describe('Key highlights/features of this specific offer'),
 });
 

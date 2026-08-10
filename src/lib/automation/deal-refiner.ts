@@ -322,6 +322,7 @@ export class DealRefiner {
     let titleFR = '';
     let titleES = '';
     let titleUK = '';
+    let titleIT = '';
 
     if (typeof deal.title === 'object' && deal.title) {
       titlePL = deal.title.pl || '';
@@ -330,6 +331,7 @@ export class DealRefiner {
       titleFR = deal.title.fr || '';
       titleES = deal.title.es || '';
       titleUK = deal.title.uk || '';
+      titleIT = deal.title.it || '';
     } else if (typeof deal.title === 'string') {
       // Old format: title is a plain string - treat as Polish fallback
       titlePL = deal.title;
@@ -338,10 +340,11 @@ export class DealRefiner {
       titleFR = deal.title;
       titleES = deal.title;
       titleUK = deal.title;
+      titleIT = deal.title;
     }
 
     // If we somehow have nothing, skip
-    if (!titlePL && !titleEN && !titleDE && !titleFR && !titleES && !titleUK) {
+    if (!titlePL && !titleEN && !titleDE && !titleFR && !titleES && !titleUK && !titleIT) {
       this.addLog('warn', `Deal ${dealId} has no extractable title, skipping`);
       return null;
     }
@@ -392,6 +395,7 @@ export class DealRefiner {
           fr: pickLocalizedTitle(titleFR, enriched.titleFR || '', 'fr'),
           es: pickLocalizedTitle(titleES, enriched.titleES || '', 'es'),
           uk: pickLocalizedTitle(titleUK, enriched.titleUK || '', 'uk'),
+          it: pickLocalizedTitle(titleIT, enriched.titleIT || '', 'it'),
         });
 
         if (

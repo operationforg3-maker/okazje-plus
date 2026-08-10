@@ -107,6 +107,7 @@ export interface LocalizedText {
   fr?: string; // French (optional)
   es?: string; // Spanish (optional)
   uk?: string; // Ukrainian (optional)
+  it?: string; // Italian (optional)
   [key: string]: string | undefined; // Extensible for future languages
 }
 
