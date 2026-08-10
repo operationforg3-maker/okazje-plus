@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 import { Deal, LocalizedText } from '@/lib/types';
 import { getProductCore } from '@/lib/data';
 import { getExternalUrl } from '@/lib/external-url';
@@ -391,11 +392,13 @@ export default async function DealDetailPage({ params }: PageProps) {
       />
       
       {/* Client component z interaktywnym UI */}
-      <DealDetailClient 
-        deal={deal}
-        product={product}
-        relatedDeals={relatedDeals}
-      />
+      <Suspense fallback={null}>
+        <DealDetailClient 
+          deal={deal}
+          product={product}
+          relatedDeals={relatedDeals}
+        />
+      </Suspense>
     </>
   );
 }

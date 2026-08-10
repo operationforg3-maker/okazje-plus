@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 
 import { Product, ProductRating, ProductCore, DealM6 } from '@/lib/types';
 import { getProductRatings, getProductWithDeals } from '@/lib/data';
@@ -460,14 +461,16 @@ export default async function ProductDetailPage({ params }: PageProps) {
       )}
       
       {/* Client component z interaktywnym UI */}
-      <ProductDetailM6Client 
-        productCore={isM6 ? productCore : undefined}
-        product={!isM6 ? product : undefined}
-        deals={deals}
-        relatedProducts={relatedProducts}
-        recentRatings={recentRatings}
-        isM6={isM6}
-      />
+      <Suspense fallback={null}>
+        <ProductDetailM6Client 
+          productCore={isM6 ? productCore : undefined}
+          product={!isM6 ? product : undefined}
+          deals={deals}
+          relatedProducts={relatedProducts}
+          recentRatings={recentRatings}
+          isM6={isM6}
+        />
+      </Suspense>
     </>
   );
 }
