@@ -22,6 +22,24 @@ export class DealRefiner {
     this.jobId = jobId;
   }
 
+  private async updateJobRecord(status: 'running' | 'completed' | 'failed' | 'paused', processedCount = 0): Promise<void> {
+    try {
+      await adminDb.collection('refiner_jobs').doc(this.jobId).set({
+        id: this.jobId,
+        status,
+        refinationType: 'deal_enrichment',
+        productsProcessed: processedCount,
+        productsSuccessful: processedCount,
+        productsFailed: 0,
+        startedAt: new Date().toISOString(),
+        lastUpdatedAt: new Date().toISOString(),
+        logs: this.logs,
+      }, { merge: true });
+    } catch (error) {
+      console.error(`Failed to update deal refiner job record for ${this.jobId}:`, error);
+    }
+  }
+
   private addLog(level: 'info' | 'warn' | 'error', message: string, details?: any) {
     let serializedDetails = undefined;
     if (details) {
@@ -72,6 +90,7 @@ export class DealRefiner {
       }
 
       this.addLog('info', `Starting Deal Refiner job: limit=${limit}`);
+      await this.updateJobRecord('running', 0);
 
       // Find deals that need refinement:
       // - Status is 'draft' OR 'approved' (harvested deals that missed enrichment after moderation)
@@ -96,6 +115,7 @@ export class DealRefiner {
 
       const totalDeals = dealsSnapshot.docs.length;
       this.addLog('info', `Found ${totalDeals} deals to process`);
+      await this.updateJobRecord('running', 0);
 
       let skipped = 0;
 
@@ -119,12 +139,17 @@ export class DealRefiner {
             dealsSuccessful++;
             processedIds.push(dealDoc.id);
             this.addLog('info', `Refined deal ${dealDoc.id}`);
+            await this.updateJobRecord('running', dealsSuccessful);
           }
         } catch (err) {
           dealsFailed++;
           this.addLog('error', `Failed to refine deal ${dealDoc.id}`, err);
+          await this.updateJobRecord('running', dealsSuccessful);
         }
       }
+
+      this.addLog('info', `Deal Refinement completed: ${dealsSuccessful} refined, ${dealsFailed} failed, ${skipped} skipped`);
+      await this.updateJobRecord('completed', dealsSuccessful);
 
       const job: RefinerJob = {
         id: this.jobId,
@@ -135,7 +160,6 @@ export class DealRefiner {
         logs: this.logs,
       } as any;
 
-      this.addLog('info', `Deal Refinement completed: ${dealsSuccessful} refined, ${dealsFailed} failed, ${skipped} skipped`);
       return job;
     } catch (err) {
       this.addLog('error', 'Deal refinement job failed', err);

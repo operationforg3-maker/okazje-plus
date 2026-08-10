@@ -34,6 +34,21 @@ export class AIRefiner {
     const processedIds: string[] = [];
 
     try {
+      const initialJob: RefinerJob = {
+        id: this.jobId,
+        status: 'running',
+        productIds: [],
+        refinationType,
+        productsProcessed: 0,
+        productsSuccessful: 0,
+        productsFailed: 0,
+        startedAt: jobStartTime,
+        completedAt: '',
+        lastUpdatedAt: jobStartTime,
+        logs: this.logs,
+      };
+      await this.updateJobRecord(initialJob);
+
       this.addLog('info', `Starting DB refinement job: status=${status || 'all'}, limit=${limit}, type=${refinationType}, dryRun=${dryRun}`);
 
       // Build query to fetch products from database
@@ -77,7 +92,7 @@ export class AIRefiner {
           processedIds.push(productId);
 
           try {
-            this.addLog('info', `Refining product: ${product.title.pl || 'Unknown'}`);
+            this.addLog('info', `Refining product: ${product.title?.pl || product.title?.en || 'Unknown'}`);
 
             // Perform refinement based on type
             const refined = await this.performRefinement(product, refinationType);
@@ -85,15 +100,15 @@ export class AIRefiner {
             if (!dryRun) {
               // Update product in Firestore
               await this.updateProduct(productId, refined);
-              this.addLog('success', `Refined & Saved ${product.title.pl || 'Unknown'}`, { productId, refinationType });
+              this.addLog('success', `Refined & Saved ${product.title?.pl || product.title?.en || 'Unknown'}`, { productId, refinationType });
             } else {
-               this.addLog('info', `[DRY-RUN] Would save changes for ${product.title.pl}`, { refined });
+               this.addLog('info', `[DRY-RUN] Would save changes for ${product.title?.pl}`, { refined });
             }
             return true;
           } catch (err) {
             this.addLog(
               'failed',
-              `Failed to refine ${product.title.pl || 'Unknown'}`,
+              `Failed to refine ${product.title?.pl || 'Unknown'}`,
               { error: (err as Error).message }
             );
             return false;
@@ -107,6 +122,21 @@ export class AIRefiner {
         });
 
         this.addLog('info', `Processed batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(docs.length / BATCH_SIZE)} (${productsSuccessful + productsFailed}/${docs.length})`);
+        
+        // Flush progress to refiner_jobs in real-time for live logs
+        await this.updateJobRecord({
+          id: this.jobId,
+          status: 'running',
+          productIds: processedIds,
+          refinationType,
+          productsProcessed: processedIds.length,
+          productsSuccessful,
+          productsFailed,
+          startedAt: jobStartTime,
+          completedAt: '',
+          lastUpdatedAt: new Date().toISOString(),
+          logs: this.logs,
+        });
       }
 
       const job: RefinerJob = {
