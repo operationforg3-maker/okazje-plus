@@ -33,6 +33,25 @@ function localeToOgLocale(locale: string): string {
   return map[locale] || 'pl_PL';
 }
 
+function deepSerialize<T>(value: T): T {
+  if (value === null || value === undefined) return value;
+  try {
+    return JSON.parse(
+      JSON.stringify(value, (_, v) => {
+        if (v && typeof v === 'object' && typeof v.toDate === 'function') {
+          return v.toDate().toISOString();
+        }
+        if (v && typeof v === 'object' && v.seconds !== undefined && v.nanoseconds !== undefined) {
+          return new Date(v.seconds * 1000).toISOString();
+        }
+        return v;
+      })
+    );
+  } catch {
+    return value;
+  }
+}
+
 // Server-side data fetching - używa M6 ProductCore + DealM6
 async function getProductData(id: string) {
   try {
@@ -97,16 +116,15 @@ async function getProductData(id: string) {
         relatedProducts,
       ]);
       
-      // Serialize everything to prevent "passing non-serializable data to Client Component" errors
-      // caused by Firestore Timestamps in relatedProducts or recentRatings
-      // This is critical for both Admin (draft) and User (approved) views
-      return JSON.parse(JSON.stringify({ 
+      // Deep serialize everything to prevent "passing non-serializable data to Client Component" errors
+      // caused by Firestore Timestamps in productCore, deals, relatedProducts or recentRatings
+      return deepSerialize({ 
         productCore, 
         deals, 
         relatedProducts: resolvedRelated, 
         recentRatings, 
         isM6: true 
-      }));
+      });
     }
     
     // Fallback to legacy Product if not found in ProductCore
@@ -172,13 +190,13 @@ async function getProductData(id: string) {
   }
   
   // Serialize legacy data return as well
-  return JSON.parse(JSON.stringify({ 
+  return deepSerialize({ 
     product, 
     relatedProducts, 
     recentRatings, 
     deals: [], 
     isM6: false 
-  }));
+  });
   } catch (error) {
     console.error('[getProductData] Unexpected error fetching product:', error);
     return null;

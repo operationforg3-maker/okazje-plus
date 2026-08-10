@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useParams, usePathname, useSearchParams } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import { Flame, ShoppingBag, ShoppingCart, Trash2, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -28,7 +28,7 @@ type BottomNavItem = {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  isActive?: (pathname: string, searchParams: URLSearchParams) => boolean;
+  isActive?: (pathname: string) => boolean;
 };
 
 export function BottomTabBar() {
@@ -37,7 +37,6 @@ export function BottomTabBar() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const rawLocale = useLocale();
   const locale = (rawLocale as string) || 'pl';
   const prefix = `/${locale}`;
@@ -215,7 +214,7 @@ export function BottomTabBar() {
           {items.map((item) => {
             const Icon = item.icon;
             const active = item.isActive
-              ? item.isActive(pathname, searchParams)
+              ? item.isActive(pathname)
               : pathname === item.href;
 
             return (

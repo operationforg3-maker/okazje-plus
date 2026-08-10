@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { Navbar } from "./navbar";
 import { Footer } from "./footer";
 import { BottomTabBar } from "./bottom-tab-bar";
@@ -23,7 +24,9 @@ export function ConditionalNav({ children, categories = [] }: { children: React.
         {children}
       </main>
       <Footer />
-      <BottomTabBar />
+      <Suspense fallback={null}>
+        <BottomTabBar />
+      </Suspense>
     </div>
   );
 }

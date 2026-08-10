@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import DealsClient from './deals-client';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://okazjeplus.pl';
@@ -47,5 +48,9 @@ export async function generateMetadata({
 }
 
 export default function Page() {
-  return <DealsClient />;
+  return (
+    <Suspense fallback={<div className="page-container py-12 text-center text-muted-foreground">Ładowanie okazji...</div>}>
+      <DealsClient />
+    </Suspense>
+  );
 }
