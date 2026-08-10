@@ -179,6 +179,14 @@ export async function POST(request: NextRequest) {
 
       const totalCommission = (row.directCommissionRate || 0) + (row.incentiveCommissionRate || 0);
 
+      const catName = (row.categoryName || '').toLowerCase();
+      let mainCategorySlug = 'elektronika';
+      if (catName.includes('home') || catName.includes('ogród') || catName.includes('dom')) {
+        mainCategorySlug = 'dom-ogrod';
+      } else if (catName.includes('apparel') || catName.includes('wear') || catName.includes('moda')) {
+        mainCategorySlug = 'moda';
+      }
+
       const dealData: Record<string, any> = {
         id: dealId,
         title: row.productName,
@@ -192,6 +200,10 @@ export async function POST(request: NextRequest) {
         discountPercent: row.discountPercent || (row.originalPrice ? Math.round(((row.originalPrice - row.salePrice) / row.originalPrice) * 100) : 0),
         images: row.productImageUrl ? [row.productImageUrl] : [],
         status: 'draft',
+        temperature: 100,
+        mainCategorySlug,
+        categorySlug: mainCategorySlug,
+        votes: { up: 1, down: 0 },
         createdAt: now,
         updatedAt: now,
         merchantName: 'AliExpress',
