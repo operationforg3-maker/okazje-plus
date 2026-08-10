@@ -235,12 +235,21 @@ export async function POST(request: NextRequest) {
       await batch.commit();
     }
 
+    if (autoRefine && createdIds.length > 0) {
+      import('@/lib/automation/deal-refiner').then(({ DealRefiner }) => {
+        const refiner = new DealRefiner(`csv-auto-${Date.now()}`);
+        refiner.refineDeals(createdIds).catch(err => {
+          console.error('[CSV Import AutoRefine Error]', err);
+        });
+      });
+    }
+
     return NextResponse.json({
       success: true,
       totalRowsProcessed: rows.length,
       createdCount,
       promoCodesCount,
-      message: `Pomyślnie zaimportowano ${createdCount} okazji z pliku CSV AliExpress (w tym ${promoCodesCount} kodów rabatowych).`,
+      message: `Pomyślnie zaimportowano ${createdCount} okazji z pliku CSV AliExpress (w tym ${promoCodesCount} kodów rabatowych). Uruchomiono automatyczny AI Refiner w tle.`,
       createdIds: createdIds.slice(0, 50),
     });
   } catch (error: any) {

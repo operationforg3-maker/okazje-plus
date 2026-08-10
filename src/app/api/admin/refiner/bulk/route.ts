@@ -56,22 +56,28 @@ export async function POST(req: NextRequest) {
       userId: session.uid,
     });
 
-    // Create refiner job
+    // Create refiner jobs for both product_cores and deals
     const jobId = `refiner-bulk-${Date.now()}`;
     const refiner = new AIRefiner(jobId);
 
-    // Start refinement (non-blocking - job runs in background)
-    const jobPromise = refiner.refineExistingProducts(
-      status,
-      limit,
-      refinementType as 'full_enrichment' | 'specs_cleanup'
-    );
+    const { DealRefiner } = await import('@/lib/automation/deal-refiner');
+    const dealRefiner = new DealRefiner(`deal-${jobId}`);
+
+    // Start refinement (non-blocking - jobs run in background)
+    Promise.all([
+      refiner.refineExistingProducts(
+        status,
+        limit,
+        refinementType as 'full_enrichment' | 'specs_cleanup'
+      ).catch(err => console.error('[BulkRefiner] product_cores error:', err)),
+      dealRefiner.refineNewDeals(limit)
+        .catch(err => console.error('[BulkRefiner] deals error:', err)),
+    ]);
 
     // Return immediately with job ID
-    // Client can poll /api/admin/refiner-logs/{jobId} for progress
     return NextResponse.json({
       success: true,
-      message: 'Bulk refinement started',
+      message: 'Bulk refinement started for both product_cores and deals',
       jobId,
       status: 'running',
       query: {
@@ -96,12 +102,10 @@ export async function POST(req: NextRequest) {
 /**
  * GET /api/admin/refiner/bulk?status=draft&limit=10
  * 
- * Preview: Count how many products match the filter
- * Doesn't actually refine anything
+ * Preview: Count how many products and deals match the filter
  */
 export async function GET(req: NextRequest) {
   try {
-    // Admin auth check
     const session = await getServerAuthSession();
     if (!session || session.role !== 'admin') {
       return NextResponse.json(
@@ -113,13 +117,21 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status') || undefined;
 
-    // Import Firebase Admin to count products
     const { adminDb } = await import('@/lib/firebase-admin');
     const productsRef = adminDb.collection('product_cores');
-    const query = status ? productsRef.where('status', '==', status) : productsRef;
+    const dealsRef = adminDb.collection('deals');
+
+    const pQuery = status ? productsRef.where('status', '==', status) : productsRef;
+    const dQuery = status ? dealsRef.where('status', '==', status) : dealsRef;
     
-    const snapshot = await query.count().get();
-    const totalCount = snapshot.data().count;
+    const [pSnap, dSnap] = await Promise.all([
+      pQuery.count().get(),
+      dQuery.count().get(),
+    ]);
+
+    const productCount = pSnap.data().count;
+    const dealCount = dSnap.data().count;
+    const totalCount = productCount + dealCount;
 
     return NextResponse.json({
       success: true,
@@ -127,7 +139,9 @@ export async function GET(req: NextRequest) {
         status: status || 'all',
       },
       totalProducts: totalCount,
-      message: `Found ${totalCount} products matching filter`,
+      productCoresCount: productCount,
+      dealsCount: dealCount,
+      message: `Found ${totalCount} items matching filter (${productCount} products, ${dealCount} deals)`,
     });
 
   } catch (error: any) {
