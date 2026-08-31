@@ -207,7 +207,7 @@ export function BottomTabBar() {
       </Sheet>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 md:hidden"
+        className="fixed inset-x-0 bottom-0 z-50 border-t border-border/70 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85 md:hidden pb-[env(safe-area-inset-bottom,0px)]"
         aria-label={t('mobileNavigation')}
       >
         <ul className="mx-auto grid h-16 max-w-screen-sm grid-cols-4 px-1">

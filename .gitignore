@@ -76,3 +76,5 @@ serviceAccountKey.json
 check-jobs-latest.ts
 check-latest-products.ts
 verify-specific-product.ts
+/scratch/
+/src/scratch/

@@ -20,6 +20,10 @@ const CookieConsentBanner = dynamic(
   () => import('@/components/cookie-consent').then((m) => ({ default: m.CookieConsentBanner })),
   { ssr: false }
 );
+const CapacitorBridge = dynamic(
+  () => import('@/hooks/use-capacitor').then((m) => ({ default: m.CapacitorBridge })),
+  { ssr: false }
+);
 
 export function DeferredClientWidgets() {
   const [showCookieBanner, setShowCookieBanner] = useState(false);
@@ -57,6 +61,7 @@ export function DeferredClientWidgets() {
 
   return (
     <>
+      <CapacitorBridge />
       <ComparisonListener />
       <ExtensionWarningBanner />
       <CashbackWarningModal />

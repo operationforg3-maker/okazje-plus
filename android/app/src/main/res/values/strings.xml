@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Okazje+</string>
+    <string name="title_activity_main">Okazje+</string>
+    <string name="package_name">pl.okazjeplus.app</string>
+    <string name="custom_url_scheme">pl.okazjeplus.app</string>
+</resources>

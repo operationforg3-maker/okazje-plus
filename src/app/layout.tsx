@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import './globals.css';
 import { cn } from '@/lib/utils';
@@ -6,9 +6,30 @@ import WebsiteSchema from '@/components/structured-data/WebsiteSchema';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://okazjeplus.pl';
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#090d16' },
+  ],
+};
+
 export const metadata: Metadata = {
   title: 'Okazje+',
   description: 'Najlepsze okazje i promocje w Polsce – codzienne oferty, zniżki i wyprzedaże.',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Okazje+',
+  },
+  icons: {
+    icon: '/icon_okazjeplus.svg',
+    apple: '/icon_okazjeplus.png',
+  },
   metadataBase: new URL(SITE_URL),
   openGraph: {
     title: 'Okazje+ – codzienne promocje',
