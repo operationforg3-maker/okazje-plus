@@ -80,9 +80,10 @@ export interface TradeTrackerCampaign {
   name: string;
   url: string;
   category: string;
-  commission: string;
-  currency: string;
-  country: string;
+  commission?: string;
+  currency?: string;
+  country?: string;
+  assignmentStatus?: 'accepted' | 'pending' | 'rejected' | 'notsignedup';
 }
 
 /**

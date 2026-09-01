@@ -19,6 +19,7 @@ export class TradeTrackerClient {
   private config: TradeTrackerConfig;
   private soapEndpoint = 'https://ws.tradetracker.com/soap/affiliate';
   private sessionId: string | null = null;
+  private sessionCookie: string | null = null;
   private sessionExpiresAt: number = 0;
 
   constructor(config?: Partial<TradeTrackerConfig>) {
@@ -346,19 +347,123 @@ export class TradeTrackerClient {
   }
 
   /**
+   * Ensures the client is authenticated via SOAP and has a valid session cookie
+   */
+  private async ensureAuthenticated(): Promise<boolean> {
+    if (this.sessionId && this.sessionCookie && Date.now() < this.sessionExpiresAt) {
+      return true;
+    }
+    if (!this.config.customerId || !this.config.passphrase) {
+      return false;
+    }
+
+    try {
+      const authSoapEnvelope = `<?xml version="1.0" encoding="utf-8"?>
+<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:TradeTracker">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <urn:authenticate soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+         <customerID xsi:type="xsd:int">${this.config.customerId}</customerID>
+         <passphrase xsi:type="xsd:string">${this.config.passphrase}</passphrase>
+         <sandbox xsi:type="xsd:boolean">${this.config.sandbox ? 'true' : 'false'}</sandbox>
+         <locale xsi:type="xsd:string">${this.config.locale || 'pl_PL'}</locale>
+         <demo xsi:type="xsd:boolean">false</demo>
+      </urn:authenticate>
+   </soapenv:Body>
+</soapenv:Envelope>`;
+
+      const response = await fetch(this.soapEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/xml; charset=utf-8',
+          'SOAPAction': 'urn:TradeTracker#authenticate',
+          'User-Agent': 'OkazjePlus-Harvester/1.0',
+        },
+        body: authSoapEnvelope,
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Authentication HTTP error: ${response.status}`);
+      }
+
+      this.sessionCookie = response.headers.get('set-cookie');
+      const xml = await response.text();
+      const $ = loadHtml(xml, { xmlMode: true });
+      const fault = $('faultstring').text();
+      if (fault) {
+        throw new Error(`Authentication SOAP Fault: ${fault}`);
+      }
+
+      this.sessionId = $('authenticateReturn, result, return').text().trim() || 'session_active';
+      this.sessionExpiresAt = Date.now() + 30 * 60 * 1000;
+
+      if (!this.config.affiliateSiteId) {
+        const siteId = await this.discoverFirstSiteId();
+        if (siteId) {
+          this.config.affiliateSiteId = siteId;
+        }
+      }
+
+      return true;
+    } catch (err) {
+      logger.warn('[TradeTracker] Failed to authenticate SOAP session', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return false;
+    }
+  }
+
+  private async discoverFirstSiteId(): Promise<string | null> {
+    try {
+      const envelope = `<?xml version="1.0" encoding="utf-8"?>
+<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:TradeTracker">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <urn:getAffiliateSites soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+      </urn:getAffiliateSites>
+   </soapenv:Body>
+</soapenv:Envelope>`;
+
+      const response = await fetch(this.soapEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/xml; charset=utf-8',
+          'SOAPAction': 'urn:TradeTracker#getAffiliateSites',
+          'User-Agent': 'OkazjePlus-Harvester/1.0',
+          ...(this.sessionCookie ? { Cookie: this.sessionCookie } : {}),
+        },
+        body: envelope,
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (!response.ok) return null;
+      const xml = await response.text();
+      const $ = loadHtml(xml, { xmlMode: true });
+      const firstId = $('item').first().find('ID, id').first().text().trim();
+      return firstId || null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * SOAP API integration for TradeTracker Web Services
    */
   private async fetchProductsViaSoap(
     query: string,
     limit: number
   ): Promise<TradeTrackerProductFeedItem[]> {
-    // SOAP Envelope for getFeedProducts / getFeeds
+    const authed = await this.ensureAuthenticated();
+    if (!authed) return [];
+
+    // SOAP Envelope for getFeedProducts
     const soapBody = `<?xml version="1.0" encoding="utf-8"?>
 <soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:TradeTracker">
    <soapenv:Header/>
    <soapenv:Body>
       <urn:getFeedProducts soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-         <affiliateSiteID xsi:type="xsd:string">${this.config.affiliateSiteId || ''}</affiliateSiteID>
+         <affiliateSiteID xsi:type="xsd:int">${this.config.affiliateSiteId || '511688'}</affiliateSiteID>
          <filter xsi:type="urn:FeedProductFilter">
             <query xsi:type="xsd:string">${query || ''}</query>
             <limit xsi:type="xsd:int">${limit}</limit>
@@ -373,6 +478,7 @@ export class TradeTrackerClient {
         'Content-Type': 'text/xml; charset=utf-8',
         'SOAPAction': 'urn:TradeTracker#getFeedProducts',
         'User-Agent': 'OkazjePlus-Harvester/1.0',
+        ...(this.sessionCookie ? { Cookie: this.sessionCookie } : {}),
       },
       body: soapBody,
       signal: AbortSignal.timeout(20000),
@@ -390,12 +496,15 @@ export class TradeTrackerClient {
     query: string,
     limit: number
   ): Promise<TradeTrackerVoucherItem[]> {
+    const authed = await this.ensureAuthenticated();
+    if (!authed) return [];
+
     const soapBody = `<?xml version="1.0" encoding="utf-8"?>
 <soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:TradeTracker">
    <soapenv:Header/>
    <soapenv:Body>
       <urn:getMaterialIncentiveVoucherItems soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-         <affiliateSiteID xsi:type="xsd:string">${this.config.affiliateSiteId || ''}</affiliateSiteID>
+         <affiliateSiteID xsi:type="xsd:int">${this.config.affiliateSiteId || '511688'}</affiliateSiteID>
          <filter xsi:type="urn:MaterialIncentiveVoucherItemFilter">
             <query xsi:type="xsd:string">${query || ''}</query>
             <limit xsi:type="xsd:int">${limit}</limit>
@@ -409,6 +518,8 @@ export class TradeTrackerClient {
       headers: {
         'Content-Type': 'text/xml; charset=utf-8',
         'SOAPAction': 'urn:TradeTracker#getMaterialIncentiveVoucherItems',
+        'User-Agent': 'OkazjePlus-Harvester/1.0',
+        ...(this.sessionCookie ? { Cookie: this.sessionCookie } : {}),
       },
       body: soapBody,
       signal: AbortSignal.timeout(20000),
@@ -450,6 +561,95 @@ export class TradeTrackerClient {
     });
 
     return vouchers;
+  }
+
+  /**
+   * Fetch list of available campaigns and their subscription status
+   */
+  async getCampaigns(): Promise<TradeTrackerCampaign[]> {
+    const authed = await this.ensureAuthenticated();
+    if (!authed) return [];
+
+    const soapBody = `<?xml version="1.0" encoding="utf-8"?>
+<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:TradeTracker">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <urn:getCampaigns soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+         <affiliateSiteID xsi:type="xsd:int">${this.config.affiliateSiteId || '511688'}</affiliateSiteID>
+      </urn:getCampaigns>
+   </soapenv:Body>
+</soapenv:Envelope>`;
+
+    const response = await fetch(this.soapEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/xml; charset=utf-8',
+        'SOAPAction': 'urn:TradeTracker#getCampaigns',
+        'User-Agent': 'OkazjePlus-Harvester/1.0',
+        ...(this.sessionCookie ? { Cookie: this.sessionCookie } : {}),
+      },
+      body: soapBody,
+      signal: AbortSignal.timeout(20000),
+    });
+
+    if (!response.ok) return [];
+    const xml = await response.text();
+    const $ = loadHtml(xml, { xmlMode: true });
+    const campaigns: TradeTrackerCampaign[] = [];
+
+    $('item').each((_, el) => {
+      const id = $(el).find('ID').first().text().trim();
+      const name = $(el).find('name').first().text().trim();
+      const url = $(el).find('URL').first().text().trim();
+      const category = $(el).find('category > name').first().text().trim();
+      const status = $(el).find('assignmentStatus').first().text().trim();
+
+      if (id && name) {
+        campaigns.push({
+          id,
+          name,
+          url,
+          category: category || 'E-Commerce',
+          assignmentStatus: (status as any) || 'notsignedup',
+        });
+      }
+    });
+
+    return campaigns;
+  }
+
+  /**
+   * Subscribe/join an affiliate campaign on TradeTracker
+   */
+  async subscribeToCampaign(campaignId: string | number): Promise<boolean> {
+    const authed = await this.ensureAuthenticated();
+    if (!authed) return false;
+
+    const soapBody = `<?xml version="1.0" encoding="utf-8"?>
+<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:urn="urn:TradeTracker">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <urn:changeCampaignSubscription soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+         <affiliateSiteID xsi:type="xsd:nonNegativeInteger">${this.config.affiliateSiteId || '511688'}</affiliateSiteID>
+         <campaignID xsi:type="xsd:nonNegativeInteger">${campaignId}</campaignID>
+         <subscriptionAction xsi:type="urn:CampaignSubscriptionAction">subscribe</subscriptionAction>
+      </urn:changeCampaignSubscription>
+   </soapenv:Body>
+</soapenv:Envelope>`;
+
+    const response = await fetch(this.soapEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/xml; charset=utf-8',
+        'SOAPAction': 'urn:TradeTracker#changeCampaignSubscription',
+        'User-Agent': 'OkazjePlus-Harvester/1.0',
+        ...(this.sessionCookie ? { Cookie: this.sessionCookie } : {}),
+      },
+      body: soapBody,
+      signal: AbortSignal.timeout(20000),
+    });
+
+    return response.ok;
   }
 
   /**

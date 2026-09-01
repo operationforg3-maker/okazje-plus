@@ -143,6 +143,24 @@ env:
     availability:
       - RUNTIME
 
+  # TradeTracker Affiliate Integration
+  - variable: TRADETRACKER_CUSTOMER_ID
+    value: '303535'
+    availability:
+      - RUNTIME
+  - variable: TRADETRACKER_PASSPHRASE
+    value: f4c237c9c4e81bed1055af97f9aadf8b8c815dab
+    availability:
+      - RUNTIME
+  - variable: TRADETRACKER_SITE_ID
+    value: '511688'
+    availability:
+      - RUNTIME
+  - variable: TRADETRACKER_LOCALE
+    value: pl_PL
+    availability:
+      - RUNTIME
+
   # Cron job security (background task processing)
   - variable: CRON_SECRET
     secret: CRON_SECRET

@@ -75,6 +75,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const trackingToken = generateTrackingToken();
+    const affiliateId = process.env.ALIEXPRESS_AFFILIATE_ID || '';
+
     // Add Convertiser tracking, TradeTracker tracking, or AliExpress tracking parameters
     let finalUrl = buildConvertiserTrackingLink(affiliateUrl);
     if (finalUrl === affiliateUrl && affiliateUrl.includes('tc.tradetracker.net')) {
@@ -83,9 +86,6 @@ export async function POST(request: NextRequest) {
       const separator = affiliateUrl.includes('?') ? '&' : '?';
       finalUrl = `${affiliateUrl}${separator}aff_platform=okazjeplus&aff_token=${trackingToken}`;
     }
-
-    const trackingToken = generateTrackingToken();
-    const affiliateId = process.env.ALIEXPRESS_AFFILIATE_ID || '';
 
     // Log the click for conversion tracking
     try {
