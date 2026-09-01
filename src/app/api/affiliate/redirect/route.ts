@@ -44,6 +44,7 @@ function isValidAffiliateUrl(url: string): boolean {
 }
 
 import { buildConvertiserTrackingLink } from '@/lib/integrations/convertiser-affiliate-link';
+import { buildTradeTrackerTrackingLink } from '@/lib/integrations/tradetracker-affiliate-link';
 
 export async function POST(request: NextRequest) {
   try {
@@ -74,10 +75,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Add Convertiser tracking or AliExpress tracking parameters
+    // Add Convertiser tracking, TradeTracker tracking, or AliExpress tracking parameters
     let finalUrl = buildConvertiserTrackingLink(affiliateUrl);
-    if (finalUrl === affiliateUrl && affiliateUrl.includes('aliexpress.com')) {
-      const trackingToken = generateTrackingToken();
+    if (finalUrl === affiliateUrl && affiliateUrl.includes('tc.tradetracker.net')) {
+      finalUrl = buildTradeTrackerTrackingLink(affiliateUrl, trackingToken);
+    } else if (finalUrl === affiliateUrl && affiliateUrl.includes('aliexpress.com')) {
       const separator = affiliateUrl.includes('?') ? '&' : '?';
       finalUrl = `${affiliateUrl}${separator}aff_platform=okazjeplus&aff_token=${trackingToken}`;
     }
@@ -163,7 +165,9 @@ export async function GET(request: NextRequest) {
     }
 
     let finalUrl = buildConvertiserTrackingLink(affiliateUrl);
-    if (finalUrl === affiliateUrl && affiliateUrl.includes('aliexpress.com')) {
+    if (finalUrl === affiliateUrl && affiliateUrl.includes('tc.tradetracker.net')) {
+      finalUrl = buildTradeTrackerTrackingLink(affiliateUrl, trackingToken);
+    } else if (finalUrl === affiliateUrl && affiliateUrl.includes('aliexpress.com')) {
       const separator = affiliateUrl.includes('?') ? '&' : '?';
       finalUrl = `${affiliateUrl}${separator}aff_platform=okazjeplus&aff_token=${trackingToken}`;
     }
