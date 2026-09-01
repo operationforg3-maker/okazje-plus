@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+.idea/
+android/.idea/
 
 # debug
 npm-debug.log*
