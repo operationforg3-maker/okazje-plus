@@ -20,7 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Globe } from 'lucide-react';
 
-const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['pl', 'en', 'de', 'fr', 'es', 'uk'];
+const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['pl', 'en', 'de', 'fr', 'es', 'uk', 'it'];
 
 export function LanguageSwitcher() {
   const locale = useLocale() as SupportedLanguage;
@@ -29,7 +29,7 @@ export function LanguageSwitcher() {
 
   const switchLanguage = (newLocale: SupportedLanguage) => {
     // Remove current locale prefix from pathname
-    const pathnameWithoutLocale = pathname.replace(/^\/(pl|en|de|fr|es|uk)(\/|$)/, '/');
+    const pathnameWithoutLocale = pathname.replace(/^\/(pl|en|de|fr|es|uk|it)(\/|$)/, '/');
     
     // Build new path with locale prefix
     const newPath = `/${newLocale}${pathnameWithoutLocale || '/'}`;

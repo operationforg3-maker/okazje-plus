@@ -232,7 +232,8 @@ class LazyAuth {
 const adminDb = new LazyDb() as any;
 const adminAuth = new LazyAuth() as any;
 
-// Export FieldValue for array operations
+// Export FieldValue & FieldPath
 export const FieldValue = FirestoreFieldValue;
+export { FieldPath } from 'firebase-admin/firestore';
 
 export { adminDb, adminApp, adminAuth };

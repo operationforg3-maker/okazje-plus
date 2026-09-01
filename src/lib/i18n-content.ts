@@ -6,7 +6,7 @@
 
 import { Product, Category, Subcategory, SubSubcategory } from './types';
 
-export type SupportedLanguage = 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk';
+export type SupportedLanguage = 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk' | 'it';
 
 /**
  * Get translated product name

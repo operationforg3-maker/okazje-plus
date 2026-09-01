@@ -78,11 +78,11 @@ async function hydrateFallbackDealImages(deals: Deal[]): Promise<Deal[]> {
   const batches = chunkIds([...new Set(idsToHydrate)]);
   const resolved = new Map<string, string>();
 
-  const { adminDb, FieldValue } = await import('@/lib/firebase-admin');
+  const { adminDb, FieldPath } = await import('@/lib/firebase-admin');
 
   await Promise.all(
     batches.map(async (batch) => {
-      const snap = await adminDb.collection('deals').where(FieldValue.documentId(), 'in', batch).get();
+      const snap = await adminDb.collection('deals').where(FieldPath.documentId(), 'in', batch).get();
       snap.docs.forEach((docSnap: any) => {
         const image = resolveDealImage(docSnap.data());
         if (image && image !== DEAL_IMAGE_FALLBACK) {

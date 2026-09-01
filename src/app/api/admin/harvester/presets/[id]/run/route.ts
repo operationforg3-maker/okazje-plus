@@ -50,7 +50,11 @@ export async function POST(
         preset.maxResultsPerKeyword || 50,
         undefined, // no categories
         false, // not tree mode
-        preset.convertiserMode // only for convertiser
+        preset.convertiserMode, // only for convertiser
+        false,
+        'bestsellers',
+        preset.tradetrackerMode,
+        preset.tradetrackerFeedUrl
       ).catch((err) => {
         console.error(`[Preset ${params.id}] Harvester failed for keyword "${keyword}":`, err);
       });

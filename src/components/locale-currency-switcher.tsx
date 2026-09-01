@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Languages, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['pl', 'en', 'de', 'fr', 'es', 'uk'];
+const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['pl', 'en', 'de', 'fr', 'es', 'uk', 'it'];
 
 export function LanguageSwitcherMenu() {
   const [isMounted, setIsMounted] = useState(false);
@@ -34,7 +34,7 @@ export function LanguageSwitcherMenu() {
   }, []);
 
   // Strip existing locale prefix to avoid duplicated segments (e.g. /en/pl)
-  const pathnameWithoutLocale = pathname.replace(/^\/(pl|en|de|fr|es|uk)(\/|$)/, '/');
+  const pathnameWithoutLocale = pathname.replace(/^\/(pl|en|de|fr|es|uk|it)(\/|$)/, '/');
   const basePath = pathnameWithoutLocale || '/';
 
   // Don't render Check icon until mounted to avoid hydration mismatch

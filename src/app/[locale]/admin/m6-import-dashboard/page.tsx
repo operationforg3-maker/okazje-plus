@@ -1282,8 +1282,8 @@ function HarvesterWizard({
   authToken: string | null;
   setAuthError: (message: string | null) => void;
 }) {
-  const [source, setSource] = useState<"aliexpress" | "amazon" | "allegro" | "convertiser">(
-    "convertiser"
+  const [source, setSource] = useState<"aliexpress" | "amazon" | "allegro" | "convertiser" | "tradetracker">(
+    "tradetracker"
   );
   const [query, setQuery] = useState("");
   const [maxResults, setMaxResults] = useState(50);
@@ -1296,6 +1296,8 @@ function HarvesterWizard({
   const [autoAliIsImporting, setAutoAliIsImporting] = useState(false);
   const [autoAliMaxResults, setAutoAliMaxResults] = useState(200);
   const [convertiserMode, setConvertiserMode] = useState<'products' | 'offers'>('offers');
+  const [tradetrackerMode, setTradetrackerMode] = useState<'products' | 'vouchers'>('products');
+  const [tradetrackerFeedUrl, setTradetrackerFeedUrl] = useState('');
   const [importStrategy, setImportStrategy] = useState<'bestsellers' | 'price_asc'>('bestsellers');
   const [autoProgress, setAutoProgress] = useState<{
     jobId?: string;
@@ -1338,6 +1340,15 @@ function HarvesterWizard({
       if (source === 'aliexpress') {
         payload.importStrategy = importStrategy;
       }
+      if (source === 'convertiser') {
+        payload.convertiserMode = convertiserMode;
+      }
+      if (source === 'tradetracker') {
+        payload.tradetrackerMode = tradetrackerMode;
+        if (tradetrackerFeedUrl.trim()) {
+          payload.tradetrackerFeedUrl = tradetrackerFeedUrl.trim();
+        }
+      }
 
       if (useCategoryTree) {
         payload.mode = "category-tree";
@@ -1373,10 +1384,11 @@ function HarvesterWizard({
   };
 
   const runHarvesterTest = async (params: {
-    source: 'convertiser' | 'aliexpress' | 'amazon' | 'allegro';
+    source: 'convertiser' | 'aliexpress' | 'amazon' | 'allegro' | 'tradetracker';
     query: string;
     maxResults: number;
     convertiserMode?: 'products' | 'offers';
+    tradetrackerMode?: 'products' | 'vouchers';
     importStrategy?: 'bestsellers' | 'price_asc';
   }) => {
     if (!authToken) {
@@ -1391,6 +1403,9 @@ function HarvesterWizard({
     setUseCategoryTree(false);
     if (params.source === 'convertiser' && params.convertiserMode) {
       setConvertiserMode(params.convertiserMode);
+    }
+    if (params.source === 'tradetracker' && params.tradetrackerMode) {
+      setTradetrackerMode(params.tradetrackerMode);
     }
     if (params.source === 'aliexpress' && params.importStrategy) {
       setImportStrategy(params.importStrategy);
@@ -1408,6 +1423,9 @@ function HarvesterWizard({
 
       if (params.source === 'convertiser' && params.convertiserMode) {
         payload.convertiserMode = params.convertiserMode;
+      }
+      if (params.source === 'tradetracker' && params.tradetrackerMode) {
+        payload.tradetrackerMode = params.tradetrackerMode;
       }
       if (params.source === 'aliexpress') {
         payload.importStrategy = params.importStrategy || importStrategy;
@@ -1788,18 +1806,18 @@ function HarvesterWizard({
           <label className="block text-sm font-semibold text-slate-900">
             1. Wybierz źródło
           </label>
-          <div className="grid grid-cols-4 gap-3">
-            {(["convertiser", "aliexpress", "amazon", "allegro"] as const).map((s) => (
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {(["tradetracker", "convertiser", "aliexpress", "amazon", "allegro"] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setSource(s)}
-                className={`p-4 rounded-lg border-2 transition-all font-semibold capitalize ${
+                className={`p-3 rounded-lg border-2 transition-all font-semibold capitalize text-sm ${
                   source === s
-                    ? "border-blue-600 bg-blue-50 text-blue-900"
+                    ? "border-emerald-600 bg-emerald-50 text-emerald-900"
                     : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                 }`}
               >
-                {s}
+                {s === 'tradetracker' ? 'TradeTracker' : s}
               </button>
             ))}
           </div>
@@ -1814,6 +1832,36 @@ function HarvesterWizard({
             <Badge variant="outline" className="text-xs">TEST</Badge>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => runHarvesterTest({
+                source: 'tradetracker',
+                query: '',
+                maxResults: 10,
+                tradetrackerMode: 'vouchers',
+              })}
+              disabled={loading}
+              className="gap-2 border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+            >
+              TradeTracker Vouchery (10)
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => runHarvesterTest({
+                source: 'tradetracker',
+                query: 'iPhone',
+                maxResults: 10,
+                tradetrackerMode: 'products',
+              })}
+              disabled={loading}
+              className="gap-2 border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+            >
+              TradeTracker Produkty (10)
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -1861,6 +1909,66 @@ function HarvesterWizard({
             </Button>
           </div>
         </div>
+
+        {source === 'tradetracker' && (
+          <div className="space-y-4 rounded-lg border-2 border-emerald-200 bg-emerald-50 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 bg-gradient-to-br from-emerald-600 to-teal-600 rounded-lg flex items-center justify-center">
+                  <Download className="text-white" size={18} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-emerald-950">
+                    Konfiguracja TradeTracker (tradetracker.com)
+                  </h4>
+                  <p className="text-xs text-emerald-800">
+                    Pobieranie okazji, produktów z feedów XML/CSV oraz voucherów z SOAP API
+                  </p>
+                </div>
+              </div>
+              <Badge className="bg-emerald-600 hover:bg-emerald-700">NOWOŚĆ</Badge>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-emerald-900 mb-1">
+                  Tryb TradeTracker
+                </label>
+                <Select value={tradetrackerMode} onValueChange={(v) => setTradetrackerMode(v as 'products' | 'vouchers')} disabled={loading}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="products">Produkty & Okazje (Feedy / Katalog)</SelectItem>
+                    <SelectItem value="vouchers">Kody Rabatowe & Vouchery (Promocje)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-emerald-700 mt-1">
+                  {tradetrackerMode === 'vouchers'
+                    ? 'Pobiera aktywne kody promocyjne i zniżki'
+                    : 'Pobiera produkty z automatycznym filtrowaniem najwyższych zniżek'}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-emerald-900 mb-1">
+                  Opcjonalny URL Feedu XML/CSV
+                </label>
+                <Input
+                  type="url"
+                  placeholder="https://pf.tradetracker.net/?aid=...&type=xml"
+                  value={tradetrackerFeedUrl}
+                  onChange={(e) => setTradetrackerFeedUrl(e.target.value)}
+                  disabled={loading}
+                  className="bg-white text-xs"
+                />
+                <p className="text-xs text-emerald-700 mt-1">
+                  Zostaw puste, aby użyć skonfigurowanego katalogu
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {source === 'convertiser' && (
           <div className="space-y-4 rounded-lg border-2 border-purple-200 bg-purple-50 p-4">

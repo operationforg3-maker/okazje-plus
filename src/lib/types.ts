@@ -335,7 +335,7 @@ export interface PromotionCampaignInfo {
 }
 
 export interface ProductImportMetadata {
-  source: 'aliexpress' | 'convertiser' | 'manual' | 'csv' | 'amazon' | 'allegro' | 'ebay';
+  source: 'aliexpress' | 'convertiser' | 'tradetracker' | 'manual' | 'csv' | 'amazon' | 'allegro' | 'ebay';
   originalId?: string; // External ID from source platform
   
   // Product identifiers (critical for deduplication & SEO)
@@ -2558,7 +2558,7 @@ export interface DealM6 {
   totalPrice?: number;
   
   // Source & Affiliate
-  source: 'aliexpress' | 'amazon' | 'allegro' | 'ebay' | 'convertiser' | 'manual';
+  source: 'aliexpress' | 'amazon' | 'allegro' | 'ebay' | 'convertiser' | 'tradetracker' | 'manual';
   affiliateLink: string; // Generated with tracking code
   /** Master schema names */
   affiliateUrl?: string;
@@ -2634,6 +2634,7 @@ export interface DealM6 {
       fr?: string[];
       es?: string[];
       uk?: string[];
+      it?: string[];
     };
     // Deal highlights (key features/advantages)
     highlights?: {
@@ -2643,6 +2644,7 @@ export interface DealM6 {
       fr?: string[];
       es?: string[];
       uk?: string[];
+      it?: string[];
     };
     // Offer summary per language
     offerSummary?: {
@@ -2652,6 +2654,7 @@ export interface DealM6 {
       fr?: string;
       es?: string;
       uk?: string;
+      it?: string;
     };
     // Other metadata
     [key: string]: any;
@@ -2672,7 +2675,7 @@ export interface HarvesterJob {
 
   // Job Metadata
   status: 'running' | 'completed' | 'failed' | 'paused';
-  source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'manual';
+  source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'tradetracker' | 'campaigns' | 'manual';
 
   // Input Parameters
   query: string; // Search term or category ID

@@ -371,7 +371,7 @@ export class DealRefiner {
         const pickLocalizedTitle = (
           existingValue: string,
           enrichedValue: string,
-          targetLocale: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk'
+          targetLocale: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk' | 'it'
         ): string => {
           const existing = String(existingValue || '').trim();
           const generated = String(enrichedValue || '').trim();
@@ -431,6 +431,7 @@ export class DealRefiner {
               fr: enriched.sellingPoints.fr || [],
               es: enriched.sellingPoints.es || [],
               uk: enriched.sellingPoints.uk || [],
+              it: (enriched.sellingPoints as any).it || [],
             },
           };
         }
@@ -454,6 +455,7 @@ export class DealRefiner {
               fr: enriched.highlights.fr || [],
               es: enriched.highlights.es || [],
               uk: enriched.highlights.uk || [],
+              it: (enriched.highlights as any).it || [],
             },
           };
         }
@@ -465,7 +467,7 @@ export class DealRefiner {
           }
           refined.metadata = {
             ...refined.metadata,
-            offerSummary: enriched.offerSummary as { pl: string; en: string; de: string; fr: string; es: string; uk: string },
+            offerSummary: enriched.offerSummary as { pl: string; en: string; de: string; fr: string; es: string; uk: string; it?: string },
           };
         }
       }

@@ -103,7 +103,7 @@ async function enrichDealWithAI(input: DealEnrichmentInput): Promise<DealEnrichm
       : `${input.shippingCost} PLN shipping, estimated ${input.shippingDays} day(s) delivery`;
 
   const prompt = `You are a professional deal copywriter for a European price comparison marketplace (like Idealo or Ceneo).
-Write compelling, conversion-focused deal content in 6 languages: Polish (pl), English (en), German (de), French (fr), Spanish (es), Ukrainian (uk).
+Write compelling, conversion-focused deal content in 7 languages: Polish (pl), English (en), German (de), French (fr), Spanish (es), Ukrainian (uk), Italian (it).
 Write NATIVE-QUALITY text — not literal translations of Polish. Each language must feel natural to a native speaker.
 
 DEAL DETAILS:
@@ -116,7 +116,7 @@ DEAL DETAILS:
 - Platform: ${input.source}
 
 CONTENT RULES:
-1. titleTranslations — translate the product name natively into each of the 6 languages. If the source is already that language, keep it as-is.
+1. titleTranslations — translate the product name natively into each of the 7 languages. If the source is already that language, keep it as-is.
 2. sellingPoints — 3–5 short bullet-ready benefits (price, shipping speed, seller trust, deal type). Concise, native language.
 3. offerSummary — 1–2 sentence pitch answering "why buy now?". Conversational, no clickbait.
 4. description — minimal HTML using <p> and optionally <ul>/<li>. 2–3 sentences or bullets highlighting the offer value. Do NOT invent specs not in the title.
@@ -124,19 +124,19 @@ CONTENT RULES:
 
 Return STRICTLY valid JSON only — no markdown fences, no extra keys:
 {
-  "titleTranslations": { "pl": "...", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "..." },
+  "titleTranslations": { "pl": "...", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "...", "it": "..." },
   "sellingPoints": {
     "pl": ["...", "..."], "en": ["...", "..."], "de": ["...", "..."],
-    "fr": ["...", "..."], "es": ["...", "..."], "uk": ["...", "..."]
+    "fr": ["...", "..."], "es": ["...", "..."], "uk": ["...", "..."], "it": ["...", "..."]
   },
-  "offerSummary": { "pl": "...", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "..." },
+  "offerSummary": { "pl": "...", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "...", "it": "..." },
   "description": {
     "pl": "<p>...</p>", "en": "<p>...</p>", "de": "<p>...</p>",
-    "fr": "<p>...</p>", "es": "<p>...</p>", "uk": "<p>...</p>"
+    "fr": "<p>...</p>", "es": "<p>...</p>", "uk": "<p>...</p>", "it": "<p>...</p>"
   },
   "highlights": {
     "pl": ["✓ ...", "✓ ..."], "en": ["✓ ...", "✓ ..."], "de": ["✓ ...", "✓ ..."],
-    "fr": ["✓ ...", "✓ ..."], "es": ["✓ ...", "✓ ..."], "uk": ["✓ ...", "✓ ..."]
+    "fr": ["✓ ...", "✓ ..."], "es": ["✓ ...", "✓ ..."], "uk": ["✓ ...", "✓ ..."], "it": ["✓ ...", "✓ ..."]
   }
 }`;
 
@@ -161,6 +161,7 @@ Return STRICTLY valid JSON only — no markdown fences, no extra keys:
     titleFR: tt.fr || fallback,
     titleES: tt.es || fallback,
     titleUK: tt.uk || fallback,
+    titleIT: tt.it || fallback,
     sellingPoints: {
       pl: sp.pl?.length ? sp.pl : [],
       en: sp.en?.length ? sp.en : [],
@@ -168,6 +169,7 @@ Return STRICTLY valid JSON only — no markdown fences, no extra keys:
       fr: sp.fr?.length ? sp.fr : [],
       es: sp.es?.length ? sp.es : [],
       uk: sp.uk?.length ? sp.uk : [],
+      it: sp.it?.length ? sp.it : [],
     },
     offerSummary: {
       pl: os.pl || '',
@@ -176,6 +178,7 @@ Return STRICTLY valid JSON only — no markdown fences, no extra keys:
       fr: os.fr || '',
       es: os.es || '',
       uk: os.uk || '',
+      it: os.it || '',
     },
     description: {
       pl: desc.pl || '',
@@ -184,6 +187,7 @@ Return STRICTLY valid JSON only — no markdown fences, no extra keys:
       fr: desc.fr || '',
       es: desc.es || '',
       uk: desc.uk || '',
+      it: desc.it || '',
     },
     highlights: {
       pl: hl.pl?.length ? hl.pl : [],
@@ -192,6 +196,7 @@ Return STRICTLY valid JSON only — no markdown fences, no extra keys:
       fr: hl.fr?.length ? hl.fr : [],
       es: hl.es?.length ? hl.es : [],
       uk: hl.uk?.length ? hl.uk : [],
+      it: hl.it?.length ? hl.it : [],
     },
   };
 }
@@ -202,7 +207,7 @@ Return STRICTLY valid JSON only — no markdown fences, no extra keys:
  */
 async function enrichDealWithTemplates(input: DealEnrichmentInput): Promise<DealEnrichmentOutput> {
   const sourceLocale = (input.sourceLocale || 'pl').toLowerCase();
-  const targetLocales = ['pl', 'en', 'de', 'fr', 'es', 'uk'].filter((lang) => lang !== sourceLocale);
+  const targetLocales = ['pl', 'en', 'de', 'fr', 'es', 'uk', 'it'].filter((lang) => lang !== sourceLocale);
 
   let translatedTitles: Record<string, string> = {};
   try {
@@ -222,6 +227,7 @@ async function enrichDealWithTemplates(input: DealEnrichmentInput): Promise<Deal
   const titleFR = sourceLocale === 'fr' ? input.dealTitle : translatedTitles.fr || input.dealTitle;
   const titleES = sourceLocale === 'es' ? input.dealTitle : translatedTitles.es || input.dealTitle;
   const titleUK = sourceLocale === 'uk' ? input.dealTitle : translatedTitles.uk || input.dealTitle;
+  const titleIT = sourceLocale === 'it' ? input.dealTitle : translatedTitles.it || input.dealTitle;
 
   return {
     titlePL,
@@ -230,6 +236,7 @@ async function enrichDealWithTemplates(input: DealEnrichmentInput): Promise<Deal
     titleFR,
     titleES,
     titleUK,
+    titleIT,
     sellingPoints: {
       pl: generateSellingPoints(input, 'pl'),
       en: generateSellingPoints(input, 'en'),
@@ -237,6 +244,7 @@ async function enrichDealWithTemplates(input: DealEnrichmentInput): Promise<Deal
       fr: generateSellingPoints(input, 'fr'),
       es: generateSellingPoints(input, 'es'),
       uk: generateSellingPoints(input, 'uk'),
+      it: generateSellingPoints(input, 'it'),
     },
     offerSummary: {
       pl: generateSummary(input, 'pl'),
@@ -245,6 +253,7 @@ async function enrichDealWithTemplates(input: DealEnrichmentInput): Promise<Deal
       fr: generateSummary(input, 'fr'),
       es: generateSummary(input, 'es'),
       uk: generateSummary(input, 'uk'),
+      it: generateSummary(input, 'it'),
     },
     description: {
       pl: generateRichDescription(input, 'pl'),
@@ -253,6 +262,7 @@ async function enrichDealWithTemplates(input: DealEnrichmentInput): Promise<Deal
       fr: generateRichDescription(input, 'fr'),
       es: generateRichDescription(input, 'es'),
       uk: generateRichDescription(input, 'uk'),
+      it: generateRichDescription(input, 'it'),
     },
     highlights: {
       pl: generateHighlights(input, 'pl'),
@@ -261,11 +271,12 @@ async function enrichDealWithTemplates(input: DealEnrichmentInput): Promise<Deal
       fr: generateHighlights(input, 'fr'),
       es: generateHighlights(input, 'es'),
       uk: generateHighlights(input, 'uk'),
+      it: generateHighlights(input, 'it'),
     },
   };
 }
 
-function generateSellingPoints(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk'): string[] {
+function generateSellingPoints(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk' | 'it'): string[] {
   const points: string[] = [];
 
   const translations: Record<string, Record<string, string>> = {
@@ -311,6 +322,13 @@ function generateSellingPoints(context: DealEnrichmentInput, lang: 'pl' | 'en' |
       lowPrice: 'Конкурентна ціна',
       flashDeal: 'Flash-розпродаж — обмежена кількість',
     },
+    it: {
+      highRating: `Venditore affidabile su ${context.source} (${context.merchantRating}/5)`,
+      freeShipping: 'Spedizione gratuita',
+      fastShipping: `Consegna rapida (${context.shippingDays} giorni)`,
+      lowPrice: 'Prezzo competitivo',
+      flashDeal: 'Offerta lampo - quantità limitata',
+    },
   };
 
   const t = translations[lang] || translations.pl;
@@ -336,7 +354,7 @@ function generateSellingPoints(context: DealEnrichmentInput, lang: 'pl' | 'en' |
   return points;
 }
 
-function generateSummary(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk'): string {
+function generateSummary(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk' | 'it'): string {
   const translations: Record<string, string> = {
     pl: `${context.dealTitle} od ${context.merchantName}. ${context.shippingCost === 0 ? 'Darmowa dostawa.' : `Dostawa: ${context.shippingDays} dni.`} Cena: ${context.price} PLN.`,
     en: `${context.dealTitle} from ${context.merchantName}. ${context.shippingCost === 0 ? 'Free shipping.' : `Delivery: ${context.shippingDays} days.`} Price: ${context.price} PLN.`,
@@ -344,6 +362,7 @@ function generateSummary(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de' 
     fr: `${context.dealTitle} par ${context.merchantName}. ${context.shippingCost === 0 ? 'Livraison gratuite.' : `Livraison: ${context.shippingDays} jours.`} Prix: ${context.price} PLN.`,
     es: `${context.dealTitle} de ${context.merchantName}. ${context.shippingCost === 0 ? 'Envío gratis.' : `Entrega: ${context.shippingDays} días.`} Precio: ${context.price} PLN.`,
     uk: `${context.dealTitle} від ${context.merchantName}. ${context.shippingCost === 0 ? 'Безкоштовна доставка.' : `Доставка: ${context.shippingDays} днів.`} Ціна: ${context.price} PLN.`,
+    it: `${context.dealTitle} da ${context.merchantName}. ${context.shippingCost === 0 ? 'Spedizione gratuita.' : `Consegna: ${context.shippingDays} giorni.`} Prezzo: ${context.price} PLN.`,
   };
 
   return translations[lang] || translations.pl;
@@ -353,7 +372,7 @@ function generateSummary(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de' 
  * Generate rich HTML description for deal
  * Formats with headings, key info, and call-to-action
  */
-function generateRichDescription(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk'): string {
+function generateRichDescription(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk' | 'it'): string {
   const labels: Record<string, Record<string, string>> = {
     pl: {
       heading: 'Szczegóły Oferty',
@@ -403,6 +422,14 @@ function generateRichDescription(context: DealEnrichmentInput, lang: 'pl' | 'en'
       bezpłatna: 'Безкоштовна доставка',
       dni: 'днів',
     },
+    it: {
+      heading: 'Dettagli dell’offerta',
+      cena: 'Prezzo:',
+      dostawa: 'Spedizione:',
+      sprzedawca: 'Venditore:',
+      bezpłatna: 'Spedizione gratuita',
+      dni: 'giorni',
+    },
   };
 
   const t = labels[lang] || labels.pl;
@@ -428,7 +455,7 @@ function generateRichDescription(context: DealEnrichmentInput, lang: 'pl' | 'en'
 /**
  * Generate deal-specific highlights/features
  */
-function generateHighlights(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk'): string[] {
+function generateHighlights(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk' | 'it'): string[] {
   const highlights: string[] = [];
 
   const translations: Record<string, Record<string, string>> = {
@@ -479,6 +506,14 @@ function generateHighlights(context: DealEnrichmentInput, lang: 'pl' | 'en' | 'd
       topSeller: `✓ Надійний продавець (${context.merchantRating}/5)`,
       officialStore: '✓ Офіційний магазин',
       flash: '✓ Обмежена в часі пропозиція',
+    },
+    it: {
+      bestPrice: '✓ Miglior prezzo disponibile',
+      freeShipping: '✓ Spedizione gratuita',
+      fastShipping: `✓ Consegna rapida (${context.shippingDays} giorni)`,
+      topSeller: `✓ Venditore affidabile (${context.merchantRating}/5)`,
+      officialStore: '✓ Negozio ufficiale',
+      flash: '✓ Offerta a tempo limitato',
     },
   };
 

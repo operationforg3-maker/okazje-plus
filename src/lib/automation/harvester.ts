@@ -92,7 +92,7 @@ interface RawProduct {
   upc?: string;
   mpn?: string;
   offerMeta?: {
-    promotionType?: 'offer';
+    promotionType?: 'offer' | 'voucher' | string;
     terms?: string;
     previewUrl?: string;
     hasCoupons?: boolean;
@@ -270,7 +270,7 @@ export class SmartHarvester {
   private async resolveCategoryInfo(
     sourceProduct: RawProduct,
     currentQuery: string,
-    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser'
+    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'tradetracker' | 'campaigns'
   ): Promise<{
     mainCategorySlug: string;
     subCategorySlug: string;
@@ -1196,11 +1196,11 @@ export class SmartHarvester {
   }
 
   private getQueryTimeoutMs(params: {
-    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser';
+    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'tradetracker' | 'campaigns';
     isTreeMode: boolean;
     autoBrowse: boolean;
   }): number {
-    if ((params.source === 'convertiser' || params.source === 'aliexpress') && params.autoBrowse) {
+    if ((params.source === 'convertiser' || params.source === 'aliexpress' || params.source === 'tradetracker') && params.autoBrowse) {
       return 600_000;
     }
 
@@ -1224,6 +1224,7 @@ export class SmartHarvester {
       fr: safe,
       es: safe,
       uk: safe,
+      it: safe,
     };
   }
 
@@ -1647,7 +1648,7 @@ export class SmartHarvester {
   private async prepareDeal(
     productId: string,
     sourceProduct: RawProduct,
-    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser',
+    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'tradetracker' | 'campaigns',
     targetStatus: DealM6['status'] = 'poczekalnia',
     categoryInfo?: {
       mainCategorySlug: string;
@@ -1716,7 +1717,7 @@ export class SmartHarvester {
         fromCountry: shippingFromCountry,
       },
       totalPrice: priceAmount + shippingCost,
-      source,
+      source: source === 'campaigns' ? 'aliexpress' : source,
       affiliateLink: sourceProduct.sourceUrl || '',
       affiliateUrl: sourceProduct.sourceUrl || '',
       dealUrl: sourceProduct.sourceUrl || '',
@@ -1891,21 +1892,22 @@ export class SmartHarvester {
   * @param autoBrowse - Auto-browse entire catalog (Convertiser/AliExpress)
    */
   async harvestProducts(
-    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'campaigns',
+    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'tradetracker' | 'campaigns',
     query: string,
     maxResults: number = 50,
     categories?: string[], // e.g., ['phones/flagship', 'phones/budget', 'tablets/android']
     isTreeMode: boolean = false, // True when harvesting from category tree
     convertiserMode?: 'products' | 'offers', // Convertiser: fetch products or offers
-    autoBrowse: boolean = false, // Convertiser/AliExpress: fetch broad catalog without keyword query
-    importStrategy: 'bestsellers' | 'price_asc' = 'bestsellers'
+    autoBrowse: boolean = false, // Convertiser/AliExpress/TradeTracker: fetch broad catalog without keyword query
+    importStrategy: 'bestsellers' | 'price_asc' = 'bestsellers',
+    tradetrackerMode?: 'products' | 'vouchers',
+    tradetrackerFeedUrl?: string
   ): Promise<HarvesterJob> {
     const jobStartTime = new Date().toISOString();
     
-    // For Convertiser: NEVER use category tree mode - use simple query only
-    // Moderator will manually categorize products in admin UI
+    // For Convertiser/TradeTracker auto-browse: fetch broad catalog
     let queries: string[];
-    if (autoBrowse && (source === 'convertiser' || source === 'aliexpress')) {
+    if (autoBrowse && (source === 'convertiser' || source === 'aliexpress' || source === 'tradetracker')) {
       queries = ['__AUTO_BROWSE__'];
     } else {
       // M6: Always respect categories if provided, otherwise split query by comma
@@ -2115,12 +2117,14 @@ export class SmartHarvester {
             
           const fetchStartedAt = Date.now();
           const sourceProducts = await this.fetchFromSource(
-            source,
+            source as any,
             searchTerm,
             maxResults,
             isTreeMode,
             convertiserMode,
-            importStrategy
+            importStrategy,
+            tradetrackerMode,
+            tradetrackerFeedUrl
           );
           const fetchDurationMs = Date.now() - fetchStartedAt;
           attemptTelemetry.fetchMs += fetchDurationMs;
@@ -2155,11 +2159,11 @@ export class SmartHarvester {
           this.addLog('info', `Fetched ${sourceProducts.length} products from ${source} for "${currentQuery}", using ${filteredProducts.length} after quality filter`);
 
           // Step 1.5: Batch AI categorization (optimize token costs)
-          // Find products that need AI categorization (either because source is Convertiser, query is auto-browse, or local mapping failed to uncategorized)
+          // Find products that need AI categorization (either because source is Convertiser/TradeTracker, query is auto-browse, or local mapping failed to uncategorized)
           const productsForAiCat: any[] = [];
           for (const p of filteredProducts) {
-            const localCat = await this.resolveCategoryInfo(p, currentQuery, source);
-            if (source === 'convertiser' || currentQuery === '__AUTO_BROWSE__' || localCat.mainCategorySlug === 'uncategorized') {
+            const localCat = await this.resolveCategoryInfo(p, currentQuery, source as any);
+            if (source === 'convertiser' || source === 'tradetracker' || currentQuery === '__AUTO_BROWSE__' || localCat.mainCategorySlug === 'uncategorized') {
               productsForAiCat.push(p);
             }
           }
@@ -2325,7 +2329,7 @@ export class SmartHarvester {
                   const { dealData, dealRef } = await this.prepareDeal(
                     existingProduct.id,
                     sourceProduct,
-                    source,
+                    source as any,
                     allowAutoApprove ? 'approved' : 'poczekalnia',
                     {
                       mainCategorySlug: existingProduct.mainCategorySlug,
@@ -2345,7 +2349,7 @@ export class SmartHarvester {
                   // New product: Create ProductCore + Deal
                   this.addLog('info', `Creating new product for: ${sourceProduct.title}`);
 
-                  const categoryInfo = await this.resolveCategoryInfo(sourceProduct, currentQuery, source);
+                  const categoryInfo = await this.resolveCategoryInfo(sourceProduct, currentQuery, source as any);
                   this.addLog('info', `Resolved category: ${categoryInfo.mainCategorySlug}/${categoryInfo.subCategorySlug}${categoryInfo.subSubCategorySlug ? `/${categoryInfo.subSubCategorySlug}` : ''}`);
 
                   const { productData, productRef } = await this.prepareProductCore(
@@ -2364,7 +2368,7 @@ export class SmartHarvester {
                   const { dealData, dealRef } = await this.prepareDeal(
                     productId,
                     sourceProduct,
-                    source,
+                    source as any,
                     'poczekalnia',
                     categoryInfo
                   );
@@ -2753,37 +2757,15 @@ export class SmartHarvester {
    * This is a placeholder - integrate with actual AliExpress/Amazon/Allegro APIs
    */
   private async fetchFromSource(
-    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser',
+    source: 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'tradetracker' | 'campaigns',
     searchQuery: string,
     maxResults: number,
     isTreeMode: boolean = false,
     convertiserMode?: 'products' | 'offers',
-    importStrategy: 'bestsellers' | 'price_asc' = 'bestsellers'
-  ): Promise<
-    Array<{
-      title: string;
-      description?: string;
-      imageUrl: string;
-      price: number;
-      currency: string;
-      shippingCost: number;
-      shippingDays: number;
-      shippingVerified?: boolean;
-      sourceProductId: string;
-      sourceUrl: string;
-      merchantName?: string;
-      merchantRating?: number;
-      specs?: Record<string, string>;
-      rating?: number;
-      ratingCount?: number;
-      ean?: string;
-      gtin?: string;
-      upc?: string;
-      mpn?: string;
-      campaignName?: string;
-      discount?: number;
-    }>
-  > {
+    importStrategy: 'bestsellers' | 'price_asc' = 'bestsellers',
+    tradetrackerMode?: 'products' | 'vouchers',
+    tradetrackerFeedUrl?: string
+  ): Promise<RawProduct[]> {
     switch (source) {
       case 'campaigns':
         return await this.fetchFromAliExpressCampaign(searchQuery, maxResults);
@@ -2804,6 +2786,15 @@ export class SmartHarvester {
           return await this.fetchFromConvertiserOffers(searchQuery, maxResults);
         } else {
           return await this.fetchFromConvertiser(searchQuery, maxResults);
+        }
+      case 'tradetracker':
+        const ttMode = tradetrackerMode || 'products';
+        if (searchQuery === '__AUTO_BROWSE__') {
+          return await this.fetchFromTradeTrackerAutoBrowse(maxResults, ttMode, tradetrackerFeedUrl);
+        } else if (ttMode === 'vouchers') {
+          return await this.fetchFromTradeTrackerVouchers(searchQuery, maxResults);
+        } else {
+          return await this.fetchFromTradeTracker(searchQuery, maxResults, tradetrackerFeedUrl);
         }
       default:
         throw new Error(`Unknown source: ${source}`);
@@ -3545,6 +3536,103 @@ export class SmartHarvester {
   }
 
   /**
+   * Fetch products from TradeTracker (affiliate network / product feed)
+   */
+  private async fetchFromTradeTracker(
+    searchQuery: string,
+    maxResults: number,
+    feedUrl?: string
+  ): Promise<RawProduct[]> {
+    try {
+      const { getTradeTrackerClient } = await import('@/lib/integrations/tradetracker-client');
+      const { mapTradeTrackerProductToRawProduct } = await import('@/integrations/tradetracker/mappers');
+      const client = getTradeTrackerClient();
+
+      this.addLog('info', `Fetching from TradeTracker: "${searchQuery}" (limit=${maxResults})`);
+
+      const items = await client.searchProducts({
+        query: searchQuery,
+        limit: maxResults,
+        feedUrl,
+        mode: 'products',
+        sortBy: 'discount',
+      });
+
+      if (!items.length) {
+        this.addLog('warn', `TradeTracker: No products found for "${searchQuery}"`);
+        return [];
+      }
+
+      this.addLog('info', `Found ${items.length} items from TradeTracker`);
+
+      const rawProducts = await Promise.all(
+        items.map(async (item) => mapTradeTrackerProductToRawProduct(item, searchQuery))
+      );
+
+      const validProducts = rawProducts.filter(Boolean) as RawProduct[];
+      this.addLog('info', `Mapped ${validProducts.length} valid products from TradeTracker`);
+      return validProducts;
+    } catch (error) {
+      this.addLog('error', `TradeTracker API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return [];
+    }
+  }
+
+  /**
+   * Fetch vouchers and promotional deals from TradeTracker
+   */
+  private async fetchFromTradeTrackerVouchers(
+    searchQuery: string,
+    maxResults: number
+  ): Promise<RawProduct[]> {
+    try {
+      const { getTradeTrackerClient } = await import('@/lib/integrations/tradetracker-client');
+      const { mapTradeTrackerVoucherToRawProduct } = await import('@/integrations/tradetracker/mappers');
+      const client = getTradeTrackerClient();
+
+      this.addLog('info', `Fetching TradeTracker vouchers: "${searchQuery}"`);
+
+      const vouchers = await client.fetchVouchers({
+        query: searchQuery,
+        limit: maxResults,
+        mode: 'vouchers',
+      });
+
+      if (!vouchers.length) {
+        this.addLog('warn', `TradeTracker: No vouchers found for "${searchQuery}"`);
+        return [];
+      }
+
+      this.addLog('info', `Found ${vouchers.length} vouchers from TradeTracker`);
+
+      const rawProducts = await Promise.all(
+        vouchers.map(async (v) => mapTradeTrackerVoucherToRawProduct(v))
+      );
+
+      const validVouchers = rawProducts.filter(Boolean) as RawProduct[];
+      this.addLog('info', `Mapped ${validVouchers.length} valid vouchers from TradeTracker`);
+      return validVouchers;
+    } catch (error) {
+      this.addLog('error', `TradeTracker vouchers API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return [];
+    }
+  }
+
+  /**
+   * Fetch top discount deals from TradeTracker catalog (auto-browse mode)
+   */
+  private async fetchFromTradeTrackerAutoBrowse(
+    maxResults: number,
+    mode: 'products' | 'vouchers' = 'products',
+    feedUrl?: string
+  ): Promise<RawProduct[]> {
+    if (mode === 'vouchers') {
+      return this.fetchFromTradeTrackerVouchers('', maxResults);
+    }
+    return this.fetchFromTradeTracker('', maxResults, feedUrl);
+  }
+
+  /**
    * Fetch AliExpress hot catalog without keyword iteration.
    * Uses category IDs from Firestore tree and falls back to global hot products.
    */
@@ -3736,7 +3824,7 @@ export async function startHarvesterJob(
   const jobId = `harvest_${Date.now()}_${Math.random().toString(36).substring(7)}`;
   const harvester = new SmartHarvester(jobId);
   return harvester.harvestProducts(
-    source as 'aliexpress' | 'amazon' | 'allegro' | 'convertiser',
+    source as 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'tradetracker',
     query,
     maxResults
   );

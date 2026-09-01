@@ -69,6 +69,7 @@ const TRANSLATION_DICTIONARY: Record<SupportedLanguage, Record<string, string>> 
   fr: {},
   es: {},
   uk: {},
+  it: {},
 };
 
 /**

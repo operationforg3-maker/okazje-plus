@@ -31,6 +31,7 @@ function detectBrowserLanguage(): SupportedLanguage {
   if (browserLang === 'fr') return 'fr';
   if (browserLang === 'es') return 'es';
   if (browserLang === 'uk') return 'uk';
+  if (browserLang === 'it') return 'it';
   
   // Default to Polish for unsupported languages
   return DEFAULT_LANGUAGE;
@@ -43,7 +44,7 @@ function getStoredLanguage(): SupportedLanguage | null {
   if (typeof window === 'undefined') return null;
   
   const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-  if (stored && ['pl', 'en', 'de', 'fr', 'es', 'uk'].includes(stored)) {
+  if (stored && ['pl', 'en', 'de', 'fr', 'es', 'uk', 'it'].includes(stored)) {
     return stored as SupportedLanguage;
   }
   
@@ -105,12 +106,13 @@ export function useContentLanguage() {
     isFrench: language === 'fr',
     isSpanish: language === 'es',
     isUkrainian: language === 'uk',
+    isItalian: language === 'it',
   };
 }
 
 /**
  * Hook to get language from URL path
- * Format: /pl/... or /en/... or /de/... or /fr/... or /es/... or /uk/...
+ * Format: /pl/... or /en/... or /de/... or /fr/... or /es/... or /uk/... or /it/...
  */
 export function useLanguageFromPath(): SupportedLanguage {
   const [language, setLanguage] = useState<SupportedLanguage>(DEFAULT_LANGUAGE);
@@ -119,7 +121,7 @@ export function useLanguageFromPath(): SupportedLanguage {
     if (typeof window === 'undefined') return;
     
     const path = window.location.pathname;
-    const langMatch = path.match(/^\/(pl|en|de|fr|es|uk)\//);
+    const langMatch = path.match(/^\/(pl|en|de|fr|es|uk|it)\//);
     
     if (langMatch && langMatch[1]) {
       setLanguage(langMatch[1] as SupportedLanguage);
@@ -145,6 +147,7 @@ export function getLanguageLabel(lang: SupportedLanguage): string {
     fr: 'Français',
     es: 'Español',
     uk: 'Українська',
+    it: 'Italiano',
   };
   
   return labels[lang];
@@ -161,6 +164,7 @@ export function getLanguageFlag(lang: SupportedLanguage): string {
     fr: '🇫🇷',
     es: '🇪🇸',
     uk: '🇺🇦',
+    it: '🇮🇹',
   };
   
   return flags[lang];

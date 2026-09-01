@@ -128,6 +128,7 @@ export function getLanguageName(language: SupportedLanguage): string {
     fr: 'Français',
     es: 'Español',
     uk: 'Українська',
+    it: 'Italiano',
   };
   return names[language] || language.toUpperCase();
 }
@@ -143,6 +144,7 @@ export function getLanguageFlag(language: SupportedLanguage): string {
     fr: '🇫🇷',
     es: '🇪🇸',
     uk: '🇺🇦',
+    it: '🇮🇹',
   };
   return flags[language] || '🌐';
 }

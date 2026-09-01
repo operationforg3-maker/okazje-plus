@@ -60,6 +60,8 @@ export async function POST(request: NextRequest) {
       source, 
       keywords, 
       convertiserMode = 'products',
+      tradetrackerMode = 'products',
+      tradetrackerFeedUrl,
       maxResultsPerKeyword = 50,
       schedule,
       active = true 
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing or invalid name' }, { status: 400 });
     }
 
-    if (!source || !['convertiser', 'aliexpress', 'amazon', 'allegro'].includes(source)) {
+    if (!source || !['convertiser', 'aliexpress', 'amazon', 'allegro', 'tradetracker'].includes(source)) {
       return NextResponse.json({ error: 'Invalid source' }, { status: 400 });
     }
 
@@ -83,6 +85,8 @@ export async function POST(request: NextRequest) {
       source,
       keywords,
       convertiserMode: source === 'convertiser' ? convertiserMode : undefined,
+      tradetrackerMode: source === 'tradetracker' ? tradetrackerMode : undefined,
+      tradetrackerFeedUrl: source === 'tradetracker' ? tradetrackerFeedUrl : undefined,
       maxResultsPerKeyword,
       schedule: schedule || { enabled: false },
       active,

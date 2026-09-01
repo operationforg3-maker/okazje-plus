@@ -47,7 +47,9 @@ export async function POST(request: NextRequest) {
       rootCategorySlug, 
       categories: categoriesFromBody,
       convertiserMode = 'products', // New: 'products' or 'offers' for Convertiser
-      autoBrowse = false, // Convertiser: fetch entire catalog without keywords
+      tradetrackerMode = 'products', // New: 'products' or 'vouchers' for TradeTracker
+      tradetrackerFeedUrl,
+      autoBrowse = false, // Convertiser/TradeTracker: fetch entire catalog without keywords
       importStrategy = 'bestsellers',
       resumeFromJobId,
     } = body;
@@ -70,9 +72,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!['aliexpress', 'amazon', 'allegro', 'convertiser'].includes(source)) {
+    if (!['aliexpress', 'amazon', 'allegro', 'convertiser', 'tradetracker'].includes(source)) {
       return NextResponse.json(
-        { error: 'Invalid source. Must be aliexpress, amazon, allegro, or convertiser' },
+        { error: 'Invalid source. Must be aliexpress, amazon, allegro, convertiser, or tradetracker' },
         { status: 400 }
       );
     }
@@ -200,7 +202,7 @@ export async function POST(request: NextRequest) {
     const initialJob = {
       id: jobId,
       status: 'running' as const,
-      source: source as 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'manual',
+      source: source as 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'tradetracker' | 'manual',
       query: effectiveQuery,
       maxResults: max,
       productsFound: 0,
@@ -219,14 +221,16 @@ export async function POST(request: NextRequest) {
 
     // 7. Run harvest in background (don't await - async execution)
     harvester.harvestProducts(
-      source as 'aliexpress' | 'amazon' | 'allegro' | 'convertiser',
+      source as 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'tradetracker',
       effectiveQuery,
       max,
       categories,
       isTreeMode,
       source === 'convertiser' ? convertiserMode : undefined,
       autoBrowse,
-      source === 'aliexpress' ? importStrategy : 'bestsellers'
+      source === 'aliexpress' ? importStrategy : 'bestsellers',
+      source === 'tradetracker' ? tradetrackerMode : undefined,
+      tradetrackerFeedUrl
     ).catch((err) => {
       console.error(`[Harvester ${jobId}] Background job failed:`, err);
     });

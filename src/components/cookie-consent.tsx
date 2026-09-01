@@ -611,7 +611,7 @@ export function CookieConsentBanner() {
     setShowWelcomeBanner(false);
 
     if (selectedLanguage !== locale) {
-      const pathnameWithoutLocale = window.location.pathname.replace(/^\/(pl|en|de|fr|es|uk)(\/|$)/, '/');
+      const pathnameWithoutLocale = window.location.pathname.replace(/^\/(pl|en|de|fr|es|uk|it)(\/|$)/, '/');
       const query = window.location.search || '';
       window.location.href = `/${selectedLanguage}${pathnameWithoutLocale}${query}`;
     }

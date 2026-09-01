@@ -6,9 +6,11 @@ import { Plus, Play, Edit2, Trash2, Clock, TrendingUp, Package } from 'lucide-re
 interface HarvesterPreset {
   id: string;
   name: string;
-  source: 'convertiser' | 'aliexpress' | 'amazon' | 'allegro';
+  source: 'convertiser' | 'aliexpress' | 'amazon' | 'allegro' | 'tradetracker';
   keywords: string[];
   convertiserMode?: 'products' | 'offers';
+  tradetrackerMode?: 'products' | 'vouchers';
+  tradetrackerFeedUrl?: string;
   maxResultsPerKeyword: number;
   schedule?: {
     enabled: boolean;
@@ -33,9 +35,11 @@ export default function HarvesterPresetsPanel() {
   const [editingPreset, setEditingPreset] = useState<HarvesterPreset | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    source: 'convertiser' as 'convertiser' | 'aliexpress' | 'amazon' | 'allegro',
+    source: 'convertiser' as 'convertiser' | 'aliexpress' | 'amazon' | 'allegro' | 'tradetracker',
     keywords: '',
     convertiserMode: 'products' as 'products' | 'offers',
+    tradetrackerMode: 'products' as 'products' | 'vouchers',
+    tradetrackerFeedUrl: '',
     maxResultsPerKeyword: 50,
     active: true,
   });
@@ -171,6 +175,8 @@ export default function HarvesterPresetsPanel() {
       source: preset.source,
       keywords: preset.keywords.join('\n'),
       convertiserMode: preset.convertiserMode || 'products',
+      tradetrackerMode: preset.tradetrackerMode || 'products',
+      tradetrackerFeedUrl: preset.tradetrackerFeedUrl || '',
       maxResultsPerKeyword: preset.maxResultsPerKeyword,
       active: preset.active,
     });
@@ -183,6 +189,8 @@ export default function HarvesterPresetsPanel() {
       source: 'convertiser',
       keywords: '',
       convertiserMode: 'products',
+      tradetrackerMode: 'products',
+      tradetrackerFeedUrl: '',
       maxResultsPerKeyword: 50,
       active: true,
     });
@@ -191,6 +199,7 @@ export default function HarvesterPresetsPanel() {
   const getSourceBadge = (source: string) => {
     const colors: Record<string, string> = {
       convertiser: 'bg-purple-100 text-purple-800',
+      tradetracker: 'bg-emerald-100 text-emerald-800',
       aliexpress: 'bg-red-100 text-red-800',
       amazon: 'bg-orange-100 text-orange-800',
       allegro: 'bg-green-100 text-green-800',
@@ -248,6 +257,11 @@ export default function HarvesterPresetsPanel() {
                       {preset.source === 'convertiser' && (
                         <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
                           {preset.convertiserMode === 'offers' ? 'Offers' : 'Products'}
+                        </span>
+                      )}
+                      {preset.source === 'tradetracker' && (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                          {preset.tradetrackerMode === 'vouchers' ? 'Vouchery' : 'Produkty'}
                         </span>
                       )}
                       {!preset.active && (
@@ -356,12 +370,49 @@ export default function HarvesterPresetsPanel() {
                   onChange={e => setFormData({ ...formData, source: e.target.value as any })}
                   className="w-full px-3 py-2 border rounded-lg"
                 >
+                  <option value="tradetracker">TradeTracker (tradetracker.com)</option>
                   <option value="convertiser">Convertiser</option>
                   <option value="aliexpress">AliExpress</option>
                   <option value="amazon">Amazon</option>
                   <option value="allegro">Allegro</option>
                 </select>
               </div>
+
+              {formData.source === 'tradetracker' && (
+                <div className="space-y-3 p-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                  <div>
+                    <label className="block text-sm font-medium text-emerald-900 mb-1">
+                      Tryb TradeTracker
+                    </label>
+                    <select
+                      value={formData.tradetrackerMode}
+                      onChange={e => setFormData({ ...formData, tradetrackerMode: e.target.value as any })}
+                      className="w-full px-3 py-2 border rounded-lg bg-white"
+                    >
+                      <option value="products">Produkty i Okazje (Product Feeds / Katalog)</option>
+                      <option value="vouchers">Kody Rabatowe i Vouchery (SOAP / Promocje)</option>
+                    </select>
+                    <p className="text-xs text-emerald-700 mt-1">
+                      {formData.tradetrackerMode === 'vouchers' 
+                        ? 'Pobiera kody rabatowe, zniżki i promocje z kampanii TradeTracker' 
+                        : 'Pobiera produkty z feedów TradeTracker z automatycznym filtrowaniem najwyższych zniżek'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-emerald-900 mb-1">
+                      Opcjonalny URL Feedu XML/CSV (TradeTracker)
+                    </label>
+                    <input
+                      type="url"
+                      value={formData.tradetrackerFeedUrl}
+                      onChange={e => setFormData({ ...formData, tradetrackerFeedUrl: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg bg-white text-sm"
+                      placeholder="https://pf.tradetracker.net/?aid=...&encoding=utf-8&type=xml"
+                    />
+                  </div>
+                </div>
+              )}
 
               {formData.source === 'convertiser' && (
                 <div>

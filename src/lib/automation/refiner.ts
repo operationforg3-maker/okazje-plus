@@ -294,7 +294,7 @@ export class AIRefiner {
     refinationType: string
   ): Promise<Partial<ProductCore>> {
     const refined: Partial<ProductCore> = {};
-    const locales: Array<'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk'> = ['pl', 'en', 'de', 'fr', 'es', 'uk'];
+    const locales: Array<'pl' | 'en' | 'de' | 'fr' | 'es' | 'uk' | 'it'> = ['pl', 'en', 'de', 'fr', 'es', 'uk', 'it'];
     const categoryContext = await this.resolveCategoryContext(product);
 
     const ensureAllLocales = async (
@@ -308,6 +308,7 @@ export class AIRefiner {
         fr: String((value as any)?.fr || '').trim(),
         es: String((value as any)?.es || '').trim(),
         uk: String((value as any)?.uk || '').trim(),
+        it: String((value as any)?.it || '').trim(),
       };
 
       const fallbackBase =
@@ -318,6 +319,7 @@ export class AIRefiner {
         normalized.fr ||
         normalized.es ||
         normalized.uk ||
+        normalized.it ||
         '';
 
       if (!fallbackBase) {
@@ -447,7 +449,8 @@ export class AIRefiner {
       de: refined.coreSpecs || {},
       fr: refined.coreSpecs || {},
       es: refined.coreSpecs || {},
-      uk: refined.coreSpecs || {}
+      uk: refined.coreSpecs || {},
+      it: refined.coreSpecs || {},
     };
     
     // M6 UPGRADE: Use intelligent generator instead of iterative translation
@@ -536,7 +539,8 @@ export class AIRefiner {
           de: refined.coreSpecs || {},
           fr: refined.coreSpecs || {},
           es: refined.coreSpecs || {},
-          uk: refined.coreSpecs || {}
+          uk: refined.coreSpecs || {},
+          it: refined.coreSpecs || {},
         };
 
         // M6+ Market Price Estimation
@@ -625,7 +629,8 @@ export class AIRefiner {
             de: refined.coreSpecs || {},
             fr: refined.coreSpecs || {},
             es: refined.coreSpecs || {},
-            uk: refined.coreSpecs || {}
+            uk: refined.coreSpecs || {},
+            it: refined.coreSpecs || {},
           };
         }
       } catch (e) {
@@ -693,6 +698,12 @@ export class AIRefiner {
           specs: refined.specs || {},
           features: features,
         }),
+        it: formatProductDescription({
+          title: typeof refined.title === 'object' ? (refined.title as any).it || refined.title.en : title,
+          plainDescription: (refined.fullDescription as any)?.it || '',
+          specs: refined.specs || {},
+          features: features,
+        }),
       };
 
       // M6 Update: Sync shortDescription with SEO description for Cards/Deals
@@ -704,6 +715,7 @@ export class AIRefiner {
           fr: product.shortDescription?.fr || product.shortDescription?.pl || '',
           es: product.shortDescription?.es || product.shortDescription?.pl || '',
           uk: product.shortDescription?.uk || product.shortDescription?.pl || '',
+          it: (product.shortDescription as any)?.it || product.shortDescription?.pl || '',
         };
       }
     }
@@ -756,7 +768,7 @@ export class AIRefiner {
         const { translateSpecs } = await import('@/ai/flows/enrichment');
         const translatedSpecsResult = await translateSpecs({
           specs: finalSpecs,
-          targetLocales: ['pl', 'de', 'fr', 'es', 'uk'],
+          targetLocales: ['pl', 'de', 'fr', 'es', 'uk', 'it'],
         });
 
         refined.specsLocalized = {
@@ -766,6 +778,7 @@ export class AIRefiner {
           fr: translatedSpecsResult.translations.fr || finalSpecs,
           es: translatedSpecsResult.translations.es || finalSpecs,
           uk: translatedSpecsResult.translations.uk || finalSpecs,
+          it: (translatedSpecsResult.translations as any).it || finalSpecs,
         };
       }
     } catch (err) {
