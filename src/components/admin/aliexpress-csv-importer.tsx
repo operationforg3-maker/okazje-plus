@@ -22,6 +22,7 @@ export function AliExpressCsvImporter({ authToken, onImportComplete }: AliExpres
     maxCommission: number;
   } | null>(null);
   const [importing, setImporting] = useState(false);
+  const [targetStatus, setTargetStatus] = useState<'approved' | 'draft'>('approved');
   const [result, setResult] = useState<{
     success: boolean;
     createdCount: number;
@@ -130,6 +131,7 @@ export function AliExpressCsvImporter({ authToken, onImportComplete }: AliExpres
         body: JSON.stringify({
           csvText: csvContent,
           autoRefine: true,
+          targetStatus,
         }),
       });
 
@@ -234,6 +236,34 @@ export function AliExpressCsvImporter({ authToken, onImportComplete }: AliExpres
               </div>
             </div>
 
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-background/80 border border-border text-xs">
+              <span className="font-medium text-foreground">Status po imporcie:</span>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 cursor-pointer text-foreground">
+                  <input
+                    type="radio"
+                    name="targetStatus"
+                    value="approved"
+                    checked={targetStatus === 'approved'}
+                    onChange={() => setTargetStatus('approved')}
+                    className="accent-orange-500"
+                  />
+                  <span>Opublikowane (Approved - live na stronie)</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer text-foreground">
+                  <input
+                    type="radio"
+                    name="targetStatus"
+                    value="draft"
+                    checked={targetStatus === 'draft'}
+                    onChange={() => setTargetStatus('draft')}
+                    className="accent-orange-500"
+                  />
+                  <span>Szkic (Draft - wymaga moderacji)</span>
+                </label>
+              </div>
+            </div>
+
             <Button 
               onClick={handleImport}
               disabled={importing}
@@ -245,7 +275,7 @@ export function AliExpressCsvImporter({ authToken, onImportComplete }: AliExpres
                 </>
               ) : (
                 <>
-                  <Upload className="w-4 h-4 mr-2" /> Zaimportuj {preview.totalRows} okazji do bazy (Draft)
+                  <Upload className="w-4 h-4 mr-2" /> Zaimportuj {preview.totalRows} okazji ({targetStatus === 'approved' ? 'Live / Opublikowane' : 'Szkic / Draft'})
                 </>
               )}
             </Button>

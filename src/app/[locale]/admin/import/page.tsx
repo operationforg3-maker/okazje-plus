@@ -12,6 +12,7 @@ import {
   Bot,
   CalendarClock,
   ClipboardList,
+  FileSpreadsheet,
   Image,
   RefreshCw,
   Settings2,
@@ -22,6 +23,7 @@ import { AliExpressAutopilotControl } from '@/components/admin/aliexpress-autopi
 import { ScheduleManager } from '@/components/admin/schedule-manager';
 import { ScrapingQueuePanel } from '@/components/admin/scraping-queue-panel';
 import { HarvesterJobsMonitor } from '@/components/admin/harvester-jobs-monitor';
+import { AliExpressCsvImporter } from '@/components/admin/aliexpress-csv-importer';
 
 // ─── Status bar at the top ───────────────────────────────────────────────────
 
@@ -140,10 +142,14 @@ function ImportPage() {
 
       {/* Main tabs */}
       <Tabs defaultValue="autopilot" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
           <TabsTrigger value="autopilot" className="gap-2">
             <Bot className="h-4 w-4" />
             <span className="hidden sm:inline">Autopilot</span>
+          </TabsTrigger>
+          <TabsTrigger value="csv" className="gap-2">
+            <FileSpreadsheet className="h-4 w-4 text-orange-500" />
+            <span className="hidden sm:inline">Import CSV</span>
           </TabsTrigger>
           <TabsTrigger value="scraping" className="gap-2">
             <Image className="h-4 w-4" />
@@ -186,6 +192,11 @@ function ImportPage() {
             authToken={authToken}
             setAuthError={setAuthError}
           />
+        </TabsContent>
+
+        {/* ── Tab: Import CSV ─────────────────────────────────── */}
+        <TabsContent value="csv" className="space-y-4">
+          <AliExpressCsvImporter authToken={authToken} />
         </TabsContent>
 
         {/* ── Tab 2: Scraping Queue ───────────────────────────── */}

@@ -80,11 +80,13 @@ export async function POST(request: NextRequest) {
     await requireAdmin();
 
     const body = await request.json();
-    const { csvText, autoRefine = true } = body;
+    const { csvText, autoRefine = true, targetStatus = 'approved' } = body;
 
     if (!csvText || typeof csvText !== 'string') {
       return NextResponse.json({ error: 'Missing csvText string' }, { status: 400 });
     }
+
+    const { matchCategoryByText, matchCategoryByExternalIds } = await import('@/lib/category-mapper');
 
     const lines = csvText.split(/\r?\n/).filter(line => line.trim().length > 0);
     if (lines.length < 2) {
@@ -116,6 +118,7 @@ export async function POST(request: NextRequest) {
     const idxCodeStart = getIndex(['code available time start', 'start time']);
     const idxCodeEnd = getIndex(['code available time end', 'end time']);
     const idxCategory = getIndex(['category name', 'category']);
+    const idxCategoryId = getIndex(['categoryid', 'category id']);
 
     if (idxName === -1 || idxSalePrice === -1) {
       return NextResponse.json({
@@ -156,6 +159,7 @@ export async function POST(request: NextRequest) {
         codeStartTime: idxCodeStart !== -1 ? cols[idxCodeStart] : undefined,
         codeEndTime: idxCodeEnd !== -1 ? cols[idxCodeEnd] : undefined,
         categoryName: idxCategory !== -1 ? cols[idxCategory] : undefined,
+        categoryId: idxCategoryId !== -1 ? cols[idxCategoryId] : undefined,
       });
     }
 
@@ -179,34 +183,149 @@ export async function POST(request: NextRequest) {
 
       const totalCommission = (row.directCommissionRate || 0) + (row.incentiveCommissionRate || 0);
 
-      const catName = (row.categoryName || '').toLowerCase();
+      // Smart Category Matching
       let mainCategorySlug = 'elektronika';
-      if (catName.includes('home') || catName.includes('ogród') || catName.includes('dom')) {
+      let subCategorySlug: string | undefined = undefined;
+      let subSubCategorySlug: string | undefined = undefined;
+
+      // 1. Try external category ID
+      if (row.categoryId) {
+        try {
+          const idMatch = await matchCategoryByExternalIds({ aliexpressCategoryId: row.categoryId });
+          if (idMatch) {
+            mainCategorySlug = idMatch.mainCategorySlug;
+            subCategorySlug = idMatch.subCategorySlug;
+            subSubCategorySlug = idMatch.subSubCategorySlug;
+          }
+        } catch (_) {}
+      }
+
+      // 2. Try text matching (category name + product title)
+      if (!subSubCategorySlug && (row.categoryName || row.productName)) {
+        try {
+          const textMatch = await matchCategoryByText([row.categoryName || '', row.productName || '']);
+          if (textMatch) {
+            mainCategorySlug = textMatch.mainCategorySlug || mainCategorySlug;
+            subCategorySlug = textMatch.subCategorySlug || subCategorySlug;
+            subSubCategorySlug = textMatch.subSubCategorySlug || subSubCategorySlug;
+          }
+        } catch (_) {}
+      }
+
+      // 3. Heuristic fallbacks for automotive / tools / garden / fashion
+      const combinedText = `${row.productName} ${row.categoryName || ''}`.toLowerCase();
+      if (
+        combinedText.includes('motoryz') ||
+        combinedText.includes('samochod') ||
+        combinedText.includes('ev ') ||
+        combinedText.includes('ładowark') ||
+        combinedText.includes('lifepo4') ||
+        combinedText.includes('akumulator') ||
+        combinedText.includes('wallbox') ||
+        combinedText.includes('type2') ||
+        combinedText.includes('type 2')
+      ) {
+        mainCategorySlug = 'motoryzacja';
+        if (
+          combinedText.includes('ładowark') ||
+          combinedText.includes('kabel') ||
+          combinedText.includes('wallbox') ||
+          combinedText.includes('evse') ||
+          combinedText.includes('type2') ||
+          combinedText.includes('type 2')
+        ) {
+          subCategorySlug = 'akcesoria-samochodowe';
+          subSubCategorySlug = 'ladowarki-samochodowe';
+        } else if (
+          combinedText.includes('akumulator') ||
+          combinedText.includes('lifepo4') ||
+          combinedText.includes('bms')
+        ) {
+          subCategorySlug = 'czesci-samochodowe';
+          subSubCategorySlug = 'akumulatory';
+        }
+      } else if (combinedText.includes('home') || combinedText.includes('ogród') || combinedText.includes('dom')) {
         mainCategorySlug = 'dom-ogrod';
-      } else if (catName.includes('apparel') || catName.includes('wear') || catName.includes('moda')) {
+      } else if (combinedText.includes('apparel') || combinedText.includes('wear') || combinedText.includes('moda')) {
         mainCategorySlug = 'moda';
       }
 
+      const discountPercent = row.discountPercent || (row.originalPrice && row.originalPrice > row.salePrice ? Math.round(((row.originalPrice - row.salePrice) / row.originalPrice) * 100) : 0);
+      const primaryImage = row.productImageUrl || 'https://images.unsplash.com/photo-1526738549149-8e07eca6c147';
+
+      // Create ProductCore for M6 architecture
+      const productRef = adminDb.collection('product_cores').doc();
+      const productCoreData = {
+        id: productRef.id,
+        title: { pl: row.productName, en: row.productName },
+        description: { pl: row.productName, en: row.productName },
+        imageUrl: primaryImage,
+        images: [primaryImage],
+        mainCategorySlug,
+        subCategorySlug,
+        subSubCategorySlug,
+        bestPrice: row.salePrice,
+        bestTotalPrice: row.salePrice,
+        rating: 4.8,
+        status: targetStatus,
+        createdAt: now,
+        updatedAt: now,
+        metadata: {
+          source: 'aliexpress',
+          originalId: aliExpressId,
+          importedVia: 'aliexpress_csv',
+        },
+      };
+      batch.set(productRef, productCoreData);
+
       const dealData: Record<string, any> = {
         id: dealId,
-        title: row.productName,
+        productId: productRef.id,
+        productCoreId: productRef.id,
+        linkedProductIds: [productRef.id],
+        title: { pl: row.productName, en: row.productName },
         source: 'aliexpress',
+        affiliateLink: row.clickUrl || row.productUrl || '',
         affiliateUrl: row.clickUrl || row.productUrl || '',
+        dealUrl: row.clickUrl || row.productUrl || '',
+        sourceUrl: row.productUrl || '',
+        sourceProductId: aliExpressId,
         price: {
           amount: row.salePrice,
           currency: 'PLN',
           originalAmount: row.originalPrice,
         },
-        discountPercent: row.discountPercent || (row.originalPrice ? Math.round(((row.originalPrice - row.salePrice) / row.originalPrice) * 100) : 0),
-        images: row.productImageUrl ? [row.productImageUrl] : [],
-        status: 'draft',
+        originalPrice: row.originalPrice && row.originalPrice > row.salePrice ? row.originalPrice : undefined,
+        discount: discountPercent > 0 ? {
+          amount: (row.originalPrice || row.salePrice) - row.salePrice,
+          percentage: discountPercent,
+        } : undefined,
+        discountPercent: discountPercent > 0 ? discountPercent : undefined,
+        shipping: {
+          cost: 0,
+          timeDays: 7,
+          method: 'Standard',
+          fromCountry: 'CN',
+        },
+        totalPrice: row.salePrice,
+        image: primaryImage,
+        images: [primaryImage],
+        gallery: [primaryImage],
+        status: targetStatus,
         temperature: 100,
         mainCategorySlug,
+        subCategorySlug,
+        subSubCategorySlug,
         categorySlug: mainCategorySlug,
         votes: { up: 1, down: 0 },
+        voteCount: 1,
         createdAt: now,
         updatedAt: now,
         merchantName: 'AliExpress',
+        dealType: discountPercent > 0 ? 'sale' : 'regular',
+        freeShipping: true,
+        stockStatus: 'in_stock',
+        isActive: true,
         commissionRate: totalCommission > 0 ? totalCommission : undefined,
         incentiveCommissionRate: row.incentiveCommissionRate || undefined,
         popularity: row.orders || 0,
@@ -215,6 +334,7 @@ export async function POST(request: NextRequest) {
           importedVia: 'aliexpress_csv',
           originalCategory: row.categoryName,
           aliExpressId,
+          ordersCount: row.orders || 0,
         },
       };
 
@@ -233,7 +353,7 @@ export async function POST(request: NextRequest) {
 
       batch.set(dealRef, dealData);
       createdCount++;
-      batchCount++;
+      batchCount += 2; // deal + product_core
       createdIds.push(dealId);
 
       if (batchCount >= 400) {
