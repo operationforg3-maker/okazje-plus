@@ -91,7 +91,7 @@ export default function DealDetailClient({ deal, product, productData: propProdu
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalActionType, setAuthModalActionType] = useState<'favorite' | 'vote' | 'comment'>('favorite');
 
-  const liveComments = useCommentsCount(deal.id, 'deals' as any, (deal as any).commentCount ?? 0);
+  const liveComments = useCommentsCount('deals', deal.id, (deal as any).commentCount ?? 0);
   const userVoteValue = (deal as any).userVote ?? null;
   const discountPercentValue = (deal as any).discountPercent ?? null;
   const offerPreviewUrlValue = (deal.metadata as any)?.offerPreviewUrl;
@@ -100,7 +100,7 @@ export default function DealDetailClient({ deal, product, productData: propProdu
 
   const [temperature, setTemperature] = useState(deal.temperature ?? 0);
   const [voteCount, setVoteCount] = useState(deal.voteCount ?? 0);
-  const [userVote, setUserVote] = useState<number | null>(deal.userVote ?? null);
+  const [userVote, setUserVote] = useState<number | null>(userVoteValue);
   const [isVoting, setIsVoting] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<string | null>(
     deal.expiryDate ? getTimeRemaining(deal.expiryDate) : null
@@ -168,7 +168,7 @@ export default function DealDetailClient({ deal, product, productData: propProdu
       minOrder = CurrencyManager.formatPrice(minOrderInPLN, userCurrency);
     }
 
-    const fallbackDiscount = typeof deal.discountPercent === 'number' ? deal.discountPercent : null;
+    const fallbackDiscount = typeof (deal as any).discountPercent === 'number' ? (deal as any).discountPercent : null;
 
     setPriceData({
       formattedPrice: formatted,
@@ -177,7 +177,7 @@ export default function DealDetailClient({ deal, product, productData: propProdu
       formattedMinOrder: minOrder,
       discount: calculatedDiscount ?? fallbackDiscount,
     });
-  }, [deal.price, deal.originalPrice, deal.minOrderValue, deal.discountPercent, deal.legacyPrice, currency]);
+  }, [deal.price, deal.originalPrice, deal.minOrderValue, (deal as any).discountPercent, (deal as any).legacyPrice, currency]);
 
   const outboundUrl = getExternalUrl(
     deal.link,
@@ -187,8 +187,8 @@ export default function DealDetailClient({ deal, product, productData: propProdu
     (deal as any).sourceUrl,
     (deal as any).url,
     (deal as any).externalUrl,
-    deal.metadata?.offerPreviewUrl,
-    deal.metadata?.previewUrl,
+    (deal.metadata as any)?.offerPreviewUrl,
+    (deal.metadata as any)?.previewUrl,
     (deal as any)?.metadata?.offerUrl,
     (deal as any)?.metadata?.externalUrl,
     (deal as any)?.metadata?.url,
@@ -375,7 +375,7 @@ export default function DealDetailClient({ deal, product, productData: propProdu
         dealTypeLabel={currentDealType?.label}
         dealTypeColor={currentDealType?.color}
         status={deal.status}
-        productId={deal.product?.id || (deal as any).productCoreId}
+        productId={(deal as any).product?.id || (deal as any).productCoreId}
       />
 
       {/* 2-Column Main Layout: Sticky Left Gallery (7 cols) | Right Details & Price Card (5 cols) */}

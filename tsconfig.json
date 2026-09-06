@@ -46,6 +46,11 @@
     "src/legacy",
     "**/*.test.ts",
     "src/lib/__tests__",
-    "scratch"
+    "scratch",
+    "test-*.ts",
+    "test_*.ts",
+    "query-*.ts",
+    "find_*.ts",
+    "check-*.ts"
   ]
 }

@@ -8,24 +8,37 @@ import { pl } from 'date-fns/locale';
 import { TrendingDown, TrendingUp } from 'lucide-react';
 
 interface PriceHistoryChartProps {
-  priceHistory: PriceHistoryEntry[];
+  priceHistory?: PriceHistoryEntry[];
+  deals?: any[];
+  itemId?: string;
+  itemType?: string;
   currency?: string;
 }
 
-export function PriceHistoryChart({ priceHistory, currency = 'PLN' }: PriceHistoryChartProps) {
+export function PriceHistoryChart({ priceHistory, deals, currency = 'PLN' }: PriceHistoryChartProps) {
   // Sort by date and prepare chart data
   const chartData = useMemo(() => {
-    if (!priceHistory || priceHistory.length === 0) return [];
+    let entries: PriceHistoryEntry[] = priceHistory || [];
+    if ((!entries || entries.length === 0) && deals && deals.length > 0) {
+      entries = deals
+        .filter(d => d && (d.createdAt || d.postedAt) && (typeof d.price === 'number' || d.price?.amount))
+        .map(d => ({
+          date: d.createdAt || d.postedAt,
+          price: typeof d.price === 'number' ? d.price : (d.price?.amount ?? 0),
+          discount: typeof d.discount === 'number' ? d.discount : 0,
+        }));
+    }
+    if (!entries || entries.length === 0) return [];
     
-    return [...priceHistory]
+    return [...entries]
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .map(entry => ({
         date: new Date(entry.date),
-        dateStr: entry.date,
+        dateStr: typeof entry.date === 'string' ? entry.date : new Date(entry.date).toISOString(),
         price: entry.price,
         discount: entry.discount,
       }));
-  }, [priceHistory]);
+  }, [priceHistory, deals]);
   
   // Calculate trend
   const trend = useMemo(() => {

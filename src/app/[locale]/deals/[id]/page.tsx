@@ -158,8 +158,8 @@ function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
 
 // Server-side data fetching
 type DealDataResult =
-  | { gone: true }
-  | { gone?: false; expired?: boolean; deal: Deal; relatedDeals: Deal[]; product: any };
+  | { gone: true; expired?: never; deal?: never; relatedDeals?: never; product?: never }
+  | { gone: false; expired: boolean; deal: Deal; relatedDeals: Deal[]; product: any };
 
 async function getDealData(id: string): Promise<DealDataResult | null> {
   const dealDoc = await getDealById(id);
@@ -210,9 +210,9 @@ async function getDealData(id: string): Promise<DealDataResult | null> {
 
   const isExpired = (dealDoc as any).status === 'expired' || 
                     (dealDoc as any).lifecycleStatus === 'expired' || 
-                    deal.isActive === false;
+                    (deal as any).isActive === false;
 
-  return { deal, relatedDeals, product, expired: isExpired };
+  return { gone: false, deal, relatedDeals, product, expired: isExpired };
 }
 
 // SEO: Generate metadata
@@ -223,11 +223,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     : 'pl';
   const data = await getDealData(resolvedParams.id);
   
-  // 410 Gone — deal exists in DB but is rejected/deleted
-  if (data && 'gone' in data && data.gone) {
+  if (!data) {
     return {
-      title: 'Okazja usunięta | Okazje Plus',
-      description: 'Ta okazja została usunięta i nie jest już dostępna.',
+      title: 'Okazja nie znaleziona | Okazje Plus',
+      description: 'Szukana okazja nie istnieje w naszej bazie.',
       robots: {
         index: false,
         follow: false,
@@ -235,10 +234,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  if (!data || ('gone' in data && data.gone)) {
+  // 410 Gone — deal exists in DB but is rejected/deleted
+  if (data.gone) {
     return {
-      title: 'Okazja nie znaleziona | Okazje Plus',
-      description: 'Szukana okazja nie istnieje w naszej bazie.',
+      title: 'Okazja usunięta | Okazje Plus',
+      description: 'Ta okazja została usunięta i nie jest już dostępna.',
       robots: {
         index: false,
         follow: false,
@@ -392,7 +392,7 @@ export default async function DealDetailPage({ params }: PageProps) {
   
   // Deal not found or hidden (draft/rejected) — notFound() returns 404.
   // generateMetadata already sets noindex for 'gone' deals, so Google won't re-index.
-  if (!data || ('gone' in data && data.gone)) {
+  if (!data || data.gone) {
     notFound();
   }
   

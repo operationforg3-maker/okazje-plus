@@ -14,8 +14,8 @@ import { useFormatter } from 'next-intl';
 import AdminEditButton from '@/components/admin/admin-edit-button';
 import { useCurrency } from '@/lib/unified-currency';
 import { extractPriceInfo } from '@/lib/i18n-utils';
-import { useUX } from '@/context/ux-context';
 import { useCardBaseState } from '@/hooks/use-card-base-state';
+
 import { formatTimeAgo } from '@/lib/format-relative-time';
 import ShareButton from '@/components/share-button';
 import { toast } from 'sonner';
@@ -276,12 +276,12 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
       : typeof deal.price?.amount === 'number' ? deal.price.amount
       : typeof (deal as any).legacyPrice === 'number' ? (deal as any).legacyPrice
       : typeof (deal as any).currentPrice === 'number' ? (deal as any).currentPrice
-      : extractPriceInfo(deal).price;
+      : extractPriceInfo(deal.price).amount;
 
     const rawOriginal = typeof deal.originalPrice === 'number' ? deal.originalPrice
       : typeof deal.originalPrice?.amount === 'number' ? deal.originalPrice.amount
       : typeof (deal as any).legacyOriginalPrice === 'number' ? (deal as any).legacyOriginalPrice
-      : extractPriceInfo(deal).originalPrice;
+      : extractPriceInfo(deal.originalPrice).amount;
 
     const sourceCurrency = (deal.price as any)?.currency || deal.currency || 'PLN';
     const priceInPLN = rawPrice !== null && rawPrice !== undefined ? convertToPLN(rawPrice, sourceCurrency) : null;

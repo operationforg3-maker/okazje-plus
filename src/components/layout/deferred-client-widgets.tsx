@@ -24,6 +24,10 @@ const CapacitorBridge = dynamic(
   () => import('@/hooks/use-capacitor').then((m) => ({ default: m.CapacitorBridge })),
   { ssr: false }
 );
+const PWAInstallPrompt = dynamic(
+  () => import('@/components/pwa/pwa-install-prompt').then((m) => ({ default: m.PWAInstallPrompt })),
+  { ssr: false }
+);
 
 export function DeferredClientWidgets() {
   const [showCookieBanner, setShowCookieBanner] = useState(false);
@@ -62,6 +66,7 @@ export function DeferredClientWidgets() {
   return (
     <>
       <CapacitorBridge />
+      <PWAInstallPrompt />
       <ComparisonListener />
       <ExtensionWarningBanner />
       <CashbackWarningModal />

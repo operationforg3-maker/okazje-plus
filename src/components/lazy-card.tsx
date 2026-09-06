@@ -33,7 +33,7 @@ interface LazyDealCardProps {
 export function LazyDealCard({ deal, product, layoutMode, index }: LazyDealCardProps) {
   return (
     <Suspense fallback={<CardSkeleton />}>
-      <DealCardDynamic deal={deal} product={product} layoutMode={layoutMode} index={index} />
+      <DealCardDynamic deal={deal} product={product} layoutMode={layoutMode} />
     </Suspense>
   );
 }

@@ -86,31 +86,52 @@ export default function HeroSection({ featuredDeal }: HeroSectionProps) {
                     </span>
                   </div>
                   
-                  <div className="h-48 sm:h-56 bg-muted/10 dark:bg-zinc-800/20 rounded-2xl flex items-center justify-center relative overflow-hidden bg-sky-500/10 dark:bg-sky-500/5">
-                     <Image 
-                       src={featuredDeal.imageUrl || featuredDeal.image || '/placeholder-image.webp'} 
-                       alt={featuredDeal.title}
-                       fill
-                       className="object-contain p-4 group-hover:scale-105 transition-transform duration-500"
-                       priority={true}
-                       sizes="(max-width: 768px) 100vw, 500px"
-                     />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="font-bold text-base sm:text-lg text-foreground line-clamp-2 group-hover:text-primary transition-colors">
-                      {featuredDeal.title}
-                    </h3>
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-xl sm:text-2xl font-black text-foreground">{featuredDeal.price} zł</span>
-                      {featuredDeal.oldPrice ? (
-                        <span className="text-sm text-muted-foreground line-through">{featuredDeal.oldPrice} zł</span>
-                      ) : null}
-                      {featuredDeal.discount ? (
-                        <span className="text-sm font-bold text-green-500 ml-auto">{featuredDeal.discount}</span>
-                      ) : null}
-                    </div>
-                  </div>
+                  {(() => {
+                    const dealTitle = typeof featuredDeal.title === 'string'
+                      ? featuredDeal.title
+                      : ((featuredDeal.title as any)?.[locale] || (featuredDeal.title as any)?.pl || 'Okazja');
+                    const dealImage = (featuredDeal as any).imageUrl || featuredDeal.image || '/placeholder-image.webp';
+                    const dealPriceAmount = typeof featuredDeal.price === 'number'
+                      ? featuredDeal.price
+                      : (typeof featuredDeal.price === 'object' && featuredDeal.price !== null ? (featuredDeal.price as any).amount : 0);
+                    const dealOriginalPrice = typeof featuredDeal.originalPrice === 'number'
+                      ? featuredDeal.originalPrice
+                      : (typeof (featuredDeal as any).oldPrice === 'number'
+                        ? (featuredDeal as any).oldPrice
+                        : (typeof featuredDeal.originalPrice === 'object' && featuredDeal.originalPrice !== null ? (featuredDeal.originalPrice as any).amount : null));
+                    const dealDiscount = (featuredDeal as any).discount
+                      || (dealOriginalPrice && dealOriginalPrice > dealPriceAmount ? `-${Math.round(((dealOriginalPrice - dealPriceAmount) / dealOriginalPrice) * 100)}%` : null);
+
+                    return (
+                      <>
+                        <div className="h-48 sm:h-56 bg-muted/10 dark:bg-zinc-800/20 rounded-2xl flex items-center justify-center relative overflow-hidden bg-sky-500/10 dark:bg-sky-500/5">
+                           <Image 
+                             src={dealImage} 
+                             alt={dealTitle}
+                             fill
+                             className="object-contain p-4 group-hover:scale-105 transition-transform duration-500"
+                             priority={true}
+                             sizes="(max-width: 768px) 100vw, 500px"
+                           />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <h3 className="font-bold text-base sm:text-lg text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                            {dealTitle}
+                          </h3>
+                          <div className="flex items-baseline gap-2 flex-wrap">
+                            <span className="text-xl sm:text-2xl font-black text-foreground">{dealPriceAmount} zł</span>
+                            {dealOriginalPrice ? (
+                              <span className="text-sm text-muted-foreground line-through">{dealOriginalPrice} zł</span>
+                            ) : null}
+                            {dealDiscount ? (
+                              <span className="text-sm font-bold text-green-500 ml-auto">{dealDiscount}</span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </Link>
             ) : (

@@ -388,12 +388,6 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    match /reports/{reportId} {
-      allow read: if isSignedIn() && (resource.data.reportedBy == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && request.resource.data.reportedBy == request.auth.uid;
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
-    }
 
     ////////////////////////////////
     // M3: PERSONALIZATION
@@ -512,8 +506,7 @@ service cloud.firestore {
     // OAUTH CONFIGS & TOKENS
     ////////////////////////////////
     match /oauthConfigs/{configId} {
-      allow read: if true; // Admin SDK potrzebuje odczytu bez auth context
-      allow write: if isAdmin();
+      allow read, write: if isAdmin();
     }
     
     match /oauthTokens/{tokenId} {
@@ -588,7 +581,7 @@ service cloud.firestore {
     // Forum threads: zalogowani mogą czytać i tworzyć, właściciel/admin mogą edytować
     match /forum_threads/{threadId} {
       allow read: if true;
-      allow create: if (isSignedIn() && request.resource.data.authorUid == request.auth.uid) || request.auth == null;
+      allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
       allow update: if isOwner('authorUid') || isAdmin();
       allow delete: if isOwner('authorUid') || isAdmin();
     }
@@ -596,7 +589,7 @@ service cloud.firestore {
     // Forum posts: zalogowani czytają, mogą tworzyć, właściciel/admin edytują
     match /forum_threads/{threadId}/posts/{postId} {
       allow read: if true;
-      allow create: if (isSignedIn() && request.resource.data.authorUid == request.auth.uid) || request.auth == null;
+      allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
       allow update: if isOwner('authorUid') || isAdmin()
         || (isSignedIn()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -621,7 +614,7 @@ service cloud.firestore {
     // Forum posts (top-level collection): odczyt publiczny, tworzenie przez autora, edycja przez właściciela/admina
     match /forum_posts/{postId} {
       allow read: if true;
-      allow create: if (isSignedIn() && request.resource.data.authorUid == request.auth.uid) || request.auth == null;
+      allow create: if isSignedIn() && request.resource.data.authorUid == request.auth.uid;
       allow update: if isOwner('authorUid') || isAdmin();
       allow delete: if isOwner('authorUid') || isAdmin();
     }
@@ -639,7 +632,7 @@ service cloud.firestore {
     ////////////////////////////////
     match /moderationQueue/{queueItemId} {
       allow read: if isAdmin();  // Only admins can view moderation queue
-      allow create: if true;  // Allow all creates (Harvester via Admin SDK, manual submissions via isAdmin() check in app)
+      allow create: if isAdmin();  // Allow admin creates (Harvester via Admin SDK bypasses rules)
       allow update, delete: if isAdmin();  // Only admins can manage queue
     }
 

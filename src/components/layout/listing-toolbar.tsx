@@ -127,14 +127,16 @@ export function ListingToolbar({
                 </div>
                 <div className="p-4 overflow-y-auto max-h-[calc(100vh-80px)]">
                   <UnifiedFilterSidebar
-                    categories={categories}
-                    currentCategorySlug={currentCategorySlug}
-                    selectedSubcategorySlug={selectedSubcategorySlug}
-                    priceRange={priceRange}
-                    onPriceChange={onPriceChange || (() => {})}
-                    quickFilters={quickFilters || {}}
-                    onQuickFilterToggle={onQuickFilterToggle || (() => {})}
-                    onReset={onResetFilters || (() => {})}
+                    {...({
+                      categories,
+                      currentCategorySlug,
+                      selectedSubcategorySlug,
+                      priceRange,
+                      onPriceChange: onPriceChange || (() => {}),
+                      quickFilters: quickFilters || {},
+                      onQuickFilterToggle: onQuickFilterToggle || (() => {}),
+                      onReset: onResetFilters || (() => {}),
+                    } as any)}
                   />
                 </div>
               </SheetContent>
@@ -175,10 +177,7 @@ export function ListingToolbar({
 
           {/* Sort Dropdown */}
           <div className="h-9">
-            <SortSelect
-              value={sortBy}
-              onValueChange={onSortByChange}
-            />
+            <SortSelect />
           </div>
         </div>
       </div>

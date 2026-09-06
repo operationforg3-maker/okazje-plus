@@ -905,7 +905,7 @@ async function processUIImportJob(uiJob: any): Promise<void> {
         error: 'Proces zatrzymany (pauza) z poziomu panelu administratora.',
         completedAt: new Date(),
       });
-      return NextResponse.json({ success: false, reason: 'paused' });
+      return;
     }
 
     // Run import pipeline

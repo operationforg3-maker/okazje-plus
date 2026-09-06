@@ -119,6 +119,7 @@ async function getProductData(id: string) {
       // Deep serialize everything to prevent "passing non-serializable data to Client Component" errors
       // caused by Firestore Timestamps in productCore, deals, relatedProducts or recentRatings
       return deepSerialize({ 
+        product: null as Product | null,
         productCore, 
         deals, 
         relatedProducts: resolvedRelated, 
@@ -192,6 +193,7 @@ async function getProductData(id: string) {
   // Serialize legacy data return as well
   return deepSerialize({ 
     product, 
+    productCore: null as any,
     relatedProducts, 
     recentRatings, 
     deals: [], 

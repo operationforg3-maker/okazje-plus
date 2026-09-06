@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Okazje+ – Brak połączenia</title>
+  <meta name="theme-color" content="#090d16">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #090d16;
+      color: #f3f4f6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+    .card {
+      max-width: 400px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 36px 24px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .logo-box {
+      width: 72px;
+      height: 72px;
+      background: #111726;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      border: 1px solid rgba(234, 85, 5, 0.2);
+    }
+    .logo-box svg {
+      width: 48px;
+      height: 48px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: #ffffff;
+    }
+    p {
+      font-size: 15px;
+      color: #9ca3af;
+      line-height: 1.5;
+      margin-bottom: 28px;
+    }
+    .retry-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px 20px;
+      background: #ea5505;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+      text-decoration: none;
+    }
+    .retry-btn:active {
+      transform: scale(0.98);
+      background: #d44d04;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 20px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #ef4444;
+      border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo-box">
+      <svg viewBox="0 0 163 162" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.447,57.115c29.511,0.228 30.398,-1.018 35.066,3.538c12.649,12.346 12.47,12.412 25.074,24.789c24.997,24.546 25.008,26.267 25.027,29.353c0.14,22.406 2.329,26.432 -17.976,36.104c-1.843,0.878 -18.787,8.95 -23.295,10.405c-2.539,0.82 -2.578,-2.256 -2.582,-2.547c-0.069,-5.441 0.147,-47.186 0.168,-51.289c0.006,-1.244 1.021,-6.287 -3.313,-6.351c-27.583,-0.406 -34.998,5.32 -44.974,-17.353c-10.808,-24.563 -12.029,-25.928 -9.571,-26.664c0.674,-0.202 14.671,-0.002 16.377,0.013Z" fill="#ea5505"/>
+        <path d="M144.796,104.328c-29.511,-0.228 -30.398,1.018 -35.066,-3.538c-12.649,-12.346 -12.47,-12.412 -25.074,-24.789c-24.997,-24.546 -25.008,-26.267 -25.027,-29.353c-0.14,-22.406 -2.329,-26.432 17.976,-36.104c1.843,-0.878 18.787,-8.95 23.295,-10.405c2.539,-0.82 2.578,2.256 2.582,2.547c0.069,5.441 -0.147,47.186 -0.168,51.289c-0.006,1.244 -1.021,6.287 3.313,6.351c27.583,0.406 34.998,-5.32 44.974,17.353c10.808,24.563 12.029,25.928 9.571,26.664c-0.674,0.202 -14.671,0.002 -16.377,-0.013Z" fill="#ea5505"/>
+      </svg>
+    </div>
+    <h1>Jesteś offline</h1>
+    <p>Brak połączenia z internetem. Sprawdź Wi-Fi lub sieć komórkową, a następnie odśwież stronę.</p>
+    <button class="retry-btn" onclick="window.location.reload()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+        <path d="M3 3v5h5"/>
+        <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+        <path d="M16 16h5v5"/>
+      </svg>
+      Spróbuj ponownie
+    </button>
+    <div class="status-badge">
+      <span class="status-dot"></span>
+      <span>Aplikacja Okazje+ (PWA)</span>
+    </div>
+  </div>
+</body>
+</html>

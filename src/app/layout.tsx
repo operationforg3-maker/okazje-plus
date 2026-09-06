@@ -27,8 +27,14 @@ export const metadata: Metadata = {
     title: 'Okazje+',
   },
   icons: {
-    icon: '/icon_okazjeplus.svg',
-    apple: '/icon_okazjeplus.png',
+    icon: [
+      { url: '/icon_okazjeplus.svg', type: 'image/svg+xml' },
+      { url: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
   metadataBase: new URL(SITE_URL),
   openGraph: {

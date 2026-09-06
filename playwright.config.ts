@@ -7,6 +7,8 @@ export default defineConfig({
   testDir: './e2e',
   /* Run tests in files in parallel */
   fullyParallel: true,
+  /* Test timeout to accommodate Next.js dev server on-demand route compilation */
+  timeout: 60000,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
@@ -37,5 +39,9 @@ export default defineConfig({
     command: 'npm run dev',
     url: 'http://localhost:9002',
     reuseExistingServer: !process.env.CI,
+    env: {
+      PORT: '9002',
+      NEXT_PUBLIC_SITE_URL: 'http://localhost:9002',
+    },
   },
 });

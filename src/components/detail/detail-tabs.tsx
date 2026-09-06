@@ -231,7 +231,7 @@ export function DetailTabs({
                 <RatingInput
                   productId={id}
                   existingRating={userRating}
-                  onSuccess={onRatingSubmitted}
+                  onRatingSubmitted={onRatingSubmitted}
                 />
               </CardContent>
             </Card>

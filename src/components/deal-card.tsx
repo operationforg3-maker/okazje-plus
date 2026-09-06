@@ -53,6 +53,7 @@ interface DealCardProps {
   /** Pass true for first ~4 cards above the fold for LCP priority */
   priority?: boolean;
   layoutMode?: 'grid' | 'masonry' | 'list';
+  previewMode?: boolean;
 }
 
 const safeText = (value: unknown, fallback = ''): string => {

@@ -33,6 +33,13 @@ export type DealSearchOptions = {
   statusFilter?: 'approved' | 'waiting_room';
 };
 
+function getBaseUrl(): string {
+  if (typeof window !== 'undefined') return '';
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  const port = process.env.PORT || '9002';
+  return `http://localhost:${port}`;
+}
+
 export async function searchProducts(
   q: string,
   opts: ProductSearchOptions = {}
@@ -51,7 +58,7 @@ export async function searchProducts(
     if (opts.minRating !== undefined) params.set('minRating', String(opts.minRating));
     if (opts.statusFilter) params.set('status', opts.statusFilter);
     
-    const baseUrl = typeof window === 'undefined' ? (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000') : '';
+    const baseUrl = getBaseUrl();
     const res = await fetch(`${baseUrl}/api/search?${params.toString()}`);
     if (!res.ok) return [];
     const body = await res.json();
@@ -82,7 +89,7 @@ export async function searchDeals(
     if (opts.sortBy) params.set('sort', opts.sortBy);
     if (opts.statusFilter) params.set('status', opts.statusFilter);
 
-    const baseUrl = typeof window === 'undefined' ? (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000') : '';
+    const baseUrl = getBaseUrl();
     const res = await fetch(`${baseUrl}/api/search?${params.toString()}`);
     if (!res.ok) return [];
     const body = await res.json();
@@ -100,7 +107,7 @@ export async function getAutocompleteSuggestions(q: string, limit = 5, locale = 
     params.set('limit', String(limit));
     params.set('locale', locale);
 
-    const baseUrl = typeof window === 'undefined' ? (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000') : '';
+    const baseUrl = getBaseUrl();
     const res = await fetch(`${baseUrl}/api/search/autocomplete?${params.toString()}`);
     if (!res.ok) return [];
     return (await res.json()) as Suggestion[];
@@ -119,7 +126,7 @@ export async function getDealById(dealId: string): Promise<Deal | null> {
     params.set('limit', '1');
     params.set('dealId', dealId);
 
-    const baseUrl = typeof window === 'undefined' ? (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000') : '';
+    const baseUrl = getBaseUrl();
     const res = await fetch(`${baseUrl}/api/search?${params.toString()}`);
     if (!res.ok) return null;
     const body = await res.json();

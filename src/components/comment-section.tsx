@@ -9,13 +9,12 @@ interface CommentSectionProps {
   initialComments?: Comment[];
 }
 
-export default function CommentSection({ collectionName, docId, initialComments }: CommentSectionProps) {
-  const targetType = collectionName === 'deals' ? 'deal' : collectionName === 'products' ? 'product' : 'forum';
+export default function CommentSection({ collectionName, docId }: CommentSectionProps) {
+  const validCollection = collectionName === 'deals' ? 'deals' : 'products';
   return (
     <CommentSectionV2
-      targetType={targetType}
-      targetId={docId}
-      initialComments={initialComments}
+      collectionName={validCollection}
+      docId={docId}
     />
   );
 }

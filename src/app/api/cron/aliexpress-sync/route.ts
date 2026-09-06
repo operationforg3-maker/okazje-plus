@@ -240,7 +240,7 @@ async function runAliExpressSync(request: NextRequest) {
             const promoName = promo.promo_name;
             logger.info(`Phase A: Harvesting Super Deals for campaign: ${promoName}`);
             const job = await harvester.harvestProducts('campaigns', promoName, 20);
-            totalProcessed += (job.telemetry?.totalMatched || 0);
+            totalProcessed += ((job.telemetry as any)?.totalMatched || 0);
           }
         }
         

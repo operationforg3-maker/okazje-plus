@@ -44,6 +44,7 @@ const DEFAULTS: Settings = {
   // Hot Stream
   hotStreamEnabled: false,
   hotStreamGlobalLimit: 50,
+  hotStreamPerCategoryLimit: 10,
   // Super Deals
   superDealsEnabled: true,
   superDealsMaxPromos: 2,

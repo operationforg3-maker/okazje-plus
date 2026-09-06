@@ -52,6 +52,7 @@ interface ProductCardProps {
   viewMode?: 'list' | 'grid';
   layoutMode?: 'grid' | 'masonry' | 'list';
   fetchBestDeal?: boolean;
+  previewMode?: boolean;
 }
 
 const safeText = (value: unknown, fallback = ''): string => {

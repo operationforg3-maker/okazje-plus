@@ -1,24 +1,47 @@
 {
+  "$schema": "https://json.schemastore.org/web-manifest-combined.json",
   "name": "Okazje+ – Najlepsze okazje i promocje",
   "short_name": "Okazje+",
   "description": "Najlepsze okazje zakupowe, promocje i wyprzedaże w internecie.",
-  "start_url": "/pl",
+  "id": "/pl?source=pwa",
+  "start_url": "/pl?source=pwa",
+  "scope": "/",
   "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
   "background_color": "#090d16",
   "theme_color": "#090d16",
-  "orientation": "portrait-primary",
+  "orientation": "any",
+  "lang": "pl",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/icon_okazjeplus.png",
+      "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon_okazjeplus.png",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icon_okazjeplus.svg",
@@ -27,8 +50,37 @@
       "purpose": "any"
     }
   ],
+  "shortcuts": [
+    {
+      "name": "Gorące okazje",
+      "short_name": "Okazje",
+      "description": "Przeglądaj najnowsze gorące okazje",
+      "url": "/pl?source=pwa_shortcut",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Kategorie",
+      "short_name": "Kategorie",
+      "description": "Przeglądaj oferty według kategorii",
+      "url": "/pl/categories?source=pwa_shortcut",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
   "categories": [
     "shopping",
-    "lifestyle"
+    "lifestyle",
+    "finance"
   ]
 }

@@ -349,7 +349,7 @@ export default function ProductDetailM6Client({
               }
             }
           }
-          return <GalleryM6 images={activeImageUrls} title={title} />;
+          return <GalleryM6 images={activeImageUrls} productTitle={title} />;
         })()}
 
         {/* Price Widget & Actions */}
@@ -743,7 +743,7 @@ export default function ProductDetailM6Client({
               </Card>
             )}
 
-            <SpecsTable specs={specs} title="Specyfikacja techniczna" />
+            <SpecsTable specs={specs} />
           </div>
         </TabsContent>
 
