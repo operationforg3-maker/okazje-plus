@@ -72,9 +72,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!['aliexpress', 'amazon', 'allegro', 'convertiser', 'tradetracker'].includes(source)) {
+    if (!['aliexpress', 'amazon', 'allegro', 'convertiser', 'tradetracker', 'campaigns'].includes(source)) {
       return NextResponse.json(
-        { error: 'Invalid source. Must be aliexpress, amazon, allegro, convertiser, or tradetracker' },
+        { error: 'Invalid source. Must be aliexpress, amazon, allegro, convertiser, tradetracker, or campaigns' },
         { status: 400 }
       );
     }
@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
     const initialJob = {
       id: jobId,
       status: 'running' as const,
-      source: source as 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'tradetracker' | 'manual',
+      source: source as 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'tradetracker' | 'campaigns' | 'manual',
       query: effectiveQuery,
       maxResults: max,
       productsFound: 0,
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
 
     // 7. Run harvest in background (don't await - async execution)
     harvester.harvestProducts(
-      source as 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'tradetracker',
+      source as 'aliexpress' | 'amazon' | 'allegro' | 'convertiser' | 'tradetracker' | 'campaigns',
       effectiveQuery,
       max,
       categories,

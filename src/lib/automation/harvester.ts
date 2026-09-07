@@ -2820,12 +2820,18 @@ export class SmartHarvester {
         target_currency: 'PLN'
       });
       
-      if (!response.resp_result || response.resp_code !== 200) {
-        this.addLog('error', `AliExpress campaign fetch failed for ${promotionName}`);
+      const respResult = response?.resp_result || response?.aliexpress_affiliate_featuredpromo_products_get_response?.resp_result;
+      const respCode = Number(respResult?.resp_code ?? response?.resp_code);
+
+      if (!respResult || respCode !== 200) {
+        this.addLog('error', `AliExpress campaign fetch failed for ${promotionName}: ${response?.error_response?.msg || respResult?.resp_msg || 'unknown error'}`);
         return [];
       }
       
-      const products = response.resp_result.result?.products || [];
+      const rawProducts = respResult.result?.products;
+      const products = Array.isArray(rawProducts)
+        ? rawProducts
+        : (Array.isArray(rawProducts?.product) ? rawProducts.product : []);
       return products.map((p: any) => ({
         title: String(p.product_title || ''),
         imageUrl: String(p.product_main_image_url || ''),

@@ -1,35 +1,41 @@
 import { NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
-import { adminApp } from '@/lib/firebase-admin';
+import { requireAdmin } from '@/lib/auth-server';
 import { createAliExpressClient } from '@/integrations/aliexpress/client';
 
 export async function GET(request: Request) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const idToken = authHeader.split('Bearer ')[1];
-    const decodedToken = await getAuth(adminApp).verifyIdToken(idToken);
-
-    if (decodedToken.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    await requireAdmin();
 
     const client = createAliExpressClient();
     const response = await client.getFeaturedPromos();
 
-    if (!response.resp_result || response.resp_code !== 200) {
-      return NextResponse.json({ error: 'Failed to fetch campaigns' }, { status: 500 });
+    const respResult = response?.resp_result || response?.aliexpress_affiliate_featuredpromo_get_response?.resp_result;
+    const respCode = Number(respResult?.resp_code ?? response?.resp_code);
+
+    if (!respResult || respCode !== 200) {
+      const errorMsg =
+        response?.error_response?.msg ||
+        respResult?.resp_msg ||
+        'Failed to fetch campaigns from AliExpress';
+      return NextResponse.json({ error: errorMsg, details: response }, { status: 500 });
     }
+
+    const rawPromos = respResult?.result?.promos;
+    const promos = Array.isArray(rawPromos)
+      ? rawPromos
+      : (Array.isArray(rawPromos?.promo) ? rawPromos.promo : []);
 
     return NextResponse.json({
       success: true,
-      promos: response.resp_result.result?.promos || []
+      promos
     });
   } catch (error: any) {
     console.error('Error fetching campaigns:', error);
+
+    if (error.message?.includes('Unauthorized') || error.message?.includes('Forbidden')) {
+      return NextResponse.json({ error: 'Unauthorized/Forbidden' }, { status: 403 });
+    }
+
     return NextResponse.json(
       { error: 'Internal Server Error', details: error.message },
       { status: 500 }

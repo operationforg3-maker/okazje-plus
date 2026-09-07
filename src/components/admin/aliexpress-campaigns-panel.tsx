@@ -43,7 +43,7 @@ export function AliExpressCampaignsPanel({ authToken }: { authToken: string | nu
     setError('');
     
     try {
-      const res = await fetch('/api/admin/harvester/jobs', {
+      const res = await fetch('/api/admin/harvester/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,12 +53,12 @@ export function AliExpressCampaignsPanel({ authToken }: { authToken: string | nu
           source: 'campaigns',
           query: campaignName,
           maxResults: 50,
-          categories: []
         })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Błąd uruchamiania');
-      setSuccessMsg(`Zadanie importu wyprzedaży ${campaignName} zostało dodane (Job ID: ${data.jobId})`);
+      const jobId = data.job?.id || data.jobId;
+      setSuccessMsg(`Zadanie importu wyprzedaży "${campaignName}" zostało uruchomione (Job ID: ${jobId})`);
     } catch (err: any) {
       setError(err.message);
     } finally {
