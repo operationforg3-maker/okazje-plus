@@ -267,8 +267,8 @@ export class DealRefiner {
       if (!deal.title.pl) {
         return true;
       }
-      // Also refine if missing English, German, French, Spanish, or Ukrainian
-      if (!deal.title.en || !deal.title.de || !deal.title.fr || !deal.title.es || !deal.title.uk) {
+      // Also refine if missing English, German, French, Spanish, Ukrainian, or Italian
+      if (!deal.title.en || !deal.title.de || !deal.title.fr || !deal.title.es || !deal.title.uk || !deal.title.it) {
         return true;
       }
     }
@@ -278,7 +278,7 @@ export class DealRefiner {
       return true;
     }
 
-    // Description must be localized (PL/EN/DE/FR/ES/UK). String or missing fields -> refine
+    // Description must be localized (PL/EN/DE/FR/ES/UK/IT). String or missing fields -> refine
     if (!deal.description) {
       return true;
     }
@@ -286,14 +286,14 @@ export class DealRefiner {
       return true;
     }
     if (typeof deal.description === 'object' && deal.description) {
-      if (!deal.description.pl || !deal.description.en || !deal.description.de || !deal.description.fr || !deal.description.es || !deal.description.uk) {
+      if (!deal.description.pl || !deal.description.en || !deal.description.de || !deal.description.fr || !deal.description.es || !deal.description.uk || !deal.description.it) {
         return true;
       }
     }
 
     // Selling points should exist for UI (metadata.sellingPoints)
     const sellingPoints = (deal.metadata as any)?.sellingPoints;
-    if (!sellingPoints || !sellingPoints.pl || !sellingPoints.en || !sellingPoints.de || !sellingPoints.fr || !sellingPoints.es || !sellingPoints.uk) {
+    if (!sellingPoints || !sellingPoints.pl || !sellingPoints.en || !sellingPoints.de || !sellingPoints.fr || !sellingPoints.es || !sellingPoints.uk || !sellingPoints.it) {
       return true;
     }
 
@@ -304,7 +304,7 @@ export class DealRefiner {
   /**
    * Refine a single deal:
    * 1. ENSURE Polish title exists (critical!)
-  * 2. Ensure title is localized (PL/EN/DE/FR/ES/UK)
+   * 2. Ensure title is localized (PL/EN/DE/FR/ES/UK/IT)
    * 3. Generate seller-specific selling points
    * 4. Create offer summary (combining merchant rating + deal type)
    */
@@ -418,7 +418,7 @@ export class DealRefiner {
 
         refined.title = fullyLocalizedTitle as LocalizedText;
 
-        this.addLog('info', `Deal ${dealId} title localized: PL="${fullyLocalizedTitle.pl}" EN="${fullyLocalizedTitle.en}" DE="${fullyLocalizedTitle.de}" FR="${fullyLocalizedTitle.fr}" ES="${fullyLocalizedTitle.es}" UK="${fullyLocalizedTitle.uk}"`);
+        this.addLog('info', `Deal ${dealId} title localized: PL="${fullyLocalizedTitle.pl}" EN="${fullyLocalizedTitle.en}" DE="${fullyLocalizedTitle.de}" FR="${fullyLocalizedTitle.fr}" ES="${fullyLocalizedTitle.es}" UK="${fullyLocalizedTitle.uk}" IT="${fullyLocalizedTitle.it || ''}"`);
 
         // Store AI-generated selling points for UI display
         if (enriched.sellingPoints) {

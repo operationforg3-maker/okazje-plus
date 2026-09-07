@@ -582,7 +582,7 @@ export class AIRefiner {
              const tr = await translateContent({
                text: titleResult.titleEN,
                sourceLocale: 'en',
-               targetLocales: ['pl', 'de', 'fr', 'es', 'uk']
+               targetLocales: ['pl', 'de', 'fr', 'es', 'uk', 'it']
              });
              // Only override if translation produced something different
              if (tr.translations['pl'] && tr.translations['pl'] !== titleResult.titlePL) {
@@ -600,6 +600,9 @@ export class AIRefiner {
              if (tr.translations['uk']) {
                (titleResult as any).titleUK = tr.translations['uk'];
              }
+             if (tr.translations['it']) {
+               (titleResult as any).titleIT = tr.translations['it'];
+             }
            } catch(err) {
              console.error('[Refiner] Failsafe translation failed', err);
            }
@@ -613,6 +616,7 @@ export class AIRefiner {
           fr: (titleResult as any).titleFR || titleResult.titleEN,
           es: (titleResult as any).titleES || titleResult.titleEN,
           uk: (titleResult as any).titleUK || titleResult.titleEN,
+          it: (titleResult as any).titleIT || titleResult.titleEN,
         };
 
         // Merge extracted specs
@@ -874,8 +878,8 @@ export class AIRefiner {
       const isEnSource = metadata?.source === 'aliexpress' || metadata?.source === 'amazon';
       const sourceLocale = isEnSource ? 'en' : 'pl';
       const targetLocales = isEnSource
-        ? ['pl', 'de', 'fr', 'es', 'uk']
-        : ['en', 'de', 'fr', 'es', 'uk'];
+        ? ['pl', 'de', 'fr', 'es', 'uk', 'it']
+        : ['en', 'de', 'fr', 'es', 'uk', 'it'];
 
       // Use the appropriate title base
       const baseTitle = isEnSource ? (title.en || title.pl || '') : (title.pl || '');
@@ -901,7 +905,8 @@ export class AIRefiner {
         de: '',
         fr: '',
         es: '',
-        uk: ''
+        uk: '',
+        it: ''
       };
 
       if (sourceLocale === 'en') {
@@ -911,6 +916,7 @@ export class AIRefiner {
         result.fr = translationResult.translations['fr'] || `[AI] ${baseTitle}`;
         result.es = translationResult.translations['es'] || `[AI] ${baseTitle}`;
         result.uk = translationResult.translations['uk'] || `[AI] ${baseTitle}`;
+        result.it = translationResult.translations['it'] || `[AI] ${baseTitle}`;
       } else {
         result.pl = baseDescription;
         result.en = translationResult.translations['en'] || `[AI] ${baseTitle}`;
@@ -918,6 +924,7 @@ export class AIRefiner {
         result.fr = translationResult.translations['fr'] || `[AI] ${baseTitle}`;
         result.es = translationResult.translations['es'] || `[AI] ${baseTitle}`;
         result.uk = translationResult.translations['uk'] || `[AI] ${baseTitle}`;
+        result.it = translationResult.translations['it'] || `[AI] ${baseTitle}`;
       }
 
       return result;
@@ -935,6 +942,7 @@ export class AIRefiner {
         fr: `${title.fr || title.en || title.pl}. Spécifications: ${specsText}`,
         es: `${title.es || title.en || title.pl}. Especificaciones: ${specsText}`,
         uk: `${title.uk || title.en || title.pl}. Характеристики: ${specsText}`,
+        it: `${title.it || title.en || title.pl}. Specifiche: ${specsText}`,
       };
     }
   }
@@ -950,7 +958,7 @@ export class AIRefiner {
         const res = await translateContent({
           text: title.pl,
           sourceLocale: 'pl',
-          targetLocales: ['en', 'de', 'fr', 'es', 'uk']
+          targetLocales: ['en', 'de', 'fr', 'es', 'uk', 'it']
         });
         
         return {
@@ -959,7 +967,8 @@ export class AIRefiner {
           de: res.translations['de'] || title.de || '',
           fr: res.translations['fr'] || title.fr || '',
           es: res.translations['es'] || title.es || '',
-          uk: res.translations['uk'] || title.uk || ''
+          uk: res.translations['uk'] || title.uk || '',
+          it: res.translations['it'] || title.it || ''
         };
       }
       return title;
@@ -1106,7 +1115,7 @@ export class AIRefiner {
       const res = await translateContent({
         text: sentiment,
         sourceLocale: 'en',
-        targetLocales: ['pl', 'de', 'fr', 'es', 'uk']
+        targetLocales: ['pl', 'de', 'fr', 'es', 'uk', 'it']
       });
 
       return {
@@ -1116,6 +1125,7 @@ export class AIRefiner {
         fr: res.translations['fr'] || sentiment,
         es: res.translations['es'] || sentiment,
         uk: res.translations['uk'] || sentiment,
+        it: res.translations['it'] || sentiment,
       };
     } catch (err) {
       console.error('[Refiner] Review summary translation failed:', err);
@@ -1126,6 +1136,7 @@ export class AIRefiner {
         fr: sentiment,
         es: sentiment,
         uk: sentiment,
+        it: sentiment,
       };
     }
   }

@@ -403,6 +403,7 @@ export const MarketingContentOutputSchema = z.object({
     fr: z.string().optional(),
     es: z.string().optional(),
     uk: z.string().optional(),
+    it: z.string().optional(),
   }),
   shortDescription: z.object({
     pl: z.string().optional(),
@@ -411,6 +412,7 @@ export const MarketingContentOutputSchema = z.object({
     fr: z.string().optional(),
     es: z.string().optional(),
     uk: z.string().optional(),
+    it: z.string().optional(),
   }),
   fullDescription: z.object({
     pl: z.string().optional(),
@@ -419,6 +421,7 @@ export const MarketingContentOutputSchema = z.object({
     fr: z.string().optional(),
     es: z.string().optional(),
     uk: z.string().optional(),
+    it: z.string().optional(),
   }),
   features: z.object({
     pl: z.array(z.string()).optional(),
@@ -427,6 +430,7 @@ export const MarketingContentOutputSchema = z.object({
     fr: z.array(z.string()).optional(),
     es: z.array(z.string()).optional(),
     uk: z.array(z.string()).optional(),
+    it: z.array(z.string()).optional(),
   }).optional(),
   seo: z.object({
     title: z.string().optional(),
@@ -490,7 +494,7 @@ STEP 3 — SEO (highest priority for okazjeplus.pl):
 - seo.keywords: 8-12 long-tail Polish search phrases (how users search, not product jargon).
 - seo.faqItems: 2-3 frequently asked questions with concise answers (used for FAQ schema — boosts CTR in Google).
 
-TITLES (pl/en/de/fr/es/uk):
+TITLES (pl/en/de/fr/es/uk/it):
 - Format: Brand (if known) + Model + 1-2 killer attributes.
 - Length target: 55-70 chars. Remove spammy keywords.
 
@@ -506,10 +510,10 @@ FULL DESCRIPTION (HTML per language):
   <p>Closing reassurance (compatibility, ease of use, availability)</p>
 - Polish description: naturally include 1-2 long-tail keyword phrases.
 
-SHORT DESCRIPTION (pl/en/de/fr/es/uk):
+SHORT DESCRIPTION (pl/en/de/fr/es/uk/it):
 - 2-3 sentences, max 320 chars, focused on key value propositions.
 
-FEATURES (pl/en/de/fr/es/uk):
+FEATURES (pl/en/de/fr/es/uk/it):
 - 4-6 bullet-ready strings, each with a concrete value (number, material, dimension, or outcome).
 
 MARKET PRICE:
@@ -519,10 +523,10 @@ MARKET PRICE:
 
 OUTPUT STRICTLY AS JSON:
 {
-  "title": { "pl": "...", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "..." },
-  "shortDescription": { "pl": "...", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "..." },
-  "fullDescription": { "pl": "<p>...</p><ul>...</ul><p>...</p>", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "..." },
-  "features": { "pl": ["..."], "en": ["..."], "de": ["..."], "fr": ["..."], "es": ["..."], "uk": ["..."] },
+  "title": { "pl": "...", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "...", "it": "..." },
+  "shortDescription": { "pl": "...", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "...", "it": "..." },
+  "fullDescription": { "pl": "<p>...</p><ul>...</ul><p>...</p>", "en": "...", "de": "...", "fr": "...", "es": "...", "uk": "...", "it": "..." },
+  "features": { "pl": ["..."], "en": ["..."], "de": ["..."], "fr": ["..."], "es": ["..."], "uk": ["..."], "it": ["..."] },
   "seo": {
     "title": "...",
     "description": "...",
@@ -568,10 +572,10 @@ OUTPUT STRICTLY AS JSON:
       }
 
       return {
-        title: parsed.title || { pl: input.originalTitle, en: input.originalTitle, de: input.originalTitle, fr: input.originalTitle, es: input.originalTitle, uk: input.originalTitle },
-        shortDescription: parsed.shortDescription || { pl: "", en: "", de: "", fr: "", es: "", uk: "" },
-        fullDescription: parsed.fullDescription || { pl: "", en: "", de: "", fr: "", es: "", uk: "" },
-        features: parsed.features || { pl: [], en: [], de: [], fr: [], es: [], uk: [] },
+        title: parsed.title || { pl: input.originalTitle, en: input.originalTitle, de: input.originalTitle, fr: input.originalTitle, es: input.originalTitle, uk: input.originalTitle, it: input.originalTitle },
+        shortDescription: parsed.shortDescription || { pl: "", en: "", de: "", fr: "", es: "", uk: "", it: "" },
+        fullDescription: parsed.fullDescription || { pl: "", en: "", de: "", fr: "", es: "", uk: "", it: "" },
+        features: parsed.features || { pl: [], en: [], de: [], fr: [], es: [], uk: [], it: [] },
         seo: parsed.seo || { title: "", description: "", keywords: [], faqItems: [] },
         averageMarketPrice: parsed.averageMarketPrice || undefined,
         specsAugmented: parsed.specsAugmented || undefined,
