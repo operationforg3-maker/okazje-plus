@@ -8,7 +8,7 @@ import { Comment } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Trash2, AlertTriangle, Reply, ChevronDown, ChevronUp, Heart } from 'lucide-react';
+import { Trash2, AlertTriangle, Reply, ChevronDown, ChevronUp, Heart, MessageSquare } from 'lucide-react';
 import { trackFirestoreComment } from '@/lib/analytics';
 import {
   AlertDialog,
@@ -24,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import DOMPurify from 'isomorphic-dompurify';
 import { useTranslations } from 'next-intl';
 import { likeComment, unlikeComment, hasUserLikedComment } from '@/app/[locale]/profile/actions';
+import { AuthModal } from '@/components/auth/auth-modal';
 
 interface CommentSectionProps {
   collectionName: 'products' | 'deals';
@@ -33,6 +34,7 @@ interface CommentSectionProps {
 export default function CommentSectionV2({ collectionName, docId }: CommentSectionProps) {
   const t = useTranslations('common');
   const { user } = useAuth();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [commentState, setCommentState] = useState({
     comments: [] as Comment[],
     newComment: '',
@@ -104,7 +106,7 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
 
   const handleSubmitComment = async () => {
     if (!user) {
-      toast.error(t('comments.mustBeLoggedIn'));
+      setAuthModalOpen(true);
       return;
     }
     const now = Date.now();
@@ -158,7 +160,7 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
 
   const handleSubmitReply = async (parentId: string) => {
     if (!user) {
-      toast.error("Musisz być zalogowany, aby odpowiedzieć.");
+      setAuthModalOpen(true);
       return;
     }
     const now = Date.now();
@@ -253,7 +255,7 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
 
   const handleToggleLike = async (commentId: string) => {
     if (!user) {
-      toast.error(t('comments.mustBeLoggedIn'));
+      setAuthModalOpen(true);
       return;
     }
 
@@ -505,7 +507,7 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
         {t('comments.title')} ({commentState.comments.length})
       </h3>
       
-      {user && (
+      {user ? (
         <div className="mb-6 space-y-2">
           <Textarea 
             placeholder={t('comments.addCommentPlaceholder')}
@@ -516,6 +518,32 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
           <Button onClick={handleSubmitComment} disabled={!commentState.newComment.trim()}>
             {t('comments.addComment')}
           </Button>
+        </div>
+      ) : (
+        <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-muted/40 border border-border/70 space-y-3 shadow-sm">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4 text-primary" />
+            <h4 className="text-sm font-bold text-foreground">Dołącz do dyskusji o tej okazji</h4>
+          </div>
+          <Textarea 
+            placeholder="Co sądzisz o tej cenie lub produkcie? Zadaj pytanie lub podziel się spostrzeżeniami..."
+            value={commentState.newComment}
+            onChange={(e) => setCommentState(prev => ({ ...prev, newComment: e.target.value }))}
+            className="min-h-[85px] bg-background text-sm resize-y"
+          />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+            <p className="text-xs text-muted-foreground">
+              Zaloguj się, aby opublikować swój komentarz i budować reputację w społeczności.
+            </p>
+            <Button
+              type="button"
+              onClick={() => setAuthModalOpen(true)}
+              className="font-bold text-xs shrink-0 rounded-xl"
+              size="sm"
+            >
+              Zaloguj się i skomentuj
+            </Button>
+          </div>
         </div>
       )}
       
@@ -558,6 +586,12 @@ export default function CommentSectionV2({ collectionName, docId }: CommentSecti
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        actionType="comment"
+      />
     </div>
   );
 }

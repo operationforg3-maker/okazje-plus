@@ -39,6 +39,8 @@ export function getExternalUrl(...candidates: Array<string | null | undefined>):
     return null;
   };
 
+  let fallbackCandidate: string | null = null;
+
   for (const candidate of candidates) {
     const normalized = normalizeCandidate(String(candidate || ''));
     const url = normalized || '';
@@ -49,11 +51,81 @@ export function getExternalUrl(...candidates: Array<string | null | undefined>):
       if (internalHosts.has(host) || host.endsWith('.okazjeplus.pl')) {
         continue;
       }
+
+      // Demote generic AliExpress shortlinks that redirect to best.aliexpress.com
+      if (
+        (host.includes('aliexpress.com') && (parsed.pathname.startsWith('/s/') || host.startsWith('best.')))
+      ) {
+        if (!fallbackCandidate) {
+          fallbackCandidate = parsed.toString();
+        }
+        continue;
+      }
+
       return parsed.toString();
     } catch {
       continue;
     }
   }
 
-  return null;
+  return fallbackCandidate;
 }
+
+/**
+ * Intelligent outbound URL resolver for deals.
+ * If the deal points to a generic AliExpress campaign landing page (best.aliexpress.com)
+ * but has a real product ID, it automatically generates a direct affiliate deep link to the product!
+ */
+export function getDealExternalUrl(deal: any, product?: any): string | null {
+  if (!deal) return null;
+
+  const aliId =
+    deal.sourceProductId ||
+    deal.metadata?.originalId ||
+    deal.externalOriginalId ||
+    (deal as any)?.productCoreId ||
+    product?.externalId ||
+    product?.metadata?.originalId;
+
+  const rawLink = String(deal.link || deal.affiliateLink || deal.dealUrl || deal.sourceUrl || '');
+  const isGenericAliLink =
+    rawLink.includes('s.click.aliexpress.com/s/') ||
+    rawLink.includes('best.aliexpress.com');
+
+  // If link leads to generic best.aliexpress.com and we have a numeric item ID, generate deep link to item
+  if (isGenericAliLink && aliId && /^\d+$/.test(String(aliId))) {
+    return `https://s.click.aliexpress.com/deep_link.htm?aff_short_key=_pz9sEiR&dl_target_url=${encodeURIComponent(`https://pl.aliexpress.com/item/${aliId}.html`)}`;
+  }
+
+  const resolved = getExternalUrl(
+    deal.link,
+    deal.affiliateLink,
+    deal.affiliateUrl,
+    deal.dealUrl,
+    deal.sourceUrl,
+    deal.url,
+    deal.externalUrl,
+    deal.metadata?.offerPreviewUrl,
+    deal.metadata?.previewUrl,
+    deal.metadata?.offerUrl,
+    deal.metadata?.externalUrl,
+    deal.metadata?.url,
+    deal.product?.link,
+    deal.product?.affiliateLink,
+    deal.product?.sourceUrl,
+    product?.sourceLinks?.[0]?.url,
+    product?.sourceLinks?.[0]?.link
+  );
+
+  if (resolved && !resolved.includes('best.aliexpress.com') && !resolved.includes('s.click.aliexpress.com/s/')) {
+    return resolved;
+  }
+
+  // Fallback to item deep link if product ID is available
+  if (aliId && /^\d+$/.test(String(aliId))) {
+    return `https://s.click.aliexpress.com/deep_link.htm?aff_short_key=_pz9sEiR&dl_target_url=${encodeURIComponent(`https://pl.aliexpress.com/item/${aliId}.html`)}`;
+  }
+
+  return resolved;
+}
+

@@ -37,6 +37,8 @@ interface DetailTabsProps {
   conditions?: string[];
   freeShipping?: boolean;
   cashback?: any;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
   minOrderValue?: string | null;
   limitPerUser?: number | string | null;
   requiresMembership?: string | null;
@@ -60,8 +62,16 @@ export function DetailTabs({
   minOrderValue,
   limitPerUser,
   requiresMembership,
+  activeTab: propActiveTab,
+  onTabChange,
 }: DetailTabsProps) {
-  const [activeTab, setActiveTab] = useState<string>('description');
+  const [internalTab, setInternalTab] = useState<string>('description');
+  const activeTab = propActiveTab !== undefined ? propActiveTab : internalTab;
+
+  const handleTabChange = (val: string) => {
+    setInternalTab(val);
+    onTabChange?.(val);
+  };
 
   const hasSpecs = specifications.length > 0;
   const hasDeals = deals.length > 0;
@@ -78,7 +88,7 @@ export function DetailTabs({
 
   return (
     <div id="detail-tabs-section" className="space-y-6 pt-4">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4 h-auto p-1 bg-muted/60 rounded-xl gap-1">
           <TabsTrigger value="description" className="flex items-center gap-1.5 py-2.5 text-xs font-bold rounded-lg">
             <FileText className="h-4 w-4" />
@@ -189,6 +199,30 @@ export function DetailTabs({
               )}
             </CardContent>
           </Card>
+
+          {/* Discussion Teaser Banner */}
+          <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 via-primary/10 to-transparent p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
+                <MessageSquare className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-foreground">
+                  Dyskusja społeczności {commentsCount > 0 ? `(${commentsCount})` : ''}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Masz pytanie o tę okazję lub chcesz podzielić się opinią? Dołącz do rozmowy!
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleTabChange('discussion')}
+              className="inline-flex items-center justify-center text-xs font-bold px-4 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm transition-all shrink-0"
+            >
+              {commentsCount > 0 ? 'Zobacz dyskusję' : 'Dodaj pierwszy komentarz'}
+            </button>
+          </div>
         </TabsContent>
 
         {/* Tab 2: Specifications Table */}

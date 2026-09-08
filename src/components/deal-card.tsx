@@ -41,7 +41,7 @@ import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 import { useCardBaseState } from '@/hooks/use-card-base-state';
 import { formatTimeAgo } from '@/lib/format-relative-time';
 import { CardHeader } from '@/components/ui/card-header';
-import { getExternalUrl } from '@/lib/external-url';
+import { getExternalUrl, getDealExternalUrl } from '@/lib/external-url';
 import { Sparkline, generateSmartBadges } from '@/components/product/Sparkline';
 import { SpecsTeaserInline } from '@/components/product/SpecificationsTable';
 import { useUX } from '@/context/UXContext';
@@ -360,26 +360,7 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
     (typeof deal?.productCoreId === 'string' && deal.productCoreId) ||
     (typeof deal?.product?.id === 'string' && deal.product.id) ||
     (Array.isArray(deal?.linkedProductIds) && typeof deal.linkedProductIds[0] === 'string' ? deal.linkedProductIds[0] : '');
-  const productPageUrl = linkedProductId ? `${prefix}/products/${linkedProductId}` : null;
-  const dealExternalUrl = getExternalUrl(
-    deal?.link,
-    deal?.affiliateLink,
-    deal?.affiliateUrl,
-    deal?.dealUrl,
-    deal?.sourceUrl,
-    deal?.url,
-    deal?.externalUrl,
-    deal?.metadata?.offerPreviewUrl,
-    deal?.metadata?.previewUrl,
-    deal?.metadata?.offerUrl,
-    deal?.metadata?.externalUrl,
-    deal?.metadata?.url,
-    deal?.product?.link,
-    deal?.product?.affiliateLink,
-    deal?.product?.sourceUrl,
-    (resolvedProduct as any)?.sourceLinks?.[0]?.url,
-    (resolvedProduct as any)?.sourceLinks?.[0]?.link
-  );
+  const dealExternalUrl = getDealExternalUrl(deal, resolvedProduct);
 
   // ========================================
   // 🚀 ENHANCED METADATA FROM AUTO-IMPORT

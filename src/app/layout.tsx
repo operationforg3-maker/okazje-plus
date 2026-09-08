@@ -69,7 +69,6 @@ export default function RootLayout({
         <link rel="preconnect" href="https://imgproxy.convertiser.com" />
         <link rel="dns-prefetch" href="https://ae-pic-a1.aliexpress-media.com" />
         <link rel="dns-prefetch" href="https://imgproxy.convertiser.com" />
-        <link rel="canonical" href={SITE_URL} />
         <script dangerouslySetInnerHTML={{
           __html: `
             (function() {

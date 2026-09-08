@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Deal, LocalizedText } from '@/lib/types';
 import { getProductCore } from '@/lib/data';
 import { getCommentsAdmin } from '@/lib/data-admin';
-import { getExternalUrl } from '@/lib/external-url';
+import { getExternalUrl, getDealExternalUrl } from '@/lib/external-url';
 import { getDealById, searchDeals } from '@/lib/search-server';
 import { generateDealJsonLd, generateBreadcrumbJsonLd } from '@/lib/json-ld-generators';
 import { buildCategoryPath, humanizeCategorySlug } from '@/lib/category-routes';
@@ -86,23 +86,7 @@ function normalizeDealForUi(raw: any, product?: any | null): Deal | null {
     ? descriptionInput as LocalizedText
     : ensureLocalizedText(descriptionInput, product?.shortDescription?.pl || '');
 
-  const link = getExternalUrl(
-    raw?.link,
-    raw?.affiliateLink,
-    raw?.affiliateUrl,
-    raw?.dealUrl,
-    raw?.sourceUrl,
-    raw?.url,
-    raw?.externalUrl,
-    raw?.metadata?.offerPreviewUrl,
-    raw?.metadata?.previewUrl,
-    raw?.metadata?.offerUrl,
-    raw?.metadata?.externalUrl,
-    raw?.metadata?.url,
-    raw?.product?.affiliateLink,
-    raw?.product?.sourceUrl,
-    product?.sourceLinks?.[0]?.url
-  ) || '';
+  const link = getDealExternalUrl(raw, product) || '';
   const mainCategorySlug = raw?.mainCategorySlug || product?.mainCategorySlug || 'inne';
   const subCategorySlug = raw?.subCategorySlug || product?.subCategorySlug || 'inne';
 

@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { extractPriceInfo } from '@/lib/i18n-utils';
 import { Deal, Product } from '@/lib/types';
-import { getExternalUrl } from '@/lib/external-url';
+import { getExternalUrl, getDealExternalUrl } from '@/lib/external-url';
 import { useCommentsCount } from '@/hooks/use-comments-count';
 import { useAuth } from '@/lib/auth';
 import { auth } from '@/lib/firebase';
@@ -179,23 +179,7 @@ export default function DealDetailClient({ deal, product, productData: propProdu
     });
   }, [deal.price, deal.originalPrice, deal.minOrderValue, (deal as any).discountPercent, (deal as any).legacyPrice, currency]);
 
-  const outboundUrl = getExternalUrl(
-    deal.link,
-    (deal as any).affiliateLink,
-    (deal as any).affiliateUrl,
-    (deal as any).dealUrl,
-    (deal as any).sourceUrl,
-    (deal as any).url,
-    (deal as any).externalUrl,
-    (deal.metadata as any)?.offerPreviewUrl,
-    (deal.metadata as any)?.previewUrl,
-    (deal as any)?.metadata?.offerUrl,
-    (deal as any)?.metadata?.externalUrl,
-    (deal as any)?.metadata?.url,
-    (deal as any)?.product?.affiliateLink,
-    (deal as any)?.product?.sourceUrl,
-    (productData as any)?.sourceLinks?.[0]?.url
-  );
+  const outboundUrl = getDealExternalUrl(deal, productData);
 
   useEffect(() => {
     if (!deal.expiryDate) return;
@@ -354,8 +338,13 @@ export default function DealDetailClient({ deal, product, productData: propProdu
     }
   };
 
+  const [activeTab, setActiveTab] = useState<string>('description');
+
   const scrollToDiscussion = () => {
-    document.getElementById('detail-tabs-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveTab('discussion');
+    setTimeout(() => {
+      document.getElementById('detail-tabs-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
   };
 
   return (
@@ -444,6 +433,8 @@ export default function DealDetailClient({ deal, product, productData: propProdu
             minOrderValue={priceData.formattedMinOrder}
             limitPerUser={deal.limitPerUser}
             requiresMembership={deal.requiresMembership}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
           />
         </div>
       </div>
