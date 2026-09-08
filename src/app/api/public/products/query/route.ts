@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       ? ['pending_approval', 'approval', 'pending', 'poczekalnia']
       : ['approved'];
 
-    const fetchLimit = Math.max(limitCount, 24);
+    const fetchLimit = Math.max(limitCount * 2, 48);
     const snapshots = await Promise.all(
       statuses.map(async (status) => {
         let q: FirebaseFirestore.Query = adminDb.collection('product_cores').where('status', '==', status);
@@ -113,14 +113,16 @@ export async function POST(request: NextRequest) {
           q = q.where('mainCategorySlug', '==', filters.categoryId);
         }
 
+        // Try ordering by createdAt desc first so latest products are fetched
         try {
-          return await q.limit(fetchLimit).get();
+          return await q.orderBy('createdAt', 'desc').limit(fetchLimit).get();
         } catch (error: any) {
-          const msg = String(error?.message || '');
-          const isIndexIssue = msg.includes('FAILED_PRECONDITION') || msg.toLowerCase().includes('index');
-          if (!isIndexIssue) throw error;
-
-          return await adminDb.collection('product_cores').where('status', '==', status).limit(fetchLimit * 2).get();
+          // If composite index is missing or building, fallback to unordered query with larger limit
+          try {
+            return await q.limit(fetchLimit).get();
+          } catch (innerError: any) {
+            return await adminDb.collection('product_cores').where('status', '==', status).limit(fetchLimit * 2).get();
+          }
         }
       })
     );
@@ -165,23 +167,67 @@ export async function POST(request: NextRequest) {
       return true;
     });
 
+    const getProductTimestamp = (p: any): number => {
+      const ts = p?.createdAt || p?.updatedAt;
+      if (!ts) return 0;
+      if (typeof ts?.toMillis === 'function') return ts.toMillis();
+      if (typeof ts?.toDate === 'function') return ts.toDate().getTime();
+      if (ts instanceof Date) return ts.getTime();
+      if (typeof ts === 'number') return ts;
+      const parsed = Date.parse(String(ts));
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const computeQualityScore = (p: any): number => {
+      let score = 0;
+      // High quality images
+      const hasImage = (Array.isArray(p.images) && p.images.length > 0) || !!p.imageUrl;
+      if (hasImage) score += 40;
+      // Valid price
+      const price = Number(p?.bestPrice?.amount || 0);
+      if (price > 0) score += 30;
+      // Rating & reviews
+      const rating = Number(p?.rating?.score || 0);
+      const ratingCount = Number(p?.rating?.count || 0);
+      if (rating > 0) score += Math.min(rating * 4, 20);
+      if (ratingCount > 0) score += Math.min(ratingCount * 2, 10);
+      // Recency boost (within 14 days gets up to 15 points)
+      const ts = getProductTimestamp(p);
+      if (ts > 0) {
+        const ageHours = Math.max(0, (Date.now() - ts) / (1000 * 60 * 60));
+        if (ageHours < 336) {
+          score += Math.round((1 - ageHours / 336) * 15);
+        }
+      }
+      return score;
+    };
+
     products.sort((a, b) => {
       switch (sortBy) {
         case 'price_asc':
           return Number(a?.bestPrice?.amount || 0) - Number(b?.bestPrice?.amount || 0);
         case 'price_desc':
           return Number(b?.bestPrice?.amount || 0) - Number(a?.bestPrice?.amount || 0);
-        case 'rating_desc':
-          return Number(b?.rating?.score || 0) - Number(a?.rating?.score || 0);
-        case 'newest':
-          return new Date(b?.updatedAt || 0).getTime() - new Date(a?.updatedAt || 0).getTime();
-        case 'popularity':
-          return Number(b?.marketing?.ordersCount || 0) - Number(a?.marketing?.ordersCount || 0);
-        case 'hot':
+        case 'rating_desc': {
+          const scoreDiff = Number(b?.rating?.score || 0) - Number(a?.rating?.score || 0);
+          if (scoreDiff !== 0) return scoreDiff;
           return Number(b?.rating?.count || 0) - Number(a?.rating?.count || 0);
+        }
+        case 'newest':
+          return getProductTimestamp(b) - getProductTimestamp(a);
+        case 'popularity': {
+          const ordersDiff = Number(b?.marketing?.ordersCount || 0) - Number(a?.marketing?.ordersCount || 0);
+          if (ordersDiff !== 0) return ordersDiff;
+          return Number(b?.rating?.count || 0) - Number(a?.rating?.count || 0);
+        }
+        case 'hot': {
+          const hotA = (Number(a?.rating?.score || 0) * Number(a?.rating?.count || 0)) + computeQualityScore(a);
+          const hotB = (Number(b?.rating?.score || 0) * Number(b?.rating?.count || 0)) + computeQualityScore(b);
+          return hotB - hotA;
+        }
         case 'relevance':
         default:
-          return 0;
+          return computeQualityScore(b) - computeQualityScore(a);
       }
     });
 

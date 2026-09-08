@@ -237,24 +237,24 @@ export async function getDealsByFiltersData(
           constraints.push(where('subSubCategorySlug', '==', filters.subSubCategorySlug));
         }
 
-        const baseQuery = query(collection(db, 'deals'), ...constraints, limit(limitCount));
+        const fetchLimit = Math.max(limitCount * 2, 60);
 
         try {
-          return await getDocs(baseQuery);
+          const orderedQuery = query(collection(db, 'deals'), ...constraints, orderBy('createdAt', 'desc'), limit(fetchLimit));
+          return await getDocs(orderedQuery);
         } catch (error: any) {
-          const message = String(error?.message || '');
-          const isIndexIssue = message.includes('index') || message.includes('FAILED_PRECONDITION');
-
-          if (!isIndexIssue) throw error;
-
-          // Fallback without composite category filters; category checks are enforced in-memory below.
-          const fallbackQuery = query(
-            collection(db, 'deals'),
-            where('status', '==', status),
-            limit(limitCount * 3)
-          );
-
-          return getDocs(fallbackQuery);
+          try {
+            const baseQuery = query(collection(db, 'deals'), ...constraints, limit(fetchLimit));
+            return await getDocs(baseQuery);
+          } catch (innerError: any) {
+            // Fallback without composite category filters; category checks are enforced in-memory below.
+            const fallbackQuery = query(
+              collection(db, 'deals'),
+              where('status', '==', status),
+              limit(fetchLimit * 2)
+            );
+            return getDocs(fallbackQuery);
+          }
         }
       })
     );
@@ -334,8 +334,11 @@ export async function getDealsByFiltersData(
         }
         case 'rating_desc':
           return ((db as any).rating || 0) - ((da as any).rating || 0);
-        case 'newest':
-          return new Date((db as any).createdAt || 0).getTime() - new Date((da as any).createdAt || 0).getTime();
+        case 'newest': {
+          const aTime = toMillis((da as any).createdAt || da.postedAt || (da as any).updatedAt);
+          const bTime = toMillis((db as any).createdAt || db.postedAt || (db as any).updatedAt);
+          return bTime - aTime;
+        }
         case 'discount_desc':
           if (da.originalPrice && db.originalPrice) {
             const aPrice = (da as any).priceV2?.amount || (typeof da.price === 'object' && da.price ? (da.price as any).amount : (typeof da.price === 'number' ? da.price : 0));

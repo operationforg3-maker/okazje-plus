@@ -142,35 +142,85 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const resolvedParams = await params;
   setRequestLocale(resolvedParams.locale);
 
-  // Pobieramy więcej dealów jednocześnie — 40 do karuzeli + hot deals grid
-  const [allHotDeals, topProducts, categories] = await Promise.all([
+  // Pobieramy zarówno gorące okazje, jak i najnowsze z bazy, aby połączyć je w świeżą i angażującą prezentację
+  const [allHotDeals, latestDeals, topProducts, categories] = await Promise.all([
     searchDeals('*', {
-      limit: 40,  // więcej żeby wybrać najlepiej przecenione do karuzeli
+      limit: 30,
       sortBy: 'hot',
+      statusFilter: 'approved',
+    }),
+    searchDeals('*', {
+      limit: 30,
+      sortBy: 'newest',
       statusFilter: 'approved',
     }),
     getRecommendedProducts(12),
     getCategories(),
   ]);
 
-  // Wyciągamy top 5 z największą przeceną % dla karuzeli "Okazja Tygodnia"
-  function calcDiscountPct(deal: any): number {
-    const price = typeof deal.price === 'number' ? deal.price : parseFloat(String(deal.legacyPrice || 0));
-    const orig = typeof deal.originalPrice === 'number' ? deal.originalPrice : parseFloat(String(deal.originalPrice || 0));
-    return (orig > 0 && price > 0 && orig > price) ? Math.round(((orig - price) / orig) * 100) : 0;
+  // Pomocnik do wyciągania kwoty ceny
+  function getDealPrice(deal: any): number {
+    if (typeof deal?.price === 'number') return deal.price;
+    if (typeof deal?.price === 'object' && deal?.price?.amount) return Number(deal.price.amount);
+    return parseFloat(String(deal?.legacyPrice || 0)) || 0;
   }
-  
-  const weeklyDeals = [...allHotDeals]
-    .filter(d => calcDiscountPct(d) >= 5)
-    .sort((a, b) => {
-      const sa = calcDiscountPct(a) * 0.7 + (a.temperature || 0) * 0.001 * 30;
-      const sb = calcDiscountPct(b) * 0.7 + (b.temperature || 0) * 0.001 * 30;
-      return sb - sa;
+
+  function getDealOrigPrice(deal: any): number {
+    if (typeof deal?.originalPrice === 'number') return deal.originalPrice;
+    if (typeof deal?.originalPrice === 'object' && deal?.originalPrice?.amount) return Number(deal.originalPrice.amount);
+    if (typeof deal?.oldPrice === 'number') return deal.oldPrice;
+    return 0;
+  }
+
+  // Obliczenie rabatu %
+  function calcDiscountPct(deal: any): number {
+    const price = getDealPrice(deal);
+    const orig = getDealOrigPrice(deal);
+    if (orig > 0 && price > 0 && orig > price) {
+      return Math.round(((orig - price) / orig) * 100);
+    }
+    if (deal?.discount) {
+      const num = parseInt(String(deal.discount).replace(/[^0-9]/g, ''), 10);
+      if (Number.isFinite(num) && num > 0) return num;
+    }
+    return 0;
+  }
+
+  // Złączenie unikalnych okazji (najnowsze + gorące)
+  const dealsMap = new Map<string, any>();
+  for (const d of [...latestDeals, ...allHotDeals]) {
+    if (!dealsMap.has(d.id)) {
+      dealsMap.set(d.id, d);
+    }
+  }
+  const combinedDeals = Array.from(dealsMap.values());
+
+  // Wybieramy okazje do karuzeli "Okazja Tygodnia" — wysoka jakość, obrazek, cena, atrakcyjność i świeżość
+  const weeklyDeals = [...combinedDeals]
+    .filter((d: any) => {
+      const hasImg = !!(d.image || d.imageUrl);
+      const price = getDealPrice(d);
+      return hasImg && price > 0;
+    })
+    .sort((a: any, b: any) => {
+      const discA = calcDiscountPct(a);
+      const discB = calcDiscountPct(b);
+      const tempA = Number(a.temperature || 0);
+      const tempB = Number(b.temperature || 0);
+
+      const tsA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tsB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      const recencyA = tsA > 0 ? Math.max(0, 1 - (Date.now() - tsA) / (14 * 86400000)) * 25 : 0;
+      const recencyB = tsB > 0 ? Math.max(0, 1 - (Date.now() - tsB) / (14 * 86400000)) * 25 : 0;
+
+      const scoreA = discA * 1.5 + Math.min(tempA, 100) * 0.5 + recencyA;
+      const scoreB = discB * 1.5 + Math.min(tempB, 100) * 0.5 + recencyB;
+      return scoreB - scoreA;
     })
     .slice(0, 5);
 
-  // Pierwsze 12 gorących dealów do siatki (6 w rzędzie na ultra-wide screen)
-  const hotDeals = allHotDeals.slice(0, 12);
+  // Gorące okazje do siatki (12 elementów): bierzemy top deale z uwzględnieniem różnorodności
+  const hotDeals = (allHotDeals.length >= 12 ? allHotDeals : combinedDeals).slice(0, 12);
 
   const homeJsonLd = generateHomePageJsonLd(hotDeals, topProducts);
 

@@ -115,7 +115,29 @@ export function ProductsPageContent({
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
   const { viewMode, setViewMode, cardDensity, setCardDensity } = useUX();
-  const [sortBy, setSortBy] = useState<SortBy>('relevance');
+  const sortParam = (searchParams.get('sort') as SortBy) || 'recommended';
+  const [sortBy, setSortByState] = useState<SortBy>(sortParam);
+
+  const setSortBy = (newSort: SortBy) => {
+    setSortByState(newSort);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (newSort === 'recommended') {
+        params.delete('sort');
+      } else {
+        params.set('sort', newSort);
+      }
+      const qs = params.toString();
+      const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+      window.history.replaceState(null, '', nextUrl);
+    }
+  };
+
+  useEffect(() => {
+    const s = (searchParams.get('sort') as SortBy) || 'recommended';
+    setSortByState(prev => (prev === s ? prev : s));
+  }, [searchParams]);
+
   const [productStatusView, setProductStatusView] = useState<ProductStatusView>(
     statusParam === 'waiting_room' ? 'waiting_room' : 'approved'
   );

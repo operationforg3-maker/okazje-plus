@@ -330,19 +330,29 @@ export async function getRecommendedProducts(count: number): Promise<Product[]> 
     }
 
     const productMap = new Map<string, Product>();
-    const baseLimit = count * 2;
+    const baseLimit = Math.max(count * 4, 48);
 
     if (typeof window === 'undefined') {
       try {
         const { getAdminFirestore } = await import('@/lib/firebase-admin-server');
         const adminDb = getAdminFirestore();
 
-        // 1. Fetch approved products on server using Admin SDK
-        const approvedSnap = await adminDb
-          .collection('product_cores')
-          .where('status', '==', 'approved')
-          .limit(baseLimit)
-          .get();
+        // 1. Fetch latest approved products on server using Admin SDK
+        let approvedSnap;
+        try {
+          approvedSnap = await adminDb
+            .collection('product_cores')
+            .where('status', '==', 'approved')
+            .orderBy('createdAt', 'desc')
+            .limit(baseLimit)
+            .get();
+        } catch {
+          approvedSnap = await adminDb
+            .collection('product_cores')
+            .where('status', '==', 'approved')
+            .limit(baseLimit)
+            .get();
+        }
 
         for (const doc of approvedSnap.docs) {
           if (!productMap.has(doc.id)) {
@@ -374,12 +384,23 @@ export async function getRecommendedProducts(count: number): Promise<Product[]> 
       // Client side query
       try {
         const coresRef = collection(db, "product_cores");
-        const approvedQ = query(
-          coresRef,
-          where("status", "==", "approved"),
-          limit(baseLimit)
-        );
-        const approvedSnap = await getDocs(approvedQ);
+        let approvedSnap;
+        try {
+          const approvedQ = query(
+            coresRef,
+            where("status", "==", "approved"),
+            orderBy("createdAt", "desc"),
+            limit(baseLimit)
+          );
+          approvedSnap = await getDocs(approvedQ);
+        } catch {
+          const fallbackQ = query(
+            coresRef,
+            where("status", "==", "approved"),
+            limit(baseLimit)
+          );
+          approvedSnap = await getDocs(fallbackQ);
+        }
 
         for (const snap of approvedSnap.docs) {
           if (!productMap.has(snap.id)) {
@@ -391,12 +412,48 @@ export async function getRecommendedProducts(count: number): Promise<Product[]> 
       }
     }
 
-    const products = Array.from(productMap.values())
-      .sort((a: any, b: any) => (a?.bestPrice?.amount || 0) - (b?.bestPrice?.amount || 0))
-      .slice(0, count);
+    const allProducts = Array.from(productMap.values());
+
+    const getScore = (p: any): number => {
+      let s = 0;
+      const hasImage = (Array.isArray(p.images) && p.images.length > 0) || !!p.imageUrl;
+      if (hasImage) s += 50;
+      const price = Number(p?.bestPrice?.amount || 0);
+      if (price > 0) s += 30;
+      const rating = Number(p?.rating?.score || 0);
+      const ratingCount = Number(p?.rating?.count || 0);
+      if (rating > 0) s += Math.min(rating * 5, 25);
+      if (ratingCount > 0) s += Math.min(ratingCount * 2, 10);
+      return s;
+    };
+
+    // Sort by quality score descending
+    allProducts.sort((a: any, b: any) => getScore(b) - getScore(a));
+
+    // Diversify categories so home page doesn't show only one category
+    const categoryCounts = new Map<string, number>();
+    const selectedProducts: Product[] = [];
+    const remainingProducts: Product[] = [];
+
+    for (const p of allProducts) {
+      const cat = (p as any).mainCategorySlug || 'other';
+      const currentCount = categoryCounts.get(cat) || 0;
+      if (currentCount < 3 && selectedProducts.length < count) {
+        categoryCounts.set(cat, currentCount + 1);
+        selectedProducts.push(p);
+      } else {
+        remainingProducts.push(p);
+      }
+    }
+
+    while (selectedProducts.length < count && remainingProducts.length > 0) {
+      selectedProducts.push(remainingProducts.shift()!);
+    }
+
+    const products = selectedProducts.slice(0, count);
     
     if (cacheSetFn) {
-      await cacheSetFn(cacheKey, products, 600);
+      await cacheSetFn(cacheKey, products, 300);
     }
     
     return products;
