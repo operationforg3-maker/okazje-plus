@@ -52,6 +52,13 @@ export const metadata: Metadata = {
     description: 'Najlepsze okazje i promocje w Polsce – codzienne oferty, zniżki i wyprzedaże.',
     images: [`${SITE_URL}/og-image.jpg`],
   },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || 'kty7L78dD_8avwXSAz5hhOoUmlJZvXfBd006vmiDMXg',
+    other: {
+      'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION || '',
+      'convertiser-verification': '3bc0a4fd6e7289720f9c2784de4b87f345bcca47',
+    },
+  },
 };
 
 export default function RootLayout({

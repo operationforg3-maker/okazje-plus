@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import { cacheGet, cacheSet } from '@/lib/cache';
 

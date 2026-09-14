@@ -94,10 +94,17 @@ export async function generateMetadata({
     authors: [{ name: 'Okazje+' }],
     creator: 'Okazje+',
     verification: {
-      google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+      google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || 'kty7L78dD_8avwXSAz5hhOoUmlJZvXfBd006vmiDMXg',
       other: {
         'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION || '',
         'convertiser-verification': '3bc0a4fd6e7289720f9c2784de4b87f345bcca47',
+      },
+    },
+    alternates: {
+      canonical,
+      languages: {
+        ...languageAlternates,
+        'x-default': `${SITE_URL}/pl`,
       },
     },
     openGraph: {
