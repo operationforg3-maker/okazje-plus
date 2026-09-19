@@ -7,9 +7,14 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
+        allow: [
+          '/',
+          '/api/image-proxy',
+          '/_next/image',
+          '/_next/static/',
+        ],
         disallow: [
-          // API & framework internals
+          // API & framework internals (except image-proxy)
           '/api/',
           '/_next/',
           // Admin panel
@@ -27,6 +32,19 @@ export default function robots(): MetadataRoute.Robots {
           '/*/analytics/',
           // Search pages (noindex via layout, but also block crawl)
           '/*/search/',
+        ],
+      },
+      {
+        userAgent: 'Googlebot-Image',
+        allow: [
+          '/',
+          '/api/image-proxy',
+          '/_next/image',
+          '/_next/static/',
+        ],
+        disallow: [
+          '/*/admin/',
+          '/api/admin/',
         ],
       },
     ],

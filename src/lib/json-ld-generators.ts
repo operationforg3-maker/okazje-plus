@@ -56,8 +56,27 @@ function getLocalizedValue(value: unknown, fallback = ''): string {
   return fallback;
 }
 
+export function getValidAggregateRating(score: unknown, count: unknown) {
+  const numScore = typeof score === 'number' ? score : Number(score);
+  const numCount = typeof count === 'number' ? count : Number(count);
+
+  if (!Number.isFinite(numScore) || !Number.isFinite(numCount) || numCount <= 0 || numScore < 1) {
+    return undefined;
+  }
+
+  const ratingValue = Number(Math.min(5, Math.max(1, numScore)).toFixed(1));
+
+  return {
+    '@type': 'AggregateRating' as const,
+    ratingValue,
+    reviewCount: Math.round(numCount),
+    bestRating: 5,
+    worstRating: 1,
+  };
+}
+
 function clampRating(value: number) {
-  return Math.max(0, Math.min(5, value || 0));
+  return Math.max(1, Math.min(5, value || 1));
 }
 
 function normalizeCurrency(value: unknown): string {
@@ -135,9 +154,7 @@ function buildMerchantReturnPolicy(policyText?: string) {
     returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
     merchantReturnDays: returnDays,
     returnMethod: 'https://schema.org/ReturnByMail',
-    returnFees: normalized.includes('darmow')
-      ? 'https://schema.org/FreeReturn'
-      : 'https://schema.org/ReturnShippingFees',
+    returnFees: 'https://schema.org/FreeReturn',
   };
 }
 
@@ -412,16 +429,7 @@ export function generateProductJsonLd(
       suggestedGender: gender,
       suggestedAgeGroup: ageGroup,
     },
-    aggregateRating:
-      ratingCount > 0
-        ? {
-            '@type': 'AggregateRating',
-            ratingValue: Math.max(0, Math.min(5, ratingValue || 0)),
-            reviewCount: ratingCount,
-            bestRating: 5,
-            worstRating: 1,
-          }
-        : undefined,
+    aggregateRating: getValidAggregateRating(ratingValue, ratingCount),
   };
 
   // Add offers based on model
@@ -706,8 +714,10 @@ export function generateHomePageJsonLd(
             getValidAbsoluteUrl((product as any).imageUrl),
             getValidAbsoluteUrl((product as any).images?.[0]),
           ].filter((img): img is string => Boolean(img)))[0];
-          const ratingValue = clampRating(Number((product as any)?.ratingCard?.average) || Number((product as any)?.rating?.score) || 0);
+          const rawRating = Number((product as any)?.ratingCard?.average) || Number((product as any)?.rating?.score) || 0;
           const ratingCount = Number((product as any)?.ratingCard?.count) || Number((product as any)?.rating?.count) || 0;
+          const aggregateRating = getValidAggregateRating(rawRating, ratingCount);
+          const brandName = (product as any)?.metadata?.brand || (product as any)?.specs?.brand || 'Various';
 
           return {
             '@type': 'ListItem',
@@ -719,22 +729,26 @@ export function generateHomePageJsonLd(
               url: `${PRODUCT_BASE_URL}/${product.id}`,
               ...(productImage && { image: productImage }),
               description: productDescription.slice(0, 300),
+              brand: {
+                '@type': 'Brand',
+                name: brandName,
+              },
               ...(productPrice > 0 && {
                 offers: {
                   '@type': 'Offer',
                   price: productPrice,
                   priceCurrency: productCurrency,
                   availability: 'https://schema.org/InStock',
+                  shippingDetails: buildShippingDetails({
+                    shippingCost: 0,
+                    freeShipping: true,
+                    currency: productCurrency,
+                  }),
+                  hasMerchantReturnPolicy: buildMerchantReturnPolicy('14 dni na zwrot'),
                 },
               }),
-              ...(ratingCount > 0 && {
-                aggregateRating: {
-                  '@type': 'AggregateRating',
-                  ratingValue,
-                  reviewCount: ratingCount,
-                  bestRating: 5,
-                  worstRating: 1,
-                },
+              ...(aggregateRating && {
+                aggregateRating,
               }),
             },
           };
@@ -820,13 +834,15 @@ export function generateVideoObjectJsonLd(input: {
 }) {
   const safeUploadDate = input.uploadDate || new Date().toISOString();
   const watchUrl = `${BASE_URL}${input.watchPath}`;
+  const cleanName = stripHtml(input.name || 'Wideo produktu').slice(0, 150);
+  const cleanDescription = stripHtml(input.description || cleanName).slice(0, 500) || cleanName;
 
   return {
     '@context': 'https://schema.org',
     '@type': 'VideoObject',
     '@id': `${watchUrl}#video`,
-    name: input.name,
-    description: input.description,
+    name: cleanName,
+    description: cleanDescription,
     thumbnailUrl: [input.thumbnailUrl],
     uploadDate: safeUploadDate,
     contentUrl: input.contentUrl,
