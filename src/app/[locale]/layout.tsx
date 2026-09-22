@@ -98,6 +98,7 @@ export async function generateMetadata({
       other: {
         'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION || '',
         'convertiser-verification': '3bc0a4fd6e7289720f9c2784de4b87f345bcca47',
+        'tradetracker-site-verification': '025198ca23d4854cbe238ba5635b4033f45f511d',
       },
     },
     alternates: {
