@@ -2159,6 +2159,25 @@ export interface SocialTemplate {
 
 export type SocialPostStatus = 'pending' | 'approved' | 'posting' | 'posted' | 'failed' | 'cancelled';
 
+export interface SocialAIBot {
+  id: string;
+  name: string;
+  role: 'hunter' | 'expert' | 'community' | 'responder';
+  avatar: string;
+  description: string;
+  target: 'fanpage' | 'group' | 'both';
+  enabled: boolean;
+  autoApprove: boolean;
+  tone: 'enthusiastic' | 'expert' | 'friendly' | 'analytical' | 'concise';
+  schedule: 'hourly' | 'every_3_hours' | 'twice_daily' | 'daily' | 'manual';
+  customInstructions?: string;
+  lastRunAt?: string;
+  totalGenerated: number;
+  totalPublished: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface SocialPost {
   id: string;
   platform: SocialPlatform;
@@ -2198,6 +2217,9 @@ export interface SocialPost {
     approvedBy?: string;
     approvedAt?: string;
     createdBy?: string; // 'auto' or userId
+    botId?: string;
+    botName?: string;
+    target?: string;
   };
   createdAt: string;
   updatedAt: string;

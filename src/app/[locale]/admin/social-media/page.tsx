@@ -27,6 +27,7 @@ import {
 import type { SocialConfig, SocialPost, SocialTemplate, SocialPlatform, SocialPostStatus } from '@/lib/types';
 import { toast } from 'sonner';
 import { createAndPublishFacebookTestPostAction } from '@/app/actions/publish-social-post';
+import { SocialAIBotsPanel } from '@/components/admin/social-ai-bots-panel';
 import { 
   Facebook, 
   Instagram, 
@@ -45,7 +46,8 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Calendar
+  Calendar,
+  Bot
 } from 'lucide-react';
 
 const PLATFORMS: SocialPlatform[] = ['facebook', 'instagram', 'twitter', 'linkedin', 'tiktok'];
@@ -302,6 +304,10 @@ export default function SocialMediaAdminPage() {
             <Calendar className="h-4 w-4 mr-2" />
             Kalendarz
           </TabsTrigger>
+          <TabsTrigger value="ai-bots">
+            <Bot className="h-4 w-4 mr-2" />
+            AI Boty & Grupa FB
+          </TabsTrigger>
           <TabsTrigger value="templates">
             <Eye className="h-4 w-4 mr-2" />
             Szablony ({templates.length})
@@ -404,6 +410,11 @@ export default function SocialMediaAdminPage() {
         {/* TEMPLATES TAB */}
         <TabsContent value="templates" className="space-y-4">
           <TemplatesTab templates={templates} onUpdate={loadData} />
+        </TabsContent>
+
+        {/* AI BOTS & GROUP TAB */}
+        <TabsContent value="ai-bots" className="space-y-4">
+          <SocialAIBotsPanel />
         </TabsContent>
 
       </Tabs>

@@ -1,0 +1,584 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { toast } from 'sonner';
+import {
+  Bot,
+  Sparkles,
+  Play,
+  Settings2,
+  CheckCircle2,
+  Users,
+  Copy,
+  ExternalLink,
+  Download,
+  ShieldCheck,
+  Flame,
+  MessageSquare,
+  HelpCircle,
+  Clock,
+  Loader2,
+  Eye,
+  RefreshCw
+} from 'lucide-react';
+import type { SocialAIBot } from '@/lib/types';
+import {
+  getSocialAIBotsAction,
+  saveSocialAIBotAction,
+  toggleSocialAIBotAction,
+  runSocialAIBotAction
+} from '@/app/actions/social-ai-bots';
+
+export function SocialAIBotsPanel() {
+  const [bots, setBots] = useState<SocialAIBot[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedBot, setSelectedBot] = useState<SocialAIBot | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
+  const [runningBotId, setRunningBotId] = useState<string | null>(null);
+  const [immediatePublish, setImmediatePublish] = useState(false);
+  const [topicHint, setTopicHint] = useState('');
+  const [runResult, setRunResult] = useState<{ content?: string; published?: boolean; platformPostId?: string } | null>(null);
+
+  const loadBots = async () => {
+    try {
+      setLoading(true);
+      const res = await getSocialAIBotsAction();
+      if (res.success && res.bots) {
+        setBots(res.bots);
+      } else {
+        toast.error(res.error || 'Błąd ładowania botów');
+      }
+    } catch (err) {
+      toast.error('Błąd połączenia z serwerem');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBots();
+  }, []);
+
+  const handleToggle = async (botId: string, currentEnabled: boolean) => {
+    const nextEnabled = !currentEnabled;
+    setBots(prev => prev.map(b => b.id === botId ? { ...b, enabled: nextEnabled } : b));
+    
+    const res = await toggleSocialAIBotAction(botId, nextEnabled);
+    if (res.success) {
+      toast.success(nextEnabled ? 'Bot aktywowany' : 'Bot wyłączony');
+    } else {
+      toast.error(res.error || 'Nie udało się zmienić statusu bota');
+      setBots(prev => prev.map(b => b.id === botId ? { ...b, enabled: currentEnabled } : b));
+    }
+  };
+
+  const handleSaveBot = async () => {
+    if (!selectedBot) return;
+    try {
+      const res = await saveSocialAIBotAction(selectedBot);
+      if (res.success) {
+        toast.success(`Zapisano bota: ${selectedBot.name}`);
+        setBots(prev => prev.map(b => b.id === selectedBot.id ? selectedBot : b));
+        setIsEditing(false);
+      } else {
+        toast.error(res.error || 'Błąd zapisu');
+      }
+    } catch (err) {
+      toast.error('Błąd zapisu');
+    }
+  };
+
+  const handleRunBot = async () => {
+    if (!runningBotId) return;
+    try {
+      setLoading(true);
+      const res = await runSocialAIBotAction(runningBotId, immediatePublish, topicHint);
+      if (res.success) {
+        setRunResult({
+          content: res.postContent,
+          published: res.published,
+          platformPostId: res.platformPostId,
+        });
+        toast.success(res.published ? '🚀 Opublikowano na Facebooku!' : '✅ Post wygenerowany i dodany do kolejki!');
+        loadBots();
+      } else {
+        toast.error(res.error || 'Błąd generowania posta');
+      }
+    } catch (err) {
+      toast.error('Błąd podczas generowania');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`Skopiowano: ${label}`);
+  };
+
+  const groupDescriptionText = `Witaj w oficjalnej grupie serwisu Okazje Plus (https://okazjeplus.pl)! 🎯\n\nTo miejsce dla świadomych konsumentów, którzy nie lubią przepłacać. Eliminujemy buble, tropimy prawdziwe okazje i dzielimy się perełkami cenowymi, kodami rabatowymi oraz promocjami z polskich i zagranicznych sklepów.\n\nW naszej społeczności znajdziesz:\n🔥 Błyskawiczne okazje i błędy cenowe\n🏷️ Działające kody rabatowe i promocje cashback\n🔍 Wyniki fizycznych testów produktów i opinie bez marketingu\n💬 Pomoc i porady przedzakupowe innych członków\n\nZnalazłeś super ofertę? Podziel się nią z innymi!\n🌐 https://okazjeplus.pl`;
+
+  const groupRulesText = `1. Tylko realne okazje i sprawdzone promocje (sprawdzaj historię cen przed publikacją).\n2. Kultura i wzajemny szacunek (zero hejtu i wulgaryzmów).\n3. Zakaz spamu i prywatnych reflinków bez zgody administratora.`;
+
+  return (
+    <div className="space-y-8">
+      {/* 1. Karta Zarządzania Grupą na Facebooku */}
+      <Card className="border-primary/20 bg-gradient-to-r from-blue-950/20 via-background to-orange-950/20 shadow-md">
+        <CardHeader>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  Grupa Facebookowa Okazje Plus
+                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                    Połączona
+                  </Badge>
+                </CardTitle>
+                <CardDescription>
+                  Okazje Plus – Społeczność Łowców Promocji i Okazji (ID: 1419456073494287)
+                </CardDescription>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                asChild
+              >
+                <a href="/facebook-group-cover.png" download="facebook-group-cover.png" target="_blank" rel="noopener noreferrer">
+                  <Download className="h-4 w-4 text-orange-500" />
+                  Pobierz baner grupy (1640x856)
+                </a>
+              </Button>
+              <Button
+                size="sm"
+                className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                asChild
+              >
+                <a href="https://www.facebook.com/groups/okazjepluspl/" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  Otwórz Grupę na FB
+                </a>
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold flex items-center gap-1.5">
+                  📝 Zoptymalizowany Opis Grupy
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1 text-xs"
+                  onClick={() => copyToClipboard(groupDescriptionText, 'Opis grupy')}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  Kopiuj opis
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground line-clamp-3">
+                {groupDescriptionText}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-muted/40 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold flex items-center gap-1.5">
+                  📋 3 Reguły Społeczności
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1 text-xs"
+                  onClick={() => copyToClipboard(groupRulesText, 'Reguły grupy')}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  Kopiuj reguły
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground line-clamp-3">
+                {groupRulesText}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 2. Nagłówek Sekcji AI Botów */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Bot className="h-6 w-6 text-primary" />
+            AI Administratorzy & Boty Społeczności
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            Zarządzaj autonomicznymi personami AI, które tworzą posty, animują grupę i promują okazje na Facebooku.
+          </p>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={loadBots}
+          disabled={loading}
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Odśwież
+        </Button>
+      </div>
+
+      {/* 3. Grid Kart Botów */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {bots.map((bot) => (
+          <Card
+            key={bot.id}
+            className={`transition-all border ${
+              bot.enabled
+                ? 'border-border/80 shadow-md bg-card/80 hover:border-primary/40'
+                : 'border-border/40 opacity-70 bg-muted/20'
+            }`}
+          >
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="text-3xl p-2.5 rounded-2xl bg-muted/70 border border-border/50">
+                    {bot.avatar}
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-bold flex items-center gap-2">
+                      {bot.name}
+                      <Badge
+                        variant={bot.target === 'both' ? 'default' : 'secondary'}
+                        className="text-xs font-normal"
+                      >
+                        {bot.target === 'both' ? 'Fanpage + Grupa' : bot.target === 'group' ? 'Tylko Grupa' : 'Tylko Fanpage'}
+                      </Badge>
+                    </CardTitle>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-xs text-muted-foreground">
+                        Harmonogram: {
+                          bot.schedule === 'hourly' ? 'Co 1h' :
+                          bot.schedule === 'every_3_hours' ? 'Co 3h' :
+                          bot.schedule === 'daily' ? '1x dziennie' :
+                          bot.schedule === 'twice_daily' ? '2x dziennie' : 'Ręczny'
+                        }
+                      </Badge>
+                      <Badge variant="outline" className="text-xs text-muted-foreground">
+                        Styl: {bot.tone}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-1.5">
+                  <Switch
+                    checked={bot.enabled}
+                    onCheckedChange={() => handleToggle(bot.id, bot.enabled)}
+                  />
+                  <span className="text-[11px] text-muted-foreground font-medium">
+                    {bot.enabled ? 'Aktywny' : 'Wyłączony'}
+                  </span>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4 text-sm pb-4">
+              <p className="text-muted-foreground text-xs leading-relaxed min-h-[40px]">
+                {bot.description}
+              </p>
+
+              {bot.customInstructions && (
+                <div className="p-2.5 rounded-lg bg-muted/40 border border-border/40 text-xs text-foreground/80">
+                  <span className="font-semibold text-primary">Wytyczne:</span> {bot.customInstructions}
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50 text-center">
+                <div className="p-2 rounded-lg bg-muted/30">
+                  <div className="text-xs text-muted-foreground">Wygenerowano</div>
+                  <div className="text-base font-bold text-foreground">{bot.totalGenerated || 0}</div>
+                </div>
+                <div className="p-2 rounded-lg bg-muted/30">
+                  <div className="text-xs text-muted-foreground">Opublikowano</div>
+                  <div className="text-base font-bold text-emerald-400">{bot.totalPublished || 0}</div>
+                </div>
+                <div className="p-2 rounded-lg bg-muted/30">
+                  <div className="text-xs text-muted-foreground">Auto-akceptacja</div>
+                  <div className="text-base font-bold text-foreground">
+                    {bot.autoApprove ? 'Włączona' : 'Kolejka'}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+
+            <CardFooter className="pt-2 pb-4 border-t border-border/40 flex items-center justify-between gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={() => {
+                  setSelectedBot(bot);
+                  setIsEditing(true);
+                }}
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+                Ustawienia
+              </Button>
+
+              <Button
+                size="sm"
+                className="gap-1.5 text-xs bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-sm"
+                onClick={() => {
+                  setRunningBotId(bot.id);
+                  setRunResult(null);
+                  setTopicHint('');
+                  setImmediatePublish(bot.autoApprove);
+                  setIsRunDialogOpen(true);
+                }}
+              >
+                <Play className="h-3.5 w-3.5 fill-current" />
+                Uruchom bota teraz
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+
+      {/* 4. Dialog Edycji Bota */}
+      {selectedBot && (
+        <Dialog open={isEditing} onOpenChange={setIsEditing}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <span className="text-2xl">{selectedBot.avatar}</span>
+                Edycja bota: {selectedBot.name}
+              </DialogTitle>
+              <DialogDescription>
+                Dostosuj zachowanie, ton wypowiedzi i kanały docelowe dla tej persony AI.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="bot-name">Nazwa bota</Label>
+                <Input
+                  id="bot-name"
+                  value={selectedBot.name}
+                  onChange={(e) => setSelectedBot({ ...selectedBot, name: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Cel publikacji</Label>
+                  <Select
+                    value={selectedBot.target}
+                    onValueChange={(val: any) => setSelectedBot({ ...selectedBot, target: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="both">Fanpage + Grupa</SelectItem>
+                      <SelectItem value="group">Tylko Grupa FB</SelectItem>
+                      <SelectItem value="fanpage">Tylko Fanpage</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Harmonogram</Label>
+                  <Select
+                    value={selectedBot.schedule}
+                    onValueChange={(val: any) => setSelectedBot({ ...selectedBot, schedule: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hourly">Co godzinę</SelectItem>
+                      <SelectItem value="every_3_hours">Co 3 godziny</SelectItem>
+                      <SelectItem value="twice_daily">2x dziennie</SelectItem>
+                      <SelectItem value="daily">1x dziennie</SelectItem>
+                      <SelectItem value="manual">Tylko na żądanie</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Ton głosu</Label>
+                  <Select
+                    value={selectedBot.tone}
+                    onValueChange={(val: any) => setSelectedBot({ ...selectedBot, tone: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="enthusiastic">Entuzjastyczny 🔥</SelectItem>
+                      <SelectItem value="expert">Ekspert & Rzeczowy 🛡️</SelectItem>
+                      <SelectItem value="friendly">Przyjazny & Otwarty 💬</SelectItem>
+                      <SelectItem value="concise">Zwięzły & Precyzyjny ⚡</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Tryb publikacji</Label>
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-xs text-muted-foreground">Publikuj od razu</span>
+                    <Switch
+                      checked={selectedBot.autoApprove}
+                      onCheckedChange={(checked) => setSelectedBot({ ...selectedBot, autoApprove: checked })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="bot-instructions">Własne instrukcje dla AI (Prompt)</Label>
+                <Textarea
+                  id="bot-instructions"
+                  rows={3}
+                  value={selectedBot.customInstructions || ''}
+                  onChange={(e) => setSelectedBot({ ...selectedBot, customInstructions: e.target.value })}
+                  placeholder="np. Dodawaj zawsze wzmiankę o darmowej dostawie z Allegro Smart..."
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsEditing(false)}>
+                Anuluj
+              </Button>
+              <Button onClick={handleSaveBot}>
+                Zapisz zmiany
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* 5. Dialog Uruchomienia Bota Teraz */}
+      <Dialog open={isRunDialogOpen} onOpenChange={setIsRunDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-amber-500" />
+              Uruchom bota AI na żądanie
+            </DialogTitle>
+            <DialogDescription>
+              Wygeneruj nowy angażujący post na podstawie bazy okazji i wytycznych tej persony.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="topic-hint">Opcjonalny temat / podpowiedź dla bota</Label>
+              <Input
+                id="topic-hint"
+                placeholder="np. Błąd cenowy na słuchawki Sony, dyskusja o black friday..."
+                value={topicHint}
+                onChange={(e) => setTopicHint(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-xl border border-border/60 bg-muted/40">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-semibold">Opublikuj od razu na Facebooku</Label>
+                <p className="text-xs text-muted-foreground">
+                  Gdy włączone, post natychmiast trafi na Twoją stronę/grupę.
+                </p>
+              </div>
+              <Switch
+                checked={immediatePublish}
+                onCheckedChange={setImmediatePublish}
+              />
+            </div>
+
+            {runResult && (
+              <div className="space-y-2 p-3 rounded-xl bg-card border border-primary/30">
+                <div className="flex items-center justify-between text-xs font-semibold text-primary">
+                  <span>Wygenerowana treść posta:</span>
+                  {runResult.published ? (
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+                      Opublikowano na FB!
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-amber-400 border-amber-500/30">
+                      Zapisano w kolejce
+                    </Badge>
+                  )}
+                </div>
+                <div className="p-3 rounded-lg bg-muted text-xs whitespace-pre-wrap font-sans max-h-48 overflow-y-auto">
+                  {runResult.content}
+                </div>
+                {runResult.platformPostId && (
+                  <div className="pt-1">
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs text-blue-400 gap-1"
+                      asChild
+                    >
+                      <a href={`https://www.facebook.com/${runResult.platformPostId}`} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-3 w-3" />
+                        Otwórz opublikowany post na Facebooku
+                      </a>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRunDialogOpen(false)}>
+              Zamknij
+            </Button>
+            <Button
+              onClick={handleRunBot}
+              disabled={loading}
+              className="gap-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generowanie...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  {immediatePublish ? 'Generuj i publikuj teraz' : 'Generuj do kolejki'}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
