@@ -321,22 +321,26 @@ export async function updateSocialPostStatus(
 /**
  * Approve a post manually
  */
-export async function approveSocialPost(postId: string, userId: string): Promise<void> {
+export async function approveSocialPost(postId: string, userId?: string): Promise<void> {
   const docRef = doc(db, 'socialPosts', postId);
   const now = new Date().toISOString();
   
   await updateDoc(docRef, {
     status: 'approved',
+    error: null,
     'metadata.manuallyApproved': true,
-    'metadata.approvedBy': userId,
+    'metadata.approvedBy': userId || null,
     'metadata.approvedAt': now,
     updatedAt: now
   });
   
-  const docSnap = await getDoc(docRef);
-  const platform = docSnap.data()?.platform;
-  
-  await logSocialPostAction(postId, platform, 'approved', 'approved', 'Manually approved by admin', userId);
+  try {
+    const docSnap = await getDoc(docRef);
+    const platform = docSnap.data()?.platform || 'facebook';
+    await logSocialPostAction(postId, platform, 'approved', 'approved', 'Manually approved by admin', userId);
+  } catch (err) {
+    console.warn('[approveSocialPost] Logging failed:', err);
+  }
 }
 
 /**
@@ -364,10 +368,13 @@ export async function retrySocialPost(postId: string, userId?: string): Promise<
     updatedAt: new Date().toISOString()
   });
   
-  const docSnap = await getDoc(docRef);
-  const platform = docSnap.data()?.platform;
-  
-  await logSocialPostAction(postId, platform, 'retried', 'approved', 'Post retry requested', userId);
+  try {
+    const docSnap = await getDoc(docRef);
+    const platform = docSnap.data()?.platform || 'facebook';
+    await logSocialPostAction(postId, platform, 'retried', 'approved', 'Post retry requested', userId);
+  } catch (err) {
+    console.warn('[retrySocialPost] Logging failed:', err);
+  }
 }
 
 // ============================================================================
@@ -386,18 +393,22 @@ export async function logSocialPostAction(
   userId?: string,
   error?: any
 ): Promise<void> {
-  const log: Omit<SocialPostLog, 'id'> = {
-    postId,
-    platform,
-    action,
-    status,
-    message,
-    error,
-    userId,
-    timestamp: new Date().toISOString()
-  };
-  
-  await addDoc(collection(db, 'socialPostLogs'), log);
+  try {
+    const log: any = {
+      postId,
+      platform: platform || 'facebook',
+      action,
+      status,
+      message,
+      error: error !== undefined ? error : null,
+      userId: userId !== undefined ? userId : null,
+      timestamp: new Date().toISOString()
+    };
+    
+    await addDoc(collection(db, 'socialPostLogs'), log);
+  } catch (err) {
+    console.warn('[logSocialPostAction] Failed to add log:', err);
+  }
 }
 
 /**

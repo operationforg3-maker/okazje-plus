@@ -17,9 +17,6 @@ import {
   getAllSocialConfigs,
   saveSocialConfig,
   getSocialPosts,
-  approveSocialPost,
-  cancelSocialPost,
-  retrySocialPost,
   getSocialTemplates,
   getSocialPostStats,
   getPlatformDisplayName,
@@ -33,7 +30,10 @@ import {
   deleteSocialPostAction,
   savePostAsTemplateAction,
   publishSocialPostAction,
-  validateFacebookCredentialsAction
+  validateFacebookCredentialsAction,
+  approveSocialPostAction,
+  cancelSocialPostAction,
+  retrySocialPostAction
 } from '@/app/actions/publish-social-post';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -175,34 +175,46 @@ export default function SocialMediaAdminPage() {
 
   async function handleApprovePost(postId: string) {
     try {
-      await approveSocialPost(postId, user?.uid || 'admin');
-      toast.success('Post zatwierdzony');
+      const res = await approveSocialPostAction(postId);
+      if (!res.success) {
+        toast.error(res.error || 'Błąd zatwierdzania posta');
+        return;
+      }
+      toast.success('Post został pomyślnie zatwierdzony');
       await loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error approving post:', error);
-      toast.error('Błąd zatwierdzania posta');
+      toast.error(`Błąd zatwierdzania posta: ${error?.message || 'Nieznany błąd'}`);
     }
   }
 
   async function handleCancelPost(postId: string) {
     try {
-      await cancelSocialPost(postId, user?.uid);
+      const res = await cancelSocialPostAction(postId);
+      if (!res.success) {
+        toast.error(res.error || 'Błąd anulowania posta');
+        return;
+      }
       toast.success('Post anulowany');
       await loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error cancelling post:', error);
-      toast.error('Błąd anulowania posta');
+      toast.error(`Błąd anulowania posta: ${error?.message || 'Nieznany błąd'}`);
     }
   }
 
   async function handleRetryPost(postId: string) {
     try {
-      await retrySocialPost(postId, user?.uid);
-      toast.success('Post ponownie w kolejce');
+      const res = await retrySocialPostAction(postId);
+      if (!res.success) {
+        toast.error(res.error || 'Błąd ponawiania posta');
+        return;
+      }
+      toast.success('Post ponownie w kolejce do publikacji');
       await loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error retrying post:', error);
-      toast.error('Błąd ponowienia posta');
+      toast.error(`Błąd ponowienia posta: ${error?.message || 'Nieznany błąd'}`);
     }
   }
 
@@ -947,6 +959,33 @@ function PostCard({
     }
   };
 
+  const handleDirectPublish = async () => {
+    try {
+      setPublishing(true);
+      if (post.status === 'pending') {
+        const appRes = await approveSocialPostAction(post.id);
+        if (!appRes.success) {
+          toast.error(appRes.error || 'Nie udało się zatwierdzić posta przed publikacją');
+          return;
+        }
+      }
+      const pubRes = await publishSocialPostAction(post.id);
+      if (!pubRes.success) {
+        const errMsg = typeof pubRes.error === 'string' ? pubRes.error : pubRes.error?.message || 'Błąd publikacji';
+        toast.error(`Nie udało się opublikować: ${errMsg}`);
+        onUpdate?.();
+        return;
+      }
+      toast.success('Post opublikowany na Facebooku!');
+      onUpdate?.();
+    } catch (err: any) {
+      console.error('Error publishing post:', err);
+      toast.error(`Błąd publikacji: ${err?.message || 'Nieznany błąd'}`);
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const handleSaveAsTemplate = async () => {
     if (!templateName.trim()) {
       toast.error('Podaj nazwę wzorca');
@@ -1050,6 +1089,21 @@ function PostCard({
                 >
                   <Check className="h-3.5 w-3.5 mr-1" />
                   Zatwierdź
+                </Button>
+                <Button
+                  onClick={handleDirectPublish}
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                  disabled={publishing}
+                  title="Zatwierdź i natychmiast opublikuj na Facebooku"
+                >
+                  {publishing ? (
+                    <RefreshCw className="h-3.5 w-3.5 mr-1 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5 mr-1" />
+                  )}
+                  Opublikuj teraz
                 </Button>
                 <Button 
                   onClick={() => onCancel(post.id)} 

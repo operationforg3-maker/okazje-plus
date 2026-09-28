@@ -841,3 +841,146 @@ export async function validateFacebookCredentialsAction(
   }
 }
 
+/**
+ * Approve a social post for publication (Server Action using Admin SDK)
+ */
+export async function approveSocialPostAction(
+  postId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    const postRef = adminDb.collection('socialPosts').doc(postId);
+    const postSnap = await postRef.get();
+
+    if (!postSnap.exists) {
+      return { success: false, error: 'Nie znaleziono posta w bazie danych' };
+    }
+
+    const currentPost = postSnap.data() as SocialPost;
+    const now = new Date().toISOString();
+
+    await postRef.update({
+      status: 'approved',
+      error: null,
+      'metadata.manuallyApproved': true,
+      'metadata.approvedBy': session.uid,
+      'metadata.approvedAt': now,
+      updatedAt: now,
+    });
+
+    await addSocialLog(
+      postId,
+      currentPost.platform || 'facebook',
+      'approved',
+      'approved',
+      'Post zatwierdzony przez administratora',
+      session.uid
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error('[ApproveSocialPost] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Błąd podczas zatwierdzania posta',
+    };
+  }
+}
+
+/**
+ * Cancel a social post (Server Action using Admin SDK)
+ */
+export async function cancelSocialPostAction(
+  postId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    const postRef = adminDb.collection('socialPosts').doc(postId);
+    const postSnap = await postRef.get();
+
+    if (!postSnap.exists) {
+      return { success: false, error: 'Nie znaleziono posta w bazie danych' };
+    }
+
+    const currentPost = postSnap.data() as SocialPost;
+    const now = new Date().toISOString();
+
+    await postRef.update({
+      status: 'cancelled',
+      updatedAt: now,
+    });
+
+    await addSocialLog(
+      postId,
+      currentPost.platform || 'facebook',
+      'cancelled',
+      'cancelled',
+      'Post anulowany przez administratora',
+      session.uid
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error('[CancelSocialPost] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Błąd podczas anulowania posta',
+    };
+  }
+}
+
+/**
+ * Retry a failed social post (Server Action using Admin SDK)
+ */
+export async function retrySocialPostAction(
+  postId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    const postRef = adminDb.collection('socialPosts').doc(postId);
+    const postSnap = await postRef.get();
+
+    if (!postSnap.exists) {
+      return { success: false, error: 'Nie znaleziono posta w bazie danych' };
+    }
+
+    const currentPost = postSnap.data() as SocialPost;
+    const now = new Date().toISOString();
+
+    await postRef.update({
+      status: 'approved',
+      error: null,
+      updatedAt: now,
+    });
+
+    await addSocialLog(
+      postId,
+      currentPost.platform || 'facebook',
+      'retried',
+      'approved',
+      'Post przekazany do ponowienia',
+      session.uid
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error('[RetrySocialPost] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Błąd podczas ponawiania posta',
+    };
+  }
+}
+
