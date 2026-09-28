@@ -580,41 +580,96 @@ async function searchDealsFirestoreFallback(
         console.warn('[Search Fallback] Deals vector search failed or suspended. Falling back to keyword search...', err);
       }
 
-      // Keyword search fallback for deals
-      if (!vectorSearchSuccess || docs.length === 0) {
-        const keywords = query.toLowerCase().split(/\s+/).filter(w => w.trim().length > 1);
-        if (keywords.length > 0) {
-          const getWordVariations = (word: string) => {
-            const w = word.trim();
-            if (!w) return [];
-            const lower = w.toLowerCase();
-            const upper = w.toUpperCase();
-            const capitalized = w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-            return [...new Set([w, lower, upper, capitalized])];
-          };
+      // Always run direct title prefix & keyword search to ensure exact text matches are included ahead of vector results
+      const keywords = query.toLowerCase().split(/\s+/).filter(w => w.trim().length > 1);
+      const getWordVariations = (word: string) => {
+        const w = word.trim();
+        if (!w) return [];
+        const lower = w.toLowerCase();
+        const upper = w.toUpperCase();
+        const capitalized = w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+        return [...new Set([w, lower, upper, capitalized])];
+      };
 
-          const stopWords = new Set(['i', 'a', 'o', 'w', 'z', 'na', 'do', 'dla', 'po', 'ze', 'za', 'lampa', 'lampy', 'produkt', 'okazja', 'meble']);
-          const sortedKeywords = [...keywords].sort((a, b) => {
-            const aStop = stopWords.has(a.toLowerCase()) ? 1 : 0;
-            const bStop = stopWords.has(b.toLowerCase()) ? 1 : 0;
-            if (aStop !== bStop) return aStop - bStop;
-            return b.length - a.length;
-          });
-          const primaryKeyword = sortedKeywords[0] || keywords[0];
+      const titlePromises: Promise<any>[] = [];
 
-          // 1. Direct tag & title match across ENTIRE deals collection in Firestore
-          const resultsArray = await Promise.all(
-            statuses.map(async (status) => {
-              let snap;
-              try {
-                snap = await adminDb.collection('deals')
-                  .where('status', '==', status)
-                  .where('searchTags', 'array-contains-any', getWordVariations(primaryKeyword))
-                  .limit(150)
-                  .get();
-              } catch {
-                snap = { docs: [] };
-              }
+      // 1. Direct document ID lookup if query resembles deal ID or URL
+      let cleanId = query.trim();
+      if (cleanId.includes('/deals/')) {
+        cleanId = cleanId.split('/deals/')[1].split(/[?#/]/)[0];
+      }
+      if (cleanId.length > 3) {
+        titlePromises.push(
+          adminDb.collection('deals').doc(cleanId).get().then((snap: any) => snap.exists ? [snap] : []).catch(() => [])
+        );
+      }
+
+      // 2. Direct prefix search on title and title.pl across all case variations
+      const queryVariations = getWordVariations(query);
+      for (const v of queryVariations) {
+        titlePromises.push(
+          adminDb.collection('deals').where('title', '>=', v).where('title', '<=', v + '\uf8ff').limit(30).get().then((s: any) => s.docs).catch(() => [])
+        );
+        titlePromises.push(
+          adminDb.collection('deals').where('title.pl', '>=', v).where('title.pl', '<=', v + '\uf8ff').limit(30).get().then((s: any) => s.docs).catch(() => [])
+        );
+      }
+
+      // 3. Search tags if available
+      const stopWords = new Set(['i', 'a', 'o', 'w', 'z', 'na', 'do', 'dla', 'po', 'ze', 'za', 'lampa', 'lampy', 'produkt', 'okazja', 'meble']);
+      const sortedKeywords = [...keywords].sort((a, b) => {
+        const aStop = stopWords.has(a.toLowerCase()) ? 1 : 0;
+        const bStop = stopWords.has(b.toLowerCase()) ? 1 : 0;
+        if (aStop !== bStop) return aStop - bStop;
+        return b.length - a.length;
+      });
+      const primaryKeyword = sortedKeywords[0] || keywords[0] || query;
+
+      for (const status of statuses) {
+        titlePromises.push(
+          adminDb.collection('deals')
+            .where('status', '==', status)
+            .where('searchTags', 'array-contains-any', getWordVariations(primaryKeyword))
+            .limit(100)
+            .get()
+            .then((s: any) => s.docs)
+            .catch(() => [])
+        );
+      }
+
+      // 4. Substring search across latest 150 deals
+      for (const status of statuses) {
+        titlePromises.push(
+          adminDb.collection('deals')
+            .where('status', '==', status)
+            .orderBy('createdAt', 'desc')
+            .limit(150)
+            .get()
+            .then((s: any) => s.docs)
+            .catch(() => [])
+        );
+      }
+
+      // 5. Relational product match via product_cores
+      const targetStatus = statusFilter === 'waiting_room' ? 'pending' : 'approved';
+      let productMatchDeals: any[] = [];
+      try {
+        const prodSnap = await adminDb.collection('product_cores')
+          .where('status', '==', targetStatus)
+          .where('searchTags', 'array-contains-any', getWordVariations(primaryKeyword))
+          .limit(50)
+          .get();
+
+        const matchedProductIds = prodSnap.docs.map((docSnap: any) => docSnap.id);
+        if (matchedProductIds.length > 0) {
+          const chunkedProductIds = chunkIds(matchedProductIds, 10);
+          const relationalDealsList = await Promise.all(
+            chunkedProductIds.map(async (chunk) => {
+              const snap = await adminDb.collection('deals')
+                .where('status', 'in', statuses)
+                .where('productId', 'in', chunk)
+                .limit(50)
+                .get();
               return snap.docs.map((docSnap: any) => {
                 const data = docSnap.data();
                 delete data.embedding;
@@ -622,51 +677,50 @@ async function searchDealsFirestoreFallback(
               });
             })
           );
-          let directMatchDeals = resultsArray.flat();
+          productMatchDeals = relationalDealsList.flat();
+        }
+      } catch {}
 
-          // 2. Relational match via product search
-          let productMatchDeals: any[] = [];
-
-          const targetStatus = statusFilter === 'waiting_room' ? 'pending' : 'approved';
-          let prodSnap;
-          try {
-            prodSnap = await adminDb.collection('product_cores')
-              .where('status', '==', targetStatus)
-              .where('searchTags', 'array-contains-any', getWordVariations(primaryKeyword))
-              .limit(50)
-              .get();
-          } catch {
-            prodSnap = { docs: [] };
-          }
-
-          const matchedProductIds = prodSnap.docs.map((docSnap: any) => docSnap.id);
-          if (matchedProductIds.length > 0) {
-            const chunkedProductIds = chunkIds(matchedProductIds, 10);
-            const relationalDealsList = await Promise.all(
-              chunkedProductIds.map(async (chunk) => {
-                const snap = await adminDb.collection('deals')
-                  .where('status', 'in', statuses)
-                  .where('productId', 'in', chunk)
-                  .limit(50)
-                  .get();
-                return snap.docs.map((docSnap: any) => {
-                  const data = docSnap.data();
-                  delete data.embedding;
-                  return { id: docSnap.id, ...data };
-                });
-              })
-            );
-            productMatchDeals = relationalDealsList.flat();
-          }
-
-          // Combine & deduplicate
-          const combinedMap = new Map<string, any>();
-          for (const d of [...directMatchDeals, ...productMatchDeals]) {
-            combinedMap.set(d.id, d);
-          }
-          docs = Array.from(combinedMap.values());
+      const textSnapshots = await Promise.all(titlePromises);
+      const textMatchDeals: any[] = [];
+      for (const docsGroup of textSnapshots) {
+        for (const doc of docsGroup) {
+          const data = typeof doc.data === 'function' ? doc.data() : doc;
+          const docId = doc.id || data.id;
+          delete data.embedding;
+          textMatchDeals.push({ id: docId, ...data });
         }
       }
+
+      // Combine & deduplicate by ID, keeping only allowed statuses
+      const combinedMap = new Map<string, any>();
+      for (const d of [...textMatchDeals, ...productMatchDeals, ...docs]) {
+        const dStatus = d.status || 'approved';
+        if (statuses.includes(dStatus)) {
+          combinedMap.set(d.id, d);
+        }
+      }
+
+      // Rank exact query matches (in title or id) first
+      const exactMatches: any[] = [];
+      const fuzzyMatches: any[] = [];
+      const qLower = query.toLowerCase();
+
+      for (const item of combinedMap.values()) {
+        const titleStr = typeof item.title === 'object'
+          ? Object.values(item.title).join(' ').toLowerCase()
+          : String(item.title || item.name || '').toLowerCase();
+        const idStr = String(item.id || '').toLowerCase();
+        const merchantStr = String(item.merchantName || item.merchant || '').toLowerCase();
+
+        if (titleStr.includes(qLower) || idStr.includes(qLower) || merchantStr.includes(qLower)) {
+          exactMatches.push(item);
+        } else {
+          fuzzyMatches.push(item);
+        }
+      }
+
+      docs = [...exactMatches, ...fuzzyMatches];
 
       // Post-filtering
       if (mainCategorySlug) docs = docs.filter((d: any) => d.mainCategorySlug === mainCategorySlug);
