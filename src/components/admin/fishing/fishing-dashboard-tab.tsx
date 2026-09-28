@@ -110,8 +110,8 @@ export function FishingDashboardTab({
         });
         toast.error(res.error || 'Błąd połączenia z Facebookiem');
       }
-    } catch {
-      toast.error('Błąd wykonania zapytania do Meta');
+    } catch (err: any) {
+      toast.error(err?.message || 'Błąd wykonania zapytania do Meta');
     } finally {
       setTestingMeta(false);
     }

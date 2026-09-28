@@ -91,12 +91,21 @@ export function FishingSettingsTab({
       setTestingFb(true);
       const res = await testFacebookApiAction(formData.fb.pageId, formData.fb.accessToken);
       if (res.success) {
+        if (res.resolvedPageToken && res.resolvedPageToken !== formData.fb.accessToken) {
+          setFormData(prev => ({
+            ...prev,
+            fb: {
+              ...prev.fb,
+              accessToken: res.resolvedPageToken!,
+            },
+          }));
+        }
         toast.success(`Facebook API OK! Zweryfikowano: ${res.pageName}`);
       } else {
         toast.error(res.error || 'Błąd autoryzacji Facebook API');
       }
-    } catch {
-      toast.error('Błąd połączenia z Facebookiem');
+    } catch (err: any) {
+      toast.error(err?.message || 'Błąd połączenia z Facebookiem');
     } finally {
       setTestingFb(false);
     }
@@ -107,13 +116,22 @@ export function FishingSettingsTab({
       setSaving(true);
       const res = await saveFishingAutopilotConfigAction(formData);
       if (res.success) {
+        if (res.resolvedPageToken && res.resolvedPageToken !== formData.fb.accessToken) {
+          setFormData(prev => ({
+            ...prev,
+            fb: {
+              ...prev.fb,
+              accessToken: res.resolvedPageToken!,
+            },
+          }));
+        }
         toast.success('Ustawienia wędkarskiego autopilota zostały zapisane!');
         onRefreshConfig();
       } else {
         toast.error(res.error || 'Błąd zapisu ustawień');
       }
-    } catch {
-      toast.error('Błąd zapisu');
+    } catch (err: any) {
+      toast.error(err?.message || 'Błąd zapisu konfiguracji');
     } finally {
       setSaving(false);
     }

@@ -193,21 +193,44 @@ export async function getFishingAutopilotConfigAction(): Promise<{
 
 export async function saveFishingAutopilotConfigAction(
   config: Partial<FishingAutopilotConfig>
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; resolvedPageToken?: string; error?: string }> {
   try {
     const session = await getServerAuthSession();
     if (!session || session.role !== 'admin') {
       return { success: false, error: 'Wymagane uprawnienia administratora' };
     }
 
+    const payload: any = { ...config };
+    let resolvedPageToken: string | undefined = undefined;
+
+    // Jeśli podano token i pageId, sprawdź czy to User Token i spróbuj automatycznie pobrać Page Token
+    if (config.fb?.accessToken && config.fb?.pageId) {
+      try {
+        const pageRes = await fetch(
+          `https://graph.facebook.com/v19.0/${config.fb.pageId}?fields=access_token,name&access_token=${encodeURIComponent(config.fb.accessToken)}`,
+          { cache: 'no-store' }
+        );
+        const pageData = await pageRes.json();
+        if (pageData.access_token) {
+          resolvedPageToken = pageData.access_token;
+          payload.fb = {
+            ...payload.fb,
+            accessToken: pageData.access_token,
+          };
+        }
+      } catch (tokenErr) {
+        console.warn('Auto-resolution of page access token during save failed:', tokenErr);
+      }
+    }
+
     const docRef = adminDb.collection('systemSettings').doc(CONFIG_DOC_ID);
     await docRef.set({
-      ...config,
+      ...payload,
       updatedAt: new Date().toISOString(),
     }, { merge: true });
 
     revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
-    return { success: true };
+    return { success: true, resolvedPageToken };
   } catch (error) {
     console.error('Error saving fishing config:', error);
     return { success: false, error: 'Nie udało się zapisać konfiguracji' };
@@ -276,6 +299,7 @@ export async function testFacebookApiAction(
   link?: string;
   canPost?: boolean;
   recentPostsCount?: number;
+  resolvedPageToken?: string;
   error?: string;
 }> {
   try {
@@ -293,27 +317,125 @@ export async function testFacebookApiAction(
       token = token || configRes.config.fb.accessToken;
     }
 
+    // Fallback do konfiguracji ogólnej socialConfig/facebook jeśli wciąż brak tokena lub pageId
+    if (!pageId || !token) {
+      try {
+        const socialSnap = await adminDb.collection('socialConfig').doc('facebook').get();
+        if (socialSnap.exists) {
+          const socData = socialSnap.data();
+          pageId = pageId || socData?.credentials?.pageId;
+          token = token || socData?.credentials?.accessToken;
+        }
+      } catch (socErr) {
+        console.warn('Could not read fallback socialConfig/facebook:', socErr);
+      }
+    }
+
     if (!pageId || !token) {
       return { success: false, error: 'Brak skonfigurowanego Page ID lub Access Tokena' };
     }
 
+    let activeToken = token;
+    let resolvedPageToken: string | undefined = undefined;
+
     // 1. Sprawdź podstawowe info o stronie
-    const infoUrl = `https://graph.facebook.com/v19.0/${pageId}?fields=id,name,link&access_token=${encodeURIComponent(token)}`;
-    const infoRes = await fetch(infoUrl, { cache: 'no-store' });
-    const infoData = await infoRes.json();
+    let infoUrl = `https://graph.facebook.com/v19.0/${pageId}?fields=id,name,link&access_token=${encodeURIComponent(activeToken)}`;
+    let infoRes = await fetch(infoUrl, { cache: 'no-store' });
+    let infoData = await infoRes.json();
+
+    if (!infoRes.ok || infoData.error) {
+      // Spróbujmy sprawdzić czy token to User Token i czy potrafi wygenerować Page Token
+      try {
+        const exchangeRes = await fetch(
+          `https://graph.facebook.com/v19.0/${pageId}?fields=access_token,name&access_token=${encodeURIComponent(activeToken)}`,
+          { cache: 'no-store' }
+        );
+        const exchangeData = await exchangeRes.json();
+        if (exchangeData.access_token) {
+          activeToken = exchangeData.access_token;
+          resolvedPageToken = activeToken;
+          infoUrl = `https://graph.facebook.com/v19.0/${pageId}?fields=id,name,link&access_token=${encodeURIComponent(activeToken)}`;
+          infoRes = await fetch(infoUrl, { cache: 'no-store' });
+          infoData = await infoRes.json();
+        }
+      } catch (exErr) {
+        console.warn('Exchange attempt failed:', exErr);
+      }
+    }
 
     if (!infoRes.ok || infoData.error) {
       return {
         success: false,
-        error: infoData.error?.message || 'Błąd autoryzacji Facebook API',
+        error: infoData.error?.error_user_msg || infoData.error?.message || 'Błąd autoryzacji Facebook API',
       };
     }
 
     // 2. Sprawdź odczyt feedu
-    const feedUrl = `https://graph.facebook.com/v19.0/${pageId}/feed?limit=5&access_token=${encodeURIComponent(token)}`;
+    const feedUrl = `https://graph.facebook.com/v19.0/${pageId}/feed?limit=5&access_token=${encodeURIComponent(activeToken)}`;
     const feedRes = await fetch(feedUrl, { cache: 'no-store' });
     const feedData = await feedRes.json();
+
+    if (feedData.error) {
+      // Jeśli błąd to "User access token is not supported" (subcode 2069032)
+      if (feedData.error.error_subcode === 2069032 || feedData.error.code === 190) {
+        try {
+          const pageTokenRes = await fetch(
+            `https://graph.facebook.com/v19.0/${pageId}?fields=access_token,name&access_token=${encodeURIComponent(token)}`,
+            { cache: 'no-store' }
+          );
+          const pageTokenData = await pageTokenRes.json();
+          if (pageTokenData.access_token) {
+            activeToken = pageTokenData.access_token;
+            resolvedPageToken = activeToken;
+
+            // Zapisz Page Token w ustawieniach bazy
+            await adminDb.collection('systemSettings').doc(CONFIG_DOC_ID).set({
+              fb: { accessToken: activeToken }
+            }, { merge: true });
+
+            // Ponowny test feedu z tokenem strony
+            const reFeedRes = await fetch(
+              `https://graph.facebook.com/v19.0/${pageId}/feed?limit=5&access_token=${encodeURIComponent(activeToken)}`,
+              { cache: 'no-store' }
+            );
+            const reFeedData = await reFeedRes.json();
+            if (!reFeedData.error) {
+              const count = Array.isArray(reFeedData.data) ? reFeedData.data.length : 0;
+              return {
+                success: true,
+                pageId: infoData.id,
+                pageName: infoData.name,
+                link: infoData.link || `https://www.facebook.com/${infoData.id}`,
+                canPost: true,
+                recentPostsCount: count,
+                resolvedPageToken,
+              };
+            }
+          }
+        } catch (subErr) {
+          console.warn('Page token resolution failed on feed error:', subErr);
+        }
+
+        return {
+          success: false,
+          error: 'Podany token to User Access Token. Meta wymaga Page Access Token dla tej strony (Nowe Środowisko Stron).',
+        };
+      }
+
+      return {
+        success: false,
+        error: feedData.error.error_user_msg || feedData.error.message || 'Błąd odczytu strony na Facebooku',
+      };
+    }
+
     const count = Array.isArray(feedData.data) ? feedData.data.length : 0;
+
+    // Jeśli udało się rozwiązać token, zapisz go w bazie
+    if (resolvedPageToken) {
+      await adminDb.collection('systemSettings').doc(CONFIG_DOC_ID).set({
+        fb: { accessToken: resolvedPageToken }
+      }, { merge: true });
+    }
 
     return {
       success: true,
@@ -322,6 +444,7 @@ export async function testFacebookApiAction(
       link: infoData.link || `https://www.facebook.com/${infoData.id}`,
       canPost: true,
       recentPostsCount: count,
+      resolvedPageToken,
     };
   } catch (error) {
     console.error('Error testing FB API:', error);
@@ -338,7 +461,7 @@ export async function testFacebookApiAction(
 
 export async function getFishingDealsAction(
   searchQuery?: string,
-  limitCount: number = 50,
+  limitCount: number = 150,
   partnerFilter?: string
 ): Promise<{
   success: boolean;
@@ -360,7 +483,14 @@ export async function getFishingDealsAction(
       'haczyk', 'przynęt', 'wobler', 'zanęt', 'sygnalizator', 'echosond', 'ponton', 
       'namiot karpiowy', 'namiot wędkarski', 'fotel wędkarski', 'wodery', 'spodniobuty',
       'żyłka wędkarska', 'daiwa', 'mikado', 'shimano', 'caperlan', 'fox rage', 'lineaeffe',
-      'aqua marina', 'caperlan', 'savage gear'
+      'aqua marina', 'savage gear', 'spławik', 'podbierak',
+      // Słowa kluczowe angielskie (dla ofert z AliExpress i feedów globalnych)
+      'fishing', 'fish rod', 'fishing rod', 'fishing reel', 'baitcasting',
+      'fishing lure', 'crankbait', 'wobbler', 'fishing hook', 'fishing line',
+      'fishing tackle', 'fishing bait', 'fishing net', 'fishing pliers',
+      'carp fishing', 'fly fishing', 'ice fishing', 'swivel hook', 'treble hook',
+      'minnow lure', 'popper bait', 'hard bait', 'artificial bait', 'lead sinker',
+      'trolling lure', 'jig lure'
     ];
 
     const STRICT_NEGATIVE = [
@@ -373,7 +503,10 @@ export async function getFishingDealsAction(
       'majtki', 'kurtka narciarska', 'narty', 'sunglasses', 'okulary', 'okular', 'lampenschirme',
       'obudowa', 'ładowarka', 'poliestrowa', 'legrand', 'düwi', 'kuszy', 'łowiectwa podwodnego',
       'kapelusz', 'czapka', 'topslang', 'koszulk', 'ssz 230v', 'eaton', 'greenblue', 'retoo',
-      'satel', 'siemens', 'dahua', 'gazex', 'traktorek', 'napięcia'
+      'satel', 'siemens', 'dahua', 'gazex', 'traktorek', 'napięcia',
+      // Angielskie wykluczenia
+      'dog', 'cat', 'dress', 'bra', 'bikini', 'underwear', 'earphone', 'headphone',
+      'nail art', 'wig', 'hair bun', 'hair styling', 'wall mounted'
     ];
 
     // Pobierz konfigurację filtrów
@@ -388,7 +521,7 @@ export async function getFishingDealsAction(
       .collection('deals')
       .where('status', '==', 'approved')
       .where('subCategorySlug', '==', 'wedkarstwo')
-      .limit(150)
+      .limit(200)
       .get();
     snapCategory.docs.forEach(d => docsMap.set(d.id, { id: d.id, ...d.data() }));
 
@@ -397,11 +530,24 @@ export async function getFishingDealsAction(
       .collection('deals')
       .where('status', '==', 'approved')
       .where('tags', 'array-contains', 'wędkarstwo')
-      .limit(150)
+      .limit(200)
       .get();
     snapTags.docs.forEach(d => docsMap.set(d.id, { id: d.id, ...d.data() }));
 
-    // 3. Ostatnie deale ze sportu i ogólne (dla wyłapania ofert z innych feedów)
+    // 3. Oferty z AliExpress (zawsze pobieramy pulę, aby filtr AliExpress zwracał właściwe okazje)
+    const snapAli = await adminDb
+      .collection('deals')
+      .where('status', '==', 'approved')
+      .where('source', '==', 'aliexpress')
+      .limit(partnerFilter === 'aliexpress' ? 500 : 250)
+      .get();
+    snapAli.docs.forEach(d => {
+      if (!docsMap.has(d.id)) {
+        docsMap.set(d.id, { id: d.id, ...d.data() });
+      }
+    });
+
+    // 4. Ostatnie deale ze sportu i ogólne (dla wyłapania ofert z innych feedów)
     const snapRecent = await adminDb
       .collection('deals')
       .where('status', '==', 'approved')
@@ -423,21 +569,22 @@ export async function getFishingDealsAction(
       } else if (typeof data.title === 'object' && data.title !== null) {
         titleStr = data.title.pl || data.title.en || Object.values(data.title)[0] || '';
       }
+      const titleEn = typeof data.title === 'object' && data.title !== null ? String(data.title.en || '') : '';
+      const fullSearchTitle = `${titleStr} ${titleEn}`.toLowerCase();
 
-      const titleLower = titleStr.toLowerCase();
       const descLower = (typeof data.description === 'string' ? data.description : (data.description?.pl || '')).toLowerCase();
       const tagsArray = Array.isArray(data.tags) ? data.tags.map((t: any) => String(t).toLowerCase()) : [];
       const rawSource = String(data.source || data.metadata?.source || 'okazjeplus').toLowerCase();
 
       // Odrzuć śmieci i oferty niespełniające kryteriów wędkarskich
-      if (STRICT_NEGATIVE.some(neg => titleLower.includes(neg) || descLower.includes(neg))) {
+      if (STRICT_NEGATIVE.some(neg => fullSearchTitle.includes(neg) || descLower.includes(neg))) {
         continue;
       }
 
       // Sprawdź czy to sprzęt wędkarski
       const isSubCat = data.subCategorySlug === 'wedkarstwo' || data.subCategorySlug === 'sporty-wodne';
-      const hasFishingTag = tagsArray.some((t: string) => t.includes('wędk') || t.includes('wedk'));
-      const matchesKeyword = allKeywords.some(k => titleLower.includes(k) || descLower.includes(k));
+      const hasFishingTag = tagsArray.some((t: string) => t.includes('wędk') || t.includes('wedk') || t.includes('fishing'));
+      const matchesKeyword = allKeywords.some(k => fullSearchTitle.includes(k) || descLower.includes(k));
 
       if (isSubCat || hasFishingTag || matchesKeyword) {
         // Price parsing
@@ -446,8 +593,8 @@ export async function getFishingDealsAction(
         else if (data.price?.amount) currentPriceVal = data.price.amount;
         else if (typeof data.currentPrice === 'number') currentPriceVal = data.currentPrice;
 
-        // Odrzuć oferty o cenie < 15 zł (drobiazgi / fałszywe groszówki)
-        if (currentPriceVal !== undefined && currentPriceVal < 15) {
+        // Odrzuć oferty o cenie <= 0
+        if (currentPriceVal !== undefined && currentPriceVal <= 0) {
           continue;
         }
 
@@ -455,7 +602,7 @@ export async function getFishingDealsAction(
         let sourceName = 'manual';
         if (rawSource.includes('convertiser')) sourceName = 'convertiser';
         else if (rawSource.includes('tradetracker')) sourceName = 'tradetracker';
-        else if (rawSource.includes('aliexpress')) sourceName = 'aliexpress';
+        else if (rawSource.includes('aliexpress') || String(data.merchantName || '').toLowerCase().includes('aliexpress')) sourceName = 'aliexpress';
         else if (rawSource.includes('amazon')) sourceName = 'amazon';
         else if (rawSource.includes('allegro')) sourceName = 'allegro';
 
@@ -1439,10 +1586,94 @@ export async function harvestFishingPartnerOffersAction(options?: {
       }
     }
 
+    // 3. ALIEXPRESS PARTNER FETCH
+    if (sources.includes('aliexpress') && (config.partners?.aliexpress ?? true)) {
+      try {
+        const aliKeywords = [
+          'fishing rod', 'fishing reel', 'fishing lure', 'crankbait', 'wobbler',
+          'fishing hook', 'fishing line', 'fishing tackle', 'fishing bait', 'fishing net',
+          'fishing pliers', 'carp fishing', 'fly fishing', 'ice fishing', 'swivel hook',
+          'treble hook', 'minnow lure', 'popper bait', 'hard bait', 'artificial bait',
+          'lead sinker', 'trolling lure', 'jig lure', 'spinning rod', 'spinning reel',
+          'baitcasting', 'wędka', 'kołowrotek', 'plecionka wędkarska', 'wodery'
+        ];
+
+        const aliSnap = await adminDb
+          .collection('deals')
+          .where('source', '==', 'aliexpress')
+          .where('status', '==', 'approved')
+          .limit(300)
+          .get();
+
+        const batch = adminDb.batch();
+        let batchCount = 0;
+
+        for (const doc of aliSnap.docs) {
+          if (resultsBySource.aliexpress >= limitPerSource) break;
+          const data = doc.data();
+          const titlePl = (data.title?.pl || '').toLowerCase();
+          const titleEn = (data.title?.en || '').toLowerCase();
+          const titleStr = typeof data.title === 'string' ? data.title.toLowerCase() : '';
+          const fullTitle = `${titlePl} ${titleEn} ${titleStr}`;
+          const descStr = (typeof data.description === 'string' ? data.description : (data.description?.pl || '')).toLowerCase();
+          const combined = `${fullTitle} ${descStr}`;
+
+          if (STRICT_NEGATIVE.some(neg => combined.includes(neg))) continue;
+          if (!aliKeywords.some(kw => combined.includes(kw))) continue;
+
+          const tags = Array.isArray(data.tags) ? [...data.tags] : [];
+          let needsUpdate = false;
+
+          if (!tags.includes('wędkarstwo')) { tags.push('wędkarstwo'); needsUpdate = true; }
+          if (!tags.includes('aliexpress')) { tags.push('aliexpress'); needsUpdate = true; }
+          if (!tags.includes('promocje wędkarskie')) { tags.push('promocje wędkarskie'); needsUpdate = true; }
+          if (!tags.includes('żona nie widzi')) { tags.push('żona nie widzi'); needsUpdate = true; }
+
+          if (data.subCategorySlug !== 'wedkarstwo') {
+            needsUpdate = true;
+          }
+
+          if (needsUpdate) {
+            const rawLink = data.link || data.affiliateLink || data.dealUrl || '';
+            const trackedLink = resolveFishingAffiliateUrl({
+              id: doc.id,
+              ...data,
+              source: 'aliexpress',
+            }, config.tracking?.campaign || 'Fishing_2');
+
+            batch.update(doc.ref, {
+              subCategorySlug: 'wedkarstwo',
+              mainCategorySlug: 'sport-turystyka',
+              category: 'sport-turystyka',
+              tags,
+              affiliateLink: trackedLink,
+              verified: true,
+              updatedAt: new Date().toISOString(),
+            });
+
+            batchCount++;
+            resultsBySource.aliexpress++;
+            totalImported++;
+
+            if (batchCount >= 450) {
+              await batch.commit();
+              batchCount = 0;
+            }
+          }
+        }
+
+        if (batchCount > 0) {
+          await batch.commit();
+        }
+      } catch (aliErr) {
+        console.error('[AliExpress] Harvesting error:', aliErr);
+      }
+    }
+
     revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
     revalidatePath('/[locale]/deals', 'page');
 
-    const message = `Pobrano łącznie ${totalImported} nowych ofert wędkarskich (Convertiser: ${resultsBySource.convertiser}, TradeTracker: ${resultsBySource.tradetracker}).`;
+    const message = `Pobrano/zaktualizowano łącznie ${totalImported} ofert wędkarskich (Convertiser: ${resultsBySource.convertiser}, TradeTracker: ${resultsBySource.tradetracker}, AliExpress: ${resultsBySource.aliexpress}).`;
 
     return {
       success: true,
