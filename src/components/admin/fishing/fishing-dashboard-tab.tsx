@@ -35,14 +35,14 @@ import type {
   FishingAutopilotConfig, 
   FishingBotPersona, 
   FishingBotRole, 
-  FishingPostQueueItem 
+  FishingPostQueueItem,
+  FishingDealItem 
 } from '@/lib/types';
 import {
   generateFishingPostAction,
   addPostToFishingQueueAction,
   publishFishingPostAction,
   testFacebookApiAction,
-  type FishingDealItem
 } from '@/app/actions/fishing-autopilot';
 
 interface FishingDashboardTabProps {

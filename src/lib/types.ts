@@ -2359,7 +2359,9 @@ export interface FishingDealItem {
   merchant?: string;
   imageUrl?: string;
   temperature: number;
-  dealUrl: string;
+  dealUrl: string; // Bezpośredni link afiliacyjny do partnera (np. AliExpress, Convertiser, TradeTracker)
+  portalUrl?: string; // Link wewnętrzny do okazji na portalu okazjeplus.pl
+  rawLink?: string;
   source: string;
   category?: string;
 }

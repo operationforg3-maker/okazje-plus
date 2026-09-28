@@ -12,10 +12,11 @@ import {
   FishingAutopilotConfig, 
   FishingBotPersona, 
   FishingPostQueueItem, 
-  FishingBotRole 
+  FishingBotRole,
+  FishingDealItem 
 } from '@/lib/types';
 import { ai } from '@/ai/genkit';
-import { applyFishingTracking } from '@/lib/fishing-utils';
+import { applyFishingTracking, resolveFishingAffiliateUrl } from '@/lib/fishing-utils';
 
 const CONFIG_DOC_ID = 'fishing-autopilot-settings';
 
@@ -335,20 +336,6 @@ export async function testFacebookApiAction(
 // WYSZUKIWANIE OKAZJI WĘDKARSKICH W BAZIE
 // ============================================================================
 
-export interface FishingDealItem {
-  id: string;
-  title: string;
-  price: string;
-  oldPrice?: string;
-  discount?: string;
-  merchant?: string;
-  imageUrl?: string;
-  temperature: number;
-  dealUrl: string;
-  source: string;
-  category?: string;
-}
-
 export async function getFishingDealsAction(
   searchQuery?: string,
   limitCount: number = 30,
@@ -430,6 +417,12 @@ export async function getFishingDealsAction(
           discountStr = `-${Math.round(((originalPriceVal - currentPriceVal) / originalPriceVal) * 100)}%`;
         }
 
+        const directAffiliateUrl = resolveFishingAffiliateUrl({
+          id: doc.id,
+          ...data,
+          source: sourceName,
+        }, 'Fishing_2');
+
         matches.push({
           id: doc.id,
           title: titleStr || 'Sprzęt wędkarski',
@@ -439,7 +432,9 @@ export async function getFishingDealsAction(
           merchant: data.merchantName || data.merchant || 'Sklep wędkarski',
           imageUrl: data.imageUrl || data.image || '',
           temperature: Number(data.temperature) || 100,
-          dealUrl: applyFishingTracking(`https://okazjeplus.pl/pl/deals/${doc.id}`, 'Fishing_2'),
+          dealUrl: directAffiliateUrl,
+          portalUrl: `https://okazjeplus.pl/pl/deals/${doc.id}`,
+          rawLink: data.link || data.affiliateLink || '',
           source: sourceName,
           category: data.category || 'Wędkarstwo',
         });
@@ -627,11 +622,15 @@ Zwróć odpowiedź w czystym formacie tekstu gotowego do wklejenia.
       }
     }
 
-    const rawLink = dealInfo?.dealUrl || 'https://okazjeplus.pl';
-    const trackedLink = applyFishingTracking(rawLink, 'Fishing_2');
+    const configRes = await getFishingAutopilotConfigAction();
+    const trackingCampaign = configRes.config.tracking?.campaign || 'Fishing_2';
 
-    if (dealInfo?.dealUrl || trackedLink) {
-      firstComment = `🔗 Bezpośredni link do okazji i kod rabatowy znajdziesz tutaj:\n${trackedLink}`;
+    const directAffiliateLink = dealInfo
+      ? resolveFishingAffiliateUrl(dealInfo, trackingCampaign)
+      : resolveFishingAffiliateUrl(params.targetDealData?.dealUrl || 'https://okazjeplus.pl', trackingCampaign);
+
+    if (directAffiliateLink) {
+      firstComment = `🔗 Bezpośredni link do okazji i kod rabatowy w sklepie:\n${directAffiliateLink}`;
     }
 
     const queueItem: Partial<FishingPostQueueItem> = {
@@ -645,7 +644,7 @@ Zwróć odpowiedź w czystym formacie tekstu gotowego do wklejenia.
       wifeAlibi: wifeAlibi || undefined,
       realPrice: dealInfo?.price || undefined,
       discountStr: dealInfo?.discount || undefined,
-      linkUrl: trackedLink,
+      linkUrl: directAffiliateLink,
       imageUrl: dealInfo?.imageUrl || undefined,
       hashtags,
       firstComment: firstComment || undefined,
@@ -810,7 +809,7 @@ export async function publishFishingPostAction(
 
     const trackingCampaign = config.tracking?.campaign || 'Fishing_2';
     const finalTrackingLink = post.linkUrl
-      ? applyFishingTracking(post.linkUrl, trackingCampaign)
+      ? resolveFishingAffiliateUrl(post.linkUrl, trackingCampaign)
       : undefined;
 
     // 1. Publikacja na Facebooku (Page / Group)
@@ -1048,6 +1047,8 @@ export async function createManualFishingDealAndPostAction(params: {
       botRole = 'wife_secret',
     } = params;
 
+    const directAffiliateUrl = resolveFishingAffiliateUrl(dealUrl, 'Fishing_2');
+
     // 1. Zapisz deal w Firestore
     const newDealDoc = {
       title: { pl: title },
@@ -1055,7 +1056,8 @@ export async function createManualFishingDealAndPostAction(params: {
       price: price,
       originalPrice: originalPrice,
       legacyPrice: price,
-      link: applyFishingTracking(dealUrl, 'Fishing_2'),
+      link: directAffiliateUrl,
+      affiliateLink: directAffiliateUrl,
       image: imageUrl || '',
       imageHint: 'sprzęt wędkarski',
       category: 'sport-turystyka',
@@ -1093,7 +1095,7 @@ export async function createManualFishingDealAndPostAction(params: {
         discount: originalPrice && originalPrice > price ? `-${Math.round(((originalPrice - price) / originalPrice) * 100)}%` : undefined,
         merchant,
         imageUrl,
-        dealUrl: `https://okazjeplus.pl/pl/deals/${dealId}`,
+        dealUrl: directAffiliateUrl,
       },
     });
 
@@ -1218,6 +1220,7 @@ export async function harvestFishingPartnerOffersAction(options?: {
                 originalPrice: origPriceNum,
                 legacyPrice: priceNum,
                 link,
+                affiliateLink: link,
                 image: imageUrl,
                 imageHint: 'sprzęt wędkarski',
                 category: 'sport-turystyka',
@@ -1298,6 +1301,7 @@ export async function harvestFishingPartnerOffersAction(options?: {
                 originalPrice: item.fromPrice,
                 legacyPrice: priceNum,
                 link,
+                affiliateLink: link,
                 image: item.imageURL || '',
                 imageHint: 'sprzęt wędkarski',
                 category: 'sport-turystyka',

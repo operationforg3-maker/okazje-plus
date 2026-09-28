@@ -480,15 +480,29 @@ export function FishingDealsTab({
               </div>
 
               <CardFooter className="p-3 pt-0 border-t bg-muted/10 flex items-center justify-between gap-2 mt-2">
-                <a
-                  href={deal.dealUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  Link
-                </a>
+                <div className="flex items-center gap-2.5">
+                  <a
+                    href={deal.dealUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Bezpośredni link do oferty w sklepie partnera z trackingiem afiliacyjnym"
+                    className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    Sklep (Afiliacja)
+                  </a>
+                  {deal.portalUrl && (
+                    <a
+                      href={deal.portalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Podgląd okazji na portalu Okazje Plus"
+                      className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center"
+                    >
+                      Portal
+                    </a>
+                  )}
+                </div>
 
                 <Button
                   size="sm"
