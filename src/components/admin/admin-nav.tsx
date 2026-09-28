@@ -20,6 +20,7 @@ import {
   Rocket,
   ShieldCheck,
   Sparkles,
+  Fish,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -91,6 +92,13 @@ const navStructure: (NavItem | NavGroup)[] = [
       { title: 'Zakupy AliExpress', href: '/admin/aliexpress-purchases', icon: ShoppingCart },
       { title: 'Baza danych', href: '/admin/database', icon: Database },
       { title: 'Social media', href: '/admin/social-media', icon: Share2 },
+      { 
+        title: 'Wędkarskie Promocje (FB)', 
+        href: '/admin/fishing-autopilot', 
+        icon: Fish, 
+        badge: 'Żona nie widzi', 
+        badgeVariant: 'default' 
+      },
     ],
   },
   {

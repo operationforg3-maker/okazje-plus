@@ -215,6 +215,17 @@ export const CATEGORY_STRUCTURE: Category[] = [
         ],
       },
       {
+        name: 'Wędkarstwo',
+        slug: 'wedkarstwo',
+        subcategories: [
+          { name: 'Kołowrotki i wędki', slug: 'kolowrotki-wedki', importKeywords: ['fishing reel', 'fishing rod', 'spinning rod', 'feeder', 'shimano reel', 'daiwa'] },
+          { name: 'Przynęty i zanęty', slug: 'przynety-zanety', importKeywords: ['fishing lure', 'wobbler', 'soft bait', 'boilies', 'zanęta'] },
+          { name: 'Żyłki i plecionki', slug: 'zylki-plecionki', importKeywords: ['braided line', 'fishing line', 'monofilament', 'plecionka'] },
+          { name: 'Akcesoria wędkarskie', slug: 'akcesoria-wedkarskie', importKeywords: ['fish finder', 'bite alarm', 'fishing hook', 'tackle box', 'echosonda', 'sygnalizator'] },
+          { name: 'Biwak i odzież wędkarska', slug: 'biwak-wedkarski', importKeywords: ['bivvy', 'fishing chair', 'waders', 'fishing tent', 'fotel wędkarski', 'wodery'] },
+        ],
+      },
+      {
         name: 'Sporty zimowe',
         slug: 'sporty-zimowe',
         subcategories: [

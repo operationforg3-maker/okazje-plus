@@ -258,8 +258,8 @@ export async function getPromotableDealsAction(
         statusFilter: 'approved',
         sortBy: q === '*' ? 'temperature' : 'relevance',
         page: 1,
-      },
-      limitCount
+        limit: limitCount,
+      }
     );
 
     const promotableDeals: PromotableDeal[] = dealsResult.map(deal => {

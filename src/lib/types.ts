@@ -2238,6 +2238,134 @@ export interface SocialPostLog {
 }
 
 // ============================================
+// WĘDKARSKI AUTOPILOT FB & PORTAL ("Żona nie widzi")
+// ============================================
+
+export type FishingBotRole = 'wife_secret' | 'deal_hunter' | 'angler_chatter' | 'gear_expert';
+
+export interface FishingBotPersona {
+  id: string;
+  name: string;
+  role: FishingBotRole;
+  avatar: string;
+  badge: string;
+  description: string;
+  humorLevel: 'subtle' | 'high' | 'legendary' | 'none';
+  enabled: boolean;
+  autoApprove: boolean;
+  target: 'facebook' | 'portal' | 'both';
+  customInstructions?: string;
+  scheduleDescription?: string;
+  totalGenerated: number;
+  totalPublished: number;
+}
+
+export interface FishingAutopilotConfig {
+  id: string;
+  enabled: boolean;
+  mode: 'moderation' | 'autopilot';
+  fb: {
+    pageId: string;
+    pageName: string;
+    groupId?: string;
+    accessToken: string;
+    postTarget: 'page' | 'group' | 'both';
+    autoPostFirstComment: boolean;
+    includePhoto: boolean;
+  };
+  portal: {
+    autoPublish: boolean;
+    categorySlug: string;
+    defaultStatus: 'approved' | 'poczekalnia';
+    authorName: string;
+    createTags: boolean;
+  };
+  schedule: {
+    intervalHours: number;
+    dailyLimit: number;
+    scheduleTimes: string[];
+    activeDays: string[];
+    lastRunAt?: string;
+    nextRunAt?: string;
+  };
+  filters: {
+    minDiscountPercent: number;
+    minTemperature: number;
+    keywords: string[];
+    negativeKeywords: string[];
+  };
+  partners: {
+    aliexpress: boolean;
+    convertiser: boolean;
+    tradetracker: boolean;
+    convertiserToken?: string;
+    tradeTrackerCustomerId?: string;
+    tradeTrackerPassphrase?: string;
+    tradeTrackerSiteId?: string;
+    tradeTrackerFeedUrl?: string;
+  };
+  tracking?: {
+    campaign: string;
+    subId?: string;
+    utmSource?: string;
+    utmMedium?: string;
+  };
+  stats: {
+    totalGenerated: number;
+    totalPublishedFb: number;
+    totalPublishedPortal: number;
+    lastPublishedAt?: string;
+    lastError?: string;
+  };
+  updatedAt: string;
+}
+
+export interface FishingPostQueueItem {
+  id: string;
+  botId: string;
+  botRole: FishingBotRole;
+  botName: string;
+  status: 'pending' | 'approved' | 'posting' | 'posted' | 'failed' | 'rejected';
+  dealId?: string;
+  title: string;
+  content: string;
+  wifeAlibi?: string;
+  realPrice?: string;
+  discountStr?: string;
+  linkUrl: string;
+  imageUrl?: string;
+  hashtags: string[];
+  firstComment?: string;
+  targets: {
+    facebook: boolean;
+    portal: boolean;
+  };
+  fbPostId?: string;
+  fbPostUrl?: string;
+  portalDealId?: string;
+  errorMessage?: string;
+  scheduledFor?: string;
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FishingDealItem {
+  id: string;
+  title: string;
+  price: string;
+  oldPrice?: string;
+  discount?: string;
+  merchant?: string;
+  imageUrl?: string;
+  temperature: number;
+  dealUrl: string;
+  source: string;
+  category?: string;
+}
+
+
+// ============================================
 // M6: PRODUCT-CENTRIC ARCHITECTURE (NEW)
 // Separation of immutable Products from mutable Deals/Offers
 // ============================================
