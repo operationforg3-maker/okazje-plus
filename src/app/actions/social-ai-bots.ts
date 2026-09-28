@@ -153,11 +153,160 @@ export async function toggleSocialAIBotAction(botId: string, enabled: boolean): 
   }
 }
 
+export interface PromotableDeal {
+  id: string;
+  title: string;
+  price: string;
+  oldPrice?: string;
+  discount?: string;
+  merchant?: string;
+  temperature: number;
+  imageUrl?: string;
+  postedRecently?: boolean;
+}
+
+export function parseDealFields(rawDeal: any) {
+  const rawTitle = rawDeal.title;
+  let title = 'Gorąca Okazja';
+  if (typeof rawTitle === 'string') {
+    title = rawTitle;
+  } else if (typeof rawTitle === 'object' && rawTitle !== null) {
+    title = rawTitle.pl || rawTitle.en || rawTitle.de || rawTitle.es || Object.values(rawTitle)[0] || 'Gorąca Okazja';
+  }
+
+  let currentPriceVal: number | undefined = undefined;
+  if (typeof rawDeal.price === 'number') {
+    currentPriceVal = rawDeal.price;
+  } else if (typeof rawDeal.price === 'object' && rawDeal.price !== null && typeof rawDeal.price.amount === 'number') {
+    currentPriceVal = rawDeal.price.amount;
+  } else if (typeof rawDeal.currentPrice === 'number') {
+    currentPriceVal = rawDeal.currentPrice;
+  }
+  const priceStr = currentPriceVal !== undefined ? `${currentPriceVal.toFixed(2)} zł` : '';
+
+  let originalPriceVal: number | undefined = undefined;
+  if (typeof rawDeal.originalPrice === 'number') {
+    originalPriceVal = rawDeal.originalPrice;
+  } else if (typeof rawDeal.originalPrice === 'object' && rawDeal.originalPrice !== null && typeof rawDeal.originalPrice.amount === 'number') {
+    originalPriceVal = rawDeal.originalPrice.amount;
+  }
+  const oldPriceStr = originalPriceVal && (!currentPriceVal || originalPriceVal > currentPriceVal)
+    ? ` (zamiast ${originalPriceVal.toFixed(2)} zł)`
+    : '';
+
+  let discountNum: number | undefined = undefined;
+  if (typeof rawDeal.discount === 'number') {
+    discountNum = rawDeal.discount;
+  } else if (typeof rawDeal.discount === 'object' && rawDeal.discount !== null) {
+    discountNum = rawDeal.discount.percentage ?? rawDeal.discount.amount;
+  } else if (typeof rawDeal.discountPercent === 'number') {
+    discountNum = rawDeal.discountPercent;
+  } else if (currentPriceVal && originalPriceVal && originalPriceVal > currentPriceVal) {
+    discountNum = Math.round(((originalPriceVal - currentPriceVal) / originalPriceVal) * 100);
+  }
+  const discountStr = discountNum && discountNum > 0 ? ` -${Math.round(discountNum)}%` : '';
+
+  const merchantName = rawDeal.merchantName || rawDeal.merchant || rawDeal.source;
+  const merchant = merchantName ? ` w ${merchantName}` : '';
+
+  const linkUrl = `https://okazjeplus.pl/pl/deals/${rawDeal.id}`;
+  const imageUrl = rawDeal.imageUrl || rawDeal.image;
+  const temperature = Number(rawDeal.temperature) || 100;
+
+  return {
+    id: rawDeal.id,
+    title,
+    priceStr,
+    oldPriceStr,
+    discountStr,
+    merchant,
+    temperature,
+    imageUrl,
+    linkUrl,
+  };
+}
+
+/**
+ * Fetch approved deals with suggestions and search support for social media promotion
+ */
+export async function getPromotableDealsAction(
+  searchQuery?: string,
+  limitCount: number = 20
+): Promise<{ success: boolean; deals: PromotableDeal[]; error?: string }> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, deals: [], error: 'Wymagane uprawnienia administratora' };
+    }
+
+    // 1. Fetch recent social posts to mark which deals were already posted in last 14 days
+    const recentCutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+    const recentPostsSnap = await adminDb
+      .collection('socialPosts')
+      .where('createdAt', '>=', recentCutoff)
+      .limit(100)
+      .get();
+    const recentDealIds = new Set(recentPostsSnap.docs.map(d => d.data().itemId).filter(Boolean));
+
+    // 2. Fetch approved deals
+    const dealsSnap = await adminDb
+      .collection('deals')
+      .where('status', '==', 'approved')
+      .limit(60)
+      .get();
+
+    let allDeals: PromotableDeal[] = dealsSnap.docs.map(doc => {
+      const parsed = parseDealFields({ id: doc.id, ...doc.data() });
+      return {
+        id: parsed.id,
+        title: parsed.title,
+        price: parsed.priceStr,
+        oldPrice: parsed.oldPriceStr,
+        discount: parsed.discountStr,
+        merchant: parsed.merchant.replace(' w ', ''),
+        temperature: parsed.temperature,
+        imageUrl: parsed.imageUrl,
+        postedRecently: recentDealIds.has(parsed.id),
+      };
+    });
+
+    // 3. Filter by search query if provided
+    if (searchQuery && searchQuery.trim().length > 0) {
+      const q = searchQuery.toLowerCase().trim();
+      allDeals = allDeals.filter(d => 
+        d.title.toLowerCase().includes(q) || 
+        (d.merchant && d.merchant.toLowerCase().includes(q))
+      );
+    }
+
+    // 4. Sort: unposted first, then by temperature desc
+    allDeals.sort((a, b) => {
+      if (a.postedRecently !== b.postedRecently) {
+        return a.postedRecently ? 1 : -1;
+      }
+      return (b.temperature || 0) - (a.temperature || 0);
+    });
+
+    return {
+      success: true,
+      deals: allDeals.slice(0, limitCount),
+    };
+  } catch (error) {
+    console.error('Error fetching promotable deals:', error);
+    return {
+      success: false,
+      deals: [],
+      error: error instanceof Error ? error.message : 'Błąd pobierania okazji',
+    };
+  }
+}
+
 export async function executeBotRun(
   bot: SocialAIBot,
   immediatePublish: boolean = false,
   topicHint?: string,
-  userId?: string
+  userId?: string,
+  targetDealId?: string
 ): Promise<{
   success: boolean;
   postId?: string;
@@ -178,80 +327,95 @@ export async function executeBotRun(
     let itemTitle = '';
 
     if (bot.role === 'hunter') {
-      // Find top approved deals
-      const dealsSnap = await adminDb
-        .collection('deals')
-        .where('status', '==', 'approved')
-        .limit(10)
-        .get();
+      let topDeal: any = null;
 
-      if (!dealsSnap.empty) {
-        // Pick one with highest temperature or recent
-        const deals = dealsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-        deals.sort((a, b) => (b.temperature || 0) - (a.temperature || 0));
-        const topDeal = deals[0];
-
-        itemId = topDeal.id;
-
-        // 1. Safe title extraction
-        const rawTitle = topDeal.title;
-        if (typeof rawTitle === 'string') {
-          itemTitle = rawTitle;
-        } else if (typeof rawTitle === 'object' && rawTitle !== null) {
-          itemTitle = rawTitle.pl || rawTitle.en || rawTitle.de || rawTitle.es || Object.values(rawTitle)[0] || 'Gorąca Okazja';
-        } else {
-          itemTitle = 'Gorąca Okazja';
+      // Check if user specifically requested a deal
+      if (targetDealId) {
+        const dealDoc = await adminDb.collection('deals').doc(targetDealId).get();
+        if (dealDoc.exists) {
+          topDeal = { id: dealDoc.id, ...dealDoc.data() };
         }
+      }
 
-        // 2. Safe current price extraction
-        let currentPriceVal: number | undefined = undefined;
-        if (typeof topDeal.price === 'number') {
-          currentPriceVal = topDeal.price;
-        } else if (typeof topDeal.price === 'object' && topDeal.price !== null && typeof topDeal.price.amount === 'number') {
-          currentPriceVal = topDeal.price.amount;
-        } else if (typeof topDeal.currentPrice === 'number') {
-          currentPriceVal = topDeal.currentPrice;
+      // If not, pick automatically avoiding deals posted in the last 14 days
+      if (!topDeal) {
+        const recentCutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        const recentPostsSnap = await adminDb
+          .collection('socialPosts')
+          .where('createdAt', '>=', recentCutoff)
+          .limit(100)
+          .get();
+        const recentDealIds = new Set(recentPostsSnap.docs.map(d => d.data().itemId).filter(Boolean));
+
+        const dealsSnap = await adminDb
+          .collection('deals')
+          .where('status', '==', 'approved')
+          .limit(30)
+          .get();
+
+        if (!dealsSnap.empty) {
+          const allApproved = dealsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+          allApproved.sort((a, b) => (b.temperature || 0) - (a.temperature || 0));
+
+          // Filter out deals that were already posted recently
+          const unpostedDeals = allApproved.filter(d => !recentDealIds.has(d.id));
+          topDeal = unpostedDeals.length > 0
+            ? unpostedDeals[0]
+            : allApproved[Math.floor(Math.random() * Math.min(allApproved.length, 5))];
         }
-        const priceStr = currentPriceVal !== undefined ? `${currentPriceVal.toFixed(2)} zł` : '';
+      }
 
-        // 3. Safe original price extraction
-        let originalPriceVal: number | undefined = undefined;
-        if (typeof topDeal.originalPrice === 'number') {
-          originalPriceVal = topDeal.originalPrice;
-        } else if (typeof topDeal.originalPrice === 'object' && topDeal.originalPrice !== null && typeof topDeal.originalPrice.amount === 'number') {
-          originalPriceVal = topDeal.originalPrice.amount;
-        }
-        const oldPriceStr = originalPriceVal && (!currentPriceVal || originalPriceVal > currentPriceVal) 
-          ? ` (zamiast ${originalPriceVal.toFixed(2)} zł)` 
-          : '';
+      if (topDeal) {
+        const parsed = parseDealFields(topDeal);
+        itemId = parsed.id;
+        itemTitle = parsed.title;
+        linkUrl = parsed.linkUrl;
+        imageUrl = parsed.imageUrl;
 
-        // 4. Safe discount extraction
-        let discountNum: number | undefined = undefined;
-        if (typeof topDeal.discount === 'number') {
-          discountNum = topDeal.discount;
-        } else if (typeof topDeal.discount === 'object' && topDeal.discount !== null) {
-          discountNum = topDeal.discount.percentage ?? topDeal.discount.amount;
-        } else if (typeof topDeal.discountPercent === 'number') {
-          discountNum = topDeal.discountPercent;
-        } else if (currentPriceVal && originalPriceVal && originalPriceVal > currentPriceVal) {
-          discountNum = Math.round(((originalPriceVal - currentPriceVal) / originalPriceVal) * 100);
-        }
-        const discountStr = discountNum && discountNum > 0 ? ` -${Math.round(discountNum)}%` : '';
+        const customUserNote = topicHint ? `\n💡 Wskazówka: ${topicHint}\n` : '';
 
-        // 5. Merchant extraction
-        const merchantName = topDeal.merchantName || topDeal.merchant || topDeal.source;
-        const merchant = merchantName ? ` w ${merchantName}` : '';
-
-        // 6. Direct deal link on Okazje Plus
-        linkUrl = `https://okazjeplus.pl/pl/deals/${topDeal.id}`;
-        imageUrl = topDeal.imageUrl || topDeal.image;
-
-        postText = `🔥 GORĄCA OKAZJA: ${itemTitle}!\n\n` +
-          `💰 Cena: ${priceStr}${oldPriceStr}${discountStr}${merchant}\n` +
-          `🌡️ Ocena społeczności: ${topDeal.temperature || 100}°\n\n` +
-          `Łowcy Okazje Plus sprawdzili tę ofertę – cena jest warta uwagi!\n\n` +
+        // Dynamic, diverse copywriting angles:
+        const styles = [
+          // Style 1: Gorąca Okazja / Klasyk Łowcy
+          `🔥 GORĄCA OKAZJA: ${itemTitle}!\n\n` +
+          `💰 Cena: ${parsed.priceStr}${parsed.oldPriceStr}${parsed.discountStr}${parsed.merchant}\n` +
+          `🌡️ Ocena społeczności: ${parsed.temperature}°\n` +
+          customUserNote +
+          `\nŁowcy Okazje Plus zweryfikowali tę ofertę – cena jest warta uwagi!\n\n` +
           `👉 Bezpośredni link do okazji i kod rabatowy znajdziesz w pierwszym komentarzu ⬇️ oraz tutaj:\n${linkUrl}\n\n` +
-          `#okazje #promocje #okazjeplus #znizki #zakupy`;
+          `#okazje #promocje #okazjeplus #znizki #zakupy`,
+
+          // Style 2: Błąd cenowy / Mocna zniżka
+          `⚡ MOCNA OBNIŻKA CENY: ${itemTitle}!\n\n` +
+          `🛒 Sklep: ${parsed.merchant ? parsed.merchant.replace(' w ', '') : 'Okazje Plus'}\n` +
+          `📉 Nowa cena: ${parsed.priceStr}${parsed.oldPriceStr}${parsed.discountStr ? ` (oszczędzasz ${parsed.discountStr})` : ''}\n` +
+          `🌡️ Temperatura okazji: ${parsed.temperature}°\n` +
+          customUserNote +
+          `\nTaka oferta może szybko zniknąć lub wyprzedać się zapas magazynowy.\n\n` +
+          `👉 Bezpośredni link do zakupu czeka w pierwszym komentarzu ⬇️ oraz tutaj:\n${linkUrl}\n\n` +
+          `#promocja #hitcenowy #okazjeplus #zakupy #znizka`,
+
+          // Style 3: Perełka dla Łowców / Rekomendacja
+          `💎 ZNALEZISKO DNIA: ${itemTitle}!\n\n` +
+          `💰 Dziś do upolowania za jedyne ${parsed.priceStr}${parsed.oldPriceStr}${parsed.discountStr}${parsed.merchant}.\n\n` +
+          `Nasi użytkownicy i moderatorzy ocenili ten deal na ${parsed.temperature}°. Realna oszczędność potwierdzona historią cen!\n` +
+          customUserNote +
+          `\n👉 Sprawdź szczegóły i kod rabatowy w 1. komentarzu ⬇️ oraz na stronie:\n${linkUrl}\n\n` +
+          `#lowcyokazji #okazjeplus #rabaty #prawdziweokazje`,
+
+          // Style 4: Alert Cenowy / Błyskawiczny
+          `🚨 ALERT CENOWY OKAZJE PLUS 🚨\n\n` +
+          `👉 Produkt: ${itemTitle}\n` +
+          `💸 Aktualna cena: ${parsed.priceStr}${parsed.oldPriceStr}${parsed.discountStr}\n` +
+          `🌡️ Ocena: ${parsed.temperature}°\n` +
+          customUserNote +
+          `\nSprawdź ofertę zanim cena wróci do normy!\n\n` +
+          `🔗 Bezpośredni link czeka w pierwszym komentarzu ⬇️ oraz pod adresem:\n${linkUrl}\n\n` +
+          `#alertcenowy #okazjeplus #promocje #cenabezsciemy`
+        ];
+
+        const chosenIndex = Math.floor(Math.random() * styles.length);
+        postText = styles[chosenIndex];
       } else {
         itemTitle = 'Przegląd Najlepszych Okazji Dnia';
         postText = `🔥 CODZIENNY RAPORT OKAZJI Okazje Plus (${timestampStr})!\n\n` +
@@ -260,15 +424,42 @@ export async function executeBotRun(
           `#okazje #promocje #okazjeplus #zakupyonline`;
       }
     } else if (bot.role === 'expert') {
-      itemTitle = topicHint || 'Jak kupować mądrze i nie dać się nabrać na „sztuczne promocje”';
-      postText = `🛡️ PORADNIK EKSPERTA OKAZJE PLUS: ${itemTitle}\n\n` +
-        `Czy wiesz, że ponad 30% promocji w sieci to tylko zawyżone ceny wyjściowe?\n\n` +
-        `W laboratorium i redakcji Okazje Plus każda rekomendacja przechodzi przez:\n` +
-        `✅ Badanie 90-dniowej historii cen (Omnibus i własne dane)\n` +
-        `✅ Weryfikację wiarygodności sprzedawcy\n` +
-        `✅ Ocenę fizycznej jakości wykonania sprzętu\n\n` +
-        `Kupuj mądrze ze sprawdzoną społecznością:\nhttps://okazjeplus.pl\n\n` +
-        `#testyproduktow #jakosc #ekspert #okazjeplus #swiadomykonsument`;
+      let expertDeal: any = null;
+      if (targetDealId) {
+        const dealDoc = await adminDb.collection('deals').doc(targetDealId).get();
+        if (dealDoc.exists) {
+          expertDeal = { id: dealDoc.id, ...dealDoc.data() };
+        }
+      }
+
+      if (expertDeal) {
+        const parsed = parseDealFields(expertDeal);
+        itemId = parsed.id;
+        itemTitle = `Ocena oferty: ${parsed.title}`;
+        linkUrl = parsed.linkUrl;
+        imageUrl = parsed.imageUrl;
+
+        postText = `🛡️ OCENA EKSPERTA OKAZJE PLUS: ${parsed.title}\n\n` +
+          `💰 Cena w promocji: ${parsed.priceStr}${parsed.oldPriceStr}${parsed.discountStr}${parsed.merchant}\n` +
+          `🌡️ Ocena społeczności: ${parsed.temperature}°\n\n` +
+          `Weryfikacja parametrów i historii cen:\n` +
+          `✅ Badanie 90-dniowej historii (dyrektywa Omnibus) – realna obniżka\n` +
+          `✅ Brak ukrytych kosztów i wysoka ocena sprzedawcy\n` +
+          `✅ Dobry stosunek ceny do oferowanych możliwości\n\n` +
+          (topicHint ? `💬 Uwagi eksperta: ${topicHint}\n\n` : '') +
+          `👉 Bezpośredni link do okazji i kod rabatowy znajdziesz w 1. komentarzu ⬇️ oraz tutaj:\n${linkUrl}\n\n` +
+          `#testy #jakosc #ekspert #okazjeplus #swiadomykonsument`;
+      } else {
+        itemTitle = topicHint || 'Jak kupować mądrze i nie dać się nabrać na „sztuczne promocje”';
+        postText = `🛡️ PORADNIK EKSPERTA OKAZJE PLUS: ${itemTitle}\n\n` +
+          `Czy wiesz, że ponad 30% promocji w sieci to tylko zawyżone ceny wyjściowe?\n\n` +
+          `W laboratorium i redakcji Okazje Plus każda rekomendacja przechodzi przez:\n` +
+          `✅ Badanie 90-dniowej historii cen (Omnibus i własne dane)\n` +
+          `✅ Weryfikację wiarygodności sprzedawcy\n` +
+          `✅ Ocenę fizycznej jakości wykonania sprzętu\n\n` +
+          `Kupuj mądrze ze sprawdzoną społecznością:\nhttps://okazjeplus.pl\n\n` +
+          `#testyproduktow #jakosc #ekspert #okazjeplus #swiadomykonsument`;
+      }
     } else if (bot.role === 'community') {
       itemTitle = topicHint || 'Pytanie do społeczności: Wasz najlepszy zakup miesiąca?';
       postText = `👋 Cześć Łowcy Okazji!\n\n` +
@@ -369,7 +560,8 @@ export async function executeBotRun(
 export async function runSocialAIBotAction(
   botId: string,
   immediatePublish: boolean = false,
-  topicHint?: string
+  topicHint?: string,
+  targetDealId?: string
 ): Promise<{
   success: boolean;
   postId?: string;
@@ -390,7 +582,7 @@ export async function runSocialAIBotAction(
     }
 
     const bot = { id: botDoc.id, ...botDoc.data() } as SocialAIBot;
-    const result = await executeBotRun(bot, immediatePublish, topicHint, session.uid);
+    const result = await executeBotRun(bot, immediatePublish, topicHint, session.uid, targetDealId);
 
     revalidatePath('/[locale]/admin/social-media', 'page');
     return result;

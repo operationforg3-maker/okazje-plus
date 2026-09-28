@@ -28,14 +28,22 @@ import {
   Clock,
   Loader2,
   Eye,
-  RefreshCw
+  RefreshCw,
+  Search,
+  Check,
+  X,
+  TrendingUp,
+  Tag,
+  ArrowRight
 } from 'lucide-react';
 import type { SocialAIBot } from '@/lib/types';
 import {
   getSocialAIBotsAction,
   saveSocialAIBotAction,
   toggleSocialAIBotAction,
-  runSocialAIBotAction
+  runSocialAIBotAction,
+  getPromotableDealsAction,
+  type PromotableDeal
 } from '@/app/actions/social-ai-bots';
 
 export function SocialAIBotsPanel() {
@@ -48,6 +56,12 @@ export function SocialAIBotsPanel() {
   const [immediatePublish, setImmediatePublish] = useState(false);
   const [topicHint, setTopicHint] = useState('');
   const [runResult, setRunResult] = useState<{ content?: string; published?: boolean; platformPostId?: string } | null>(null);
+
+  // Suggested & searchable deals state
+  const [promotableDeals, setPromotableDeals] = useState<PromotableDeal[]>([]);
+  const [loadingDeals, setLoadingDeals] = useState(false);
+  const [dealSearchQuery, setDealSearchQuery] = useState('');
+  const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
 
   const loadBots = async () => {
     try {
@@ -65,8 +79,23 @@ export function SocialAIBotsPanel() {
     }
   };
 
+  const loadPromotableDeals = async (search?: string) => {
+    try {
+      setLoadingDeals(true);
+      const res = await getPromotableDealsAction(search, 12);
+      if (res.success) {
+        setPromotableDeals(res.deals);
+      }
+    } catch (err) {
+      console.error('Error loading promotable deals:', err);
+    } finally {
+      setLoadingDeals(false);
+    }
+  };
+
   useEffect(() => {
     loadBots();
+    loadPromotableDeals();
   }, []);
 
   const handleToggle = async (botId: string, currentEnabled: boolean) => {
@@ -102,7 +131,7 @@ export function SocialAIBotsPanel() {
     if (!runningBotId) return;
     try {
       setLoading(true);
-      const res = await runSocialAIBotAction(runningBotId, immediatePublish, topicHint);
+      const res = await runSocialAIBotAction(runningBotId, immediatePublish, topicHint, selectedDealId || undefined);
       if (res.success) {
         setRunResult({
           content: res.postContent,
@@ -111,6 +140,7 @@ export function SocialAIBotsPanel() {
         });
         toast.success(res.published ? '🚀 Opublikowano na Facebooku!' : '✅ Post wygenerowany i dodany do kolejki!');
         loadBots();
+        loadPromotableDeals(dealSearchQuery);
       } else {
         toast.error(res.error || 'Błąd generowania posta');
       }
@@ -118,6 +148,17 @@ export function SocialAIBotsPanel() {
       toast.error('Błąd podczas generowania');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleQuickPromoteDeal = (deal: PromotableDeal, botRole: 'hunter' | 'expert' = 'hunter') => {
+    const targetBot = bots.find(b => b.role === botRole) || bots[0];
+    if (targetBot) {
+      setRunningBotId(targetBot.id);
+      setSelectedDealId(deal.id);
+      setTopicHint('');
+      setRunResult(null);
+      setIsRunDialogOpen(true);
     }
   };
 
@@ -224,7 +265,139 @@ export function SocialAIBotsPanel() {
         </CardContent>
       </Card>
 
-      {/* 2. Nagłówek Sekcji AI Botów */}
+      {/* 2. Podpowiedzi & Wyszukiwarka Okazji do Promocji */}
+      <Card className="border-border/80 shadow-sm bg-card/60">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Flame className="h-5 w-5 text-amber-500" />
+                Podpowiedzi okazji do promowania
+              </CardTitle>
+              <CardDescription>
+                Wybierz okazję z bazy lub wyszukaj konkretny produkt, aby wygenerować świeży post botem 1-kliknięciem.
+              </CardDescription>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative w-64">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Wyszukaj okazję..."
+                  value={dealSearchQuery}
+                  onChange={(e) => {
+                    setDealSearchQuery(e.target.value);
+                    loadPromotableDeals(e.target.value);
+                  }}
+                  className="pl-8 h-9 text-xs"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadPromotableDeals(dealSearchQuery)}
+                disabled={loadingDeals}
+                className="h-9 px-3"
+                title="Odśwież okazje"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${loadingDeals ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          {loadingDeals ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : promotableDeals.length === 0 ? (
+            <div className="text-center py-8 text-xs text-muted-foreground">
+              Brak zatwierdzonych okazji spełniających kryteria wyszukiwania.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {promotableDeals.slice(0, 4).map((deal) => (
+                <div
+                  key={deal.id}
+                  className="p-3 rounded-xl border border-border/70 bg-background/80 hover:border-primary/50 transition-all flex flex-col justify-between space-y-3"
+                >
+                  <div className="space-y-2">
+                    <div className="relative h-32 rounded-lg overflow-hidden border bg-muted">
+                      {deal.imageUrl ? (
+                        <img
+                          src={deal.imageUrl}
+                          alt={deal.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                          Brak zdjęcia
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2 flex gap-1">
+                        <Badge className="bg-amber-500/90 text-white font-bold text-[10px] px-1.5 py-0.5">
+                          🔥 {deal.temperature}°
+                        </Badge>
+                      </div>
+                      {deal.postedRecently && (
+                        <div className="absolute bottom-2 left-2">
+                          <Badge variant="secondary" className="text-[10px] bg-black/60 text-white backdrop-blur-sm">
+                            Promowana w 14 dni
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-xs text-foreground line-clamp-2 leading-tight" title={deal.title}>
+                        {deal.title}
+                      </h4>
+                      <div className="flex items-baseline gap-1.5 mt-1.5">
+                        <span className="font-bold text-sm text-primary">{deal.price}</span>
+                        {deal.oldPrice && (
+                          <span className="text-[11px] text-muted-foreground line-through">{deal.oldPrice}</span>
+                        )}
+                        {deal.discount && (
+                          <span className="text-[11px] font-bold text-red-500">{deal.discount}</span>
+                        )}
+                      </div>
+                      {deal.merchant && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          🛒 {deal.merchant}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5 pt-2 border-t">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[10px] px-1 text-orange-500 hover:text-orange-600"
+                      onClick={() => handleQuickPromoteDeal(deal, 'hunter')}
+                    >
+                      <Flame className="h-3 w-3 mr-1" />
+                      Łowca
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[10px] px-1 text-blue-500 hover:text-blue-600"
+                      onClick={() => handleQuickPromoteDeal(deal, 'expert')}
+                    >
+                      <ShieldCheck className="h-3 w-3 mr-1" />
+                      Ekspert
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 3. Nagłówek Sekcji AI Botów */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
@@ -484,23 +657,146 @@ export function SocialAIBotsPanel() {
 
       {/* 5. Dialog Uruchomienia Bota Teraz */}
       <Dialog open={isRunDialogOpen} onOpenChange={setIsRunDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-amber-500" />
               Uruchom bota AI na żądanie
             </DialogTitle>
             <DialogDescription>
-              Wygeneruj nowy angażujący post na podstawie bazy okazji i wytycznych tej persony.
+              Wygeneruj świeży, unikalny post na podstawie wybranej okazji lub zdaj się na algorytm bota.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            {/* Wybór konkretnej okazji do promowania */}
+            <div className="space-y-2.5 p-3.5 rounded-xl border border-border/70 bg-muted/30">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold flex items-center gap-1.5">
+                  <Tag className="h-3.5 w-3.5 text-primary" />
+                  Okazja do promowania:
+                </Label>
+                {selectedDealId && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[11px] text-muted-foreground hover:text-foreground"
+                    onClick={() => setSelectedDealId(null)}
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Wybierz automatycznie
+                  </Button>
+                )}
+              </div>
+
+              {selectedDealId ? (
+                (() => {
+                  const selectedDeal = promotableDeals.find(d => d.id === selectedDealId);
+                  return (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-background border border-primary/40 shadow-sm">
+                      {selectedDeal?.imageUrl ? (
+                        <img
+                          src={selectedDeal.imageUrl}
+                          alt={selectedDeal.title}
+                          className="w-12 h-12 rounded object-cover border"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded bg-muted flex items-center justify-center text-xs">
+                          Foto
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold truncate text-foreground">
+                          {selectedDeal?.title || 'Wybrana okazja'}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5 text-xs">
+                          <span className="font-bold text-primary">{selectedDeal?.price}</span>
+                          {selectedDeal?.oldPrice && (
+                            <span className="text-muted-foreground text-[11px] line-through">{selectedDeal.oldPrice}</span>
+                          )}
+                          {selectedDeal?.discount && (
+                            <Badge variant="secondary" className="text-[10px] h-4 px-1 bg-red-500/10 text-red-500 font-bold">
+                              {selectedDeal.discount}
+                            </Badge>
+                          )}
+                          <span className="text-[11px] text-amber-500 font-medium">🔥 {selectedDeal?.temperature}°</span>
+                        </div>
+                      </div>
+                      <Badge className="bg-emerald-500 text-white text-[10px]">
+                        Wybrana
+                      </Badge>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="space-y-2">
+                  <div className="p-2 rounded bg-muted/60 text-[11px] text-muted-foreground flex items-center gap-2">
+                    <span className="text-base">🤖</span>
+                    <span>
+                      <strong>Tryb inteligentny:</strong> Bot wybierze najlepszą okazję z bazy, <strong>wykluczając okazje promowane w ostatnich 14 dniach</strong>.
+                    </span>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Lub wyszukaj inną okazję do promowania..."
+                      value={dealSearchQuery}
+                      onChange={(e) => {
+                        setDealSearchQuery(e.target.value);
+                        loadPromotableDeals(e.target.value);
+                      }}
+                      className="pl-8 h-8 text-xs bg-background"
+                    />
+                  </div>
+
+                  {/* Lista podpowiedzi do wyboru */}
+                  <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto pr-1">
+                    {promotableDeals.slice(0, 5).map(deal => (
+                      <div
+                        key={deal.id}
+                        onClick={() => setSelectedDealId(deal.id)}
+                        className="flex items-center justify-between p-2 rounded-lg hover:bg-muted cursor-pointer border border-transparent hover:border-border text-xs transition-colors bg-background/50"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {deal.imageUrl && (
+                            <img src={deal.imageUrl} alt="" className="w-8 h-8 rounded object-cover" />
+                          )}
+                          <div className="min-w-0">
+                            <span className="truncate block font-medium max-w-[260px] text-foreground">{deal.title}</span>
+                            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                              <span>🔥 {deal.temperature}°</span>
+                              {deal.merchant && <span>• {deal.merchant}</span>}
+                              {deal.postedRecently && (
+                                <Badge variant="outline" className="text-[9px] h-3.5 px-1 text-muted-foreground">
+                                  Promowana
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-bold text-primary">{deal.price}</span>
+                          {deal.discount && (
+                            <span className="text-[10px] text-red-500 font-bold">{deal.discount}</span>
+                          )}
+                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2">
+                            Wybierz
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-1.5">
-              <Label htmlFor="topic-hint">Opcjonalny temat / podpowiedź dla bota</Label>
+              <Label htmlFor="topic-hint">Opcjonalny motyw / instrukcja dodatkowa dla bota</Label>
               <Input
                 id="topic-hint"
-                placeholder="np. Błąd cenowy na słuchawki Sony, dyskusja o black friday..."
+                placeholder="np. Podkreśl darmową dostawę, ograniczoną ilość sztuk..."
                 value={topicHint}
                 onChange={(e) => setTopicHint(e.target.value)}
               />
@@ -510,7 +806,7 @@ export function SocialAIBotsPanel() {
               <div className="space-y-0.5">
                 <Label className="text-sm font-semibold">Opublikuj od razu na Facebooku</Label>
                 <p className="text-xs text-muted-foreground">
-                  Gdy włączone, post natychmiast trafi na Twoją stronę/grupę.
+                  Gdy włączone, post natychmiast trafi na Fanpage (i doda 1. komentarz z linkiem).
                 </p>
               </div>
               <Switch
@@ -533,7 +829,7 @@ export function SocialAIBotsPanel() {
                     </Badge>
                   )}
                 </div>
-                <div className="p-3 rounded-lg bg-muted text-xs whitespace-pre-wrap font-sans max-h-48 overflow-y-auto">
+                <div className="p-3 rounded-lg bg-muted text-xs whitespace-pre-wrap font-sans max-h-48 overflow-y-auto leading-relaxed">
                   {runResult.content}
                 </div>
                 {runResult.platformPostId && (
