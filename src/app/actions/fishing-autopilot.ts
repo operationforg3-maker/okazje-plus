@@ -338,7 +338,7 @@ export async function testFacebookApiAction(
 
 export async function getFishingDealsAction(
   searchQuery?: string,
-  limitCount: number = 30,
+  limitCount: number = 50,
   partnerFilter?: string
 ): Promise<{
   success: boolean;
@@ -351,28 +351,72 @@ export async function getFishingDealsAction(
       return { success: false, deals: [], error: 'Wymagane uprawnienia administratora' };
     }
 
+    const configRes = await getFishingAutopilotConfigAction();
+    const config = configRes.config;
+    const trackingCampaign = config.tracking?.campaign || 'Fishing_2';
+
     const fishingKeywords = [
-      'wędka', 'wędk', 'kołowrotek', 'feeder', 'spinning', 'karpiow', 'plecionka', 
+      'wędka', 'wędk', 'wędzisk', 'kołowrotek', 'feeder', 'spinning', 'karpiow', 'plecionka', 
       'haczyk', 'przynęt', 'wobler', 'zanęt', 'sygnalizator', 'echosond', 'ponton', 
-      'namiot', 'fotel', 'wodery', 'fishing', 'lure', 'reel', 'tackle', 'hook'
+      'namiot karpiowy', 'namiot wędkarski', 'fotel wędkarski', 'wodery', 'spodniobuty',
+      'żyłka wędkarska', 'daiwa', 'mikado', 'shimano', 'caperlan', 'fox rage', 'lineaeffe',
+      'aqua marina', 'caperlan', 'savage gear'
+    ];
+
+    const STRICT_NEGATIVE = [
+      'pies', 'kot', 'koc', 'zwierz', 'gryzoń', 'szczur', 'mysz', 'chomik',
+      'kuchenka', 'palnik', 'patelnia', 'garnek', 'rondel', 'talerz', 'sztućce',
+      'kolczyki', 'pierścionek', 'naszyjnik', 'etui na telefon', 'joy-con', 'switch',
+      'baby', 'kids', 'dzieci', 'niemowl', 'drewniana wędka', 'zabawk', 'stolik krab',
+      'lego', 'klocki', 'narożnik', 'tapicerka', 'tkanina', 'lutowni', 'topnik', 'cyna',
+      'wyciąg górny', 'wyciąg dolny', 'treningowy', 'siłowni', 'sukienka', 'biustonosz',
+      'majtki', 'kurtka narciarska', 'narty', 'sunglasses', 'okulary', 'okular', 'lampenschirme',
+      'obudowa', 'ładowarka', 'poliestrowa', 'legrand', 'düwi', 'kuszy', 'łowiectwa podwodnego',
+      'kapelusz', 'czapka', 'topslang', 'koszulk', 'ssz 230v', 'eaton', 'greenblue', 'retoo',
+      'satel', 'siemens', 'dahua', 'gazex', 'traktorek', 'napięcia'
     ];
 
     // Pobierz konfigurację filtrów
-    const configRes = await getFishingAutopilotConfigAction();
-    const configuredKeywords = configRes.config.filters.keywords || [];
+    const configuredKeywords = config.filters.keywords || [];
     const allKeywords = Array.from(new Set([...fishingKeywords, ...configuredKeywords.map(k => k.toLowerCase())]));
 
-    const snap = await adminDb
+    // Multi-query dla maksymalnej bazy ofert wędkarskich w Firestore
+    const docsMap = new Map<string, any>();
+
+    // 1. Zdedykowana podkategoria wedkarstwo
+    const snapCategory = await adminDb
+      .collection('deals')
+      .where('status', '==', 'approved')
+      .where('subCategorySlug', '==', 'wedkarstwo')
+      .limit(150)
+      .get();
+    snapCategory.docs.forEach(d => docsMap.set(d.id, { id: d.id, ...d.data() }));
+
+    // 2. Tagi wędkarskie
+    const snapTags = await adminDb
+      .collection('deals')
+      .where('status', '==', 'approved')
+      .where('tags', 'array-contains', 'wędkarstwo')
+      .limit(150)
+      .get();
+    snapTags.docs.forEach(d => docsMap.set(d.id, { id: d.id, ...d.data() }));
+
+    // 3. Ostatnie deale ze sportu i ogólne (dla wyłapania ofert z innych feedów)
+    const snapRecent = await adminDb
       .collection('deals')
       .where('status', '==', 'approved')
       .orderBy('createdAt', 'desc')
-      .limit(300)
+      .limit(200)
       .get();
+    snapRecent.docs.forEach(d => {
+      if (!docsMap.has(d.id)) {
+        docsMap.set(d.id, { id: d.id, ...d.data() });
+      }
+    });
 
     const matches: FishingDealItem[] = [];
 
-    snap.docs.forEach(doc => {
-      const data = doc.data();
+    for (const [id, data] of docsMap.entries()) {
       let titleStr = '';
       if (typeof data.title === 'string') {
         titleStr = data.title;
@@ -382,13 +426,31 @@ export async function getFishingDealsAction(
 
       const titleLower = titleStr.toLowerCase();
       const descLower = (typeof data.description === 'string' ? data.description : (data.description?.pl || '')).toLowerCase();
-      const catLower = (data.category || data.mainCategorySlug || '').toLowerCase();
-      const rawSource = String(data.source || (data.metadata?.source) || 'okazjeplus').toLowerCase();
+      const tagsArray = Array.isArray(data.tags) ? data.tags.map((t: any) => String(t).toLowerCase()) : [];
+      const rawSource = String(data.source || data.metadata?.source || 'okazjeplus').toLowerCase();
 
-      // Check if matches fishing context
-      const isFishing = allKeywords.some(k => titleLower.includes(k) || descLower.includes(k) || catLower.includes(k));
+      // Odrzuć śmieci i oferty niespełniające kryteriów wędkarskich
+      if (STRICT_NEGATIVE.some(neg => titleLower.includes(neg) || descLower.includes(neg))) {
+        continue;
+      }
 
-      if (isFishing) {
+      // Sprawdź czy to sprzęt wędkarski
+      const isSubCat = data.subCategorySlug === 'wedkarstwo' || data.subCategorySlug === 'sporty-wodne';
+      const hasFishingTag = tagsArray.some((t: string) => t.includes('wędk') || t.includes('wedk'));
+      const matchesKeyword = allKeywords.some(k => titleLower.includes(k) || descLower.includes(k));
+
+      if (isSubCat || hasFishingTag || matchesKeyword) {
+        // Price parsing
+        let currentPriceVal: number | undefined = undefined;
+        if (typeof data.price === 'number') currentPriceVal = data.price;
+        else if (data.price?.amount) currentPriceVal = data.price.amount;
+        else if (typeof data.currentPrice === 'number') currentPriceVal = data.currentPrice;
+
+        // Odrzuć oferty o cenie < 15 zł (drobiazgi / fałszywe groszówki)
+        if (currentPriceVal !== undefined && currentPriceVal < 15) {
+          continue;
+        }
+
         // Normalize source
         let sourceName = 'manual';
         if (rawSource.includes('convertiser')) sourceName = 'convertiser';
@@ -396,12 +458,6 @@ export async function getFishingDealsAction(
         else if (rawSource.includes('aliexpress')) sourceName = 'aliexpress';
         else if (rawSource.includes('amazon')) sourceName = 'amazon';
         else if (rawSource.includes('allegro')) sourceName = 'allegro';
-
-        // Price parsing
-        let currentPriceVal: number | undefined = undefined;
-        if (typeof data.price === 'number') currentPriceVal = data.price;
-        else if (data.price?.amount) currentPriceVal = data.price.amount;
-        else if (typeof data.currentPrice === 'number') currentPriceVal = data.currentPrice;
 
         let originalPriceVal: number | undefined = undefined;
         if (typeof data.originalPrice === 'number') originalPriceVal = data.originalPrice;
@@ -418,13 +474,13 @@ export async function getFishingDealsAction(
         }
 
         const directAffiliateUrl = resolveFishingAffiliateUrl({
-          id: doc.id,
+          id,
           ...data,
           source: sourceName,
-        }, 'Fishing_2');
+        }, trackingCampaign);
 
         matches.push({
-          id: doc.id,
+          id,
           title: titleStr || 'Sprzęt wędkarski',
           price: priceStr,
           oldPrice: oldPriceStr,
@@ -433,13 +489,16 @@ export async function getFishingDealsAction(
           imageUrl: data.imageUrl || data.image || '',
           temperature: Number(data.temperature) || 100,
           dealUrl: directAffiliateUrl,
-          portalUrl: `https://okazjeplus.pl/pl/deals/${doc.id}`,
+          portalUrl: `https://okazjeplus.pl/pl/deals/${id}`,
           rawLink: data.link || data.affiliateLink || '',
           source: sourceName,
           category: data.category || 'Wędkarstwo',
         });
       }
-    });
+    }
+
+    // Sortuj: najwyższa temperatura / atrakcyjność
+    matches.sort((a, b) => (b.temperature || 0) - (a.temperature || 0));
 
     let finalDeals = matches;
 
@@ -502,8 +561,11 @@ export async function generateFishingPostAction(params: {
     const botsRes = await getFishingBotsAction();
     const bot = botsRes.bots.find(b => b.role === botRole) || DEFAULT_FISHING_BOTS[0];
 
+    const configRes = await getFishingAutopilotConfigAction();
+    const trackingCampaign = configRes.config.tracking?.campaign || 'Fishing_2';
+
     // Pobierz dane deala jeśli podano dealId
-    let dealInfo = targetDealData;
+    let dealInfo = targetDealData ? { ...targetDealData } : undefined;
     if (dealId && !dealInfo) {
       const docSnap = await adminDb.collection('deals').doc(dealId).get();
       if (docSnap.exists) {
@@ -511,14 +573,20 @@ export async function generateFishingPostAction(params: {
         let title = typeof d.title === 'string' ? d.title : (d.title?.pl || d.title?.en || 'Okazja wędkarska');
         let curPrice = typeof d.price === 'number' ? d.price : d.price?.amount;
         let origPrice = typeof d.originalPrice === 'number' ? d.originalPrice : d.originalPrice?.amount;
+        const directAffiliateUrl = resolveFishingAffiliateUrl({
+          id: docSnap.id,
+          ...d,
+        }, trackingCampaign);
+
         dealInfo = {
+          ...d,
           title,
           price: curPrice ? `${curPrice.toFixed(2)} zł` : '',
           oldPrice: origPrice ? `${origPrice.toFixed(2)} zł` : '',
           discount: curPrice && origPrice ? `-${Math.round(((origPrice - curPrice) / origPrice) * 100)}%` : '',
           merchant: d.merchantName || d.merchant || 'Sklep wędkarski',
           imageUrl: d.imageUrl || d.image || '',
-          dealUrl: `https://okazjeplus.pl/pl/deals/${docSnap.id}`,
+          dealUrl: directAffiliateUrl,
         };
       }
     }
@@ -622,12 +690,9 @@ Zwróć odpowiedź w czystym formacie tekstu gotowego do wklejenia.
       }
     }
 
-    const configRes = await getFishingAutopilotConfigAction();
-    const trackingCampaign = configRes.config.tracking?.campaign || 'Fishing_2';
-
-    const directAffiliateLink = dealInfo
+    const directAffiliateLink = dealInfo?.dealUrl || (dealInfo
       ? resolveFishingAffiliateUrl(dealInfo, trackingCampaign)
-      : resolveFishingAffiliateUrl(params.targetDealData?.dealUrl || 'https://okazjeplus.pl', trackingCampaign);
+      : resolveFishingAffiliateUrl(params.targetDealData?.dealUrl || 'https://okazjeplus.pl', trackingCampaign));
 
     if (directAffiliateLink) {
       firstComment = `🔗 Bezpośredni link do okazji i kod rabatowy w sklepie:\n${directAffiliateLink}`;
@@ -1168,10 +1233,12 @@ export async function harvestFishingPartnerOffersAction(options?: {
 
     const sources = options?.sources || (['convertiser', 'tradetracker', 'aliexpress'] as const);
     const keywords = options?.keywords || [
-      'kołowrotek', 'wędka spinningowa', 'feeder', 'plecionka wędkarska', 
-      'wobler', 'namiot wędkarski', 'fotel wędkarski', 'wodery', 'sygnalizator brań'
+      'wędka spinningowa', 'wędka feeder', 'wędka karpiowa', 'kołowrotek wędkarski',
+      'kołowrotek', 'ponton wędkarski', 'ponton', 'wobler', 'wodery wędkarskie',
+      'echosonda wędkarska', 'echosonda', 'plecionka sumowa', 'sygnalizator brań',
+      'fotel wędkarski', 'Daiwa', 'Caperlan', 'Fox Rage', 'Mikado', 'Shimano'
     ];
-    const limitPerSource = options?.limitPerSource || 8;
+    const limitPerSource = options?.limitPerSource || 25;
 
     const resultsBySource: Record<string, number> = {
       convertiser: 0,
@@ -1180,10 +1247,23 @@ export async function harvestFishingPartnerOffersAction(options?: {
     };
     let totalImported = 0;
 
-    // Deduplikacja: pobierz ostatnie 300 deali
-    const existingSnap = await adminDb.collection('deals').orderBy('createdAt', 'desc').limit(300).get();
+    // Deduplikacja: pobierz ostatnie 500 deali
+    const existingSnap = await adminDb.collection('deals').orderBy('createdAt', 'desc').limit(500).get();
     const existingLinks = new Set(existingSnap.docs.map(d => d.data().link).filter(Boolean));
     const existingTitles = new Set(existingSnap.docs.map(d => (d.data().title?.pl || d.data().title || '').toLowerCase().trim()).filter(Boolean));
+
+    const STRICT_NEGATIVE = [
+      'pies', 'kot', 'koc', 'zwierz', 'gryzoń', 'szczur', 'mysz', 'chomik',
+      'kuchenka', 'palnik', 'patelnia', 'garnek', 'rondel', 'talerz', 'sztućce',
+      'kolczyki', 'pierścionek', 'naszyjnik', 'etui na telefon', 'joy-con', 'switch',
+      'baby', 'kids', 'dzieci', 'niemowl', 'drewniana wędka', 'zabawk', 'stolik krab',
+      'lego', 'klocki', 'narożnik', 'tapicerka', 'tkanina', 'lutowni', 'topnik', 'cyna',
+      'wyciąg górny', 'wyciąg dolny', 'treningowy', 'siłowni', 'sukienka', 'biustonosz',
+      'majtki', 'kurtka narciarska', 'narty', 'sunglasses', 'okulary', 'okular', 'lampenschirme',
+      'obudowa', 'ładowarka', 'poliestrowa', 'legrand', 'düwi', 'kuszy', 'łowiectwa podwodnego',
+      'kapelusz', 'czapka', 'topslang', 'koszulk', 'ssz 230v', 'eaton', 'greenblue', 'retoo',
+      'satel', 'siemens', 'dahua', 'gazex', 'traktorek', 'napięcia'
+    ];
 
     // 1. CONVERTISER PARTNER FETCH
     if (sources.includes('convertiser') && config.partners?.convertiser) {
@@ -1191,27 +1271,45 @@ export async function harvestFishingPartnerOffersAction(options?: {
         const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
         const client = getConvertiserClient();
 
-        for (const kw of keywords.slice(0, 4)) {
+        for (const kw of keywords) {
           if (resultsBySource.convertiser >= limitPerSource) break;
           try {
             const resp = await client.searchProducts(
-              { query: kw, country: 'PL' },
-              { page: 1, page_size: 15 }
-            );
-            const items = (resp as any).results || (resp as any).data || [];
+              { title: kw, country: 'PL' },
+              { page: 1, page_size: 20 }
+            ) as any;
+            const items = resp.data || resp.results || [];
             for (const item of items) {
-              const title = item.name || item.title;
+              const title = (item.title || item.name || '').trim();
               if (!title) continue;
+              const titleLower = title.toLowerCase();
+              if (STRICT_NEGATIVE.some(neg => titleLower.includes(neg))) continue;
+
+              const priceNum = typeof item.price === 'number'
+                ? item.price
+                : parseFloat(String(item.price || '').replace(/[^0-9.,]/g, '').replace(',', '.'));
+              if (isNaN(priceNum) || priceNum < 15) continue;
+
               const rawLink = item.direct_link || item.tracking_link || item.url || `https://convertiser.com/products/${item.id}/`;
-              const link = applyFishingTracking(rawLink, config.tracking?.campaign || 'Fishing_2');
-              if (existingLinks.has(link) || existingTitles.has(title.toLowerCase().trim())) continue;
+              const affiliateLink = resolveFishingAffiliateUrl(rawLink, config.tracking?.campaign || 'Fishing_2');
+              if (existingLinks.has(affiliateLink) || existingTitles.has(titleLower)) continue;
 
-              const priceNum = typeof item.price === 'number' ? item.price : parseFloat(String(item.price || 0));
-              if (isNaN(priceNum) || priceNum <= 0) continue;
+              const origPriceNum = item.old_price 
+                ? parseFloat(String(item.old_price).replace(/[^0-9.,]/g, '').replace(',', '.')) 
+                : undefined;
+              const merchant = item.offer || item.merchant || item.brand || (rawLink.includes('decathlon') ? 'Decathlon.pl' : 'Sklep partnerski');
+              const imageUrl = item.images?.default || item.image_link || item.images?.thumb_180 || item.image_url || '';
 
-              const origPriceNum = item.old_price ? parseFloat(String(item.old_price)) : (item.original_price ? parseFloat(String(item.original_price)) : undefined);
-              const merchant = item.merchant || item.shop || item.website?.name || 'Sklep Partnerski Convertiser';
-              const imageUrl = item.image_url || item.image || item.photo || '';
+              let subSubCategorySlug = 'kolowrotki-wedki';
+              if (titleLower.includes('wobler') || titleLower.includes('przynęt') || titleLower.includes('błystk') || titleLower.includes('twister')) {
+                subSubCategorySlug = 'przynety-zanety';
+              } else if (titleLower.includes('plecionk') || titleLower.includes('żyłk')) {
+                subSubCategorySlug = 'zylki-plecionki';
+              } else if (titleLower.includes('ponton') || titleLower.includes('woder') || titleLower.includes('fotel') || titleLower.includes('namiot')) {
+                subSubCategorySlug = 'biwak-wedkarski';
+              } else if (titleLower.includes('echosond') || titleLower.includes('sygnalizator') || titleLower.includes('podbierak')) {
+                subSubCategorySlug = 'akcesoria-wedkarskie';
+              }
 
               const dealDoc = {
                 title: { pl: title },
@@ -1219,24 +1317,24 @@ export async function harvestFishingPartnerOffersAction(options?: {
                 price: priceNum,
                 originalPrice: origPriceNum,
                 legacyPrice: priceNum,
-                link,
-                affiliateLink: link,
+                link: affiliateLink,
+                affiliateLink: affiliateLink,
                 image: imageUrl,
                 imageHint: 'sprzęt wędkarski',
                 category: 'sport-turystyka',
                 mainCategorySlug: 'sport-turystyka',
                 subCategorySlug: 'wedkarstwo',
-                subSubCategorySlug: 'kolowrotki-wedki',
+                subSubCategorySlug,
                 merchant,
                 merchantName: merchant,
                 status: 'approved',
-                temperature: Math.floor(Math.random() * 40) + 80,
-                voteCount: 1,
+                temperature: Math.floor(Math.random() * 50) + 100,
+                voteCount: 3,
                 commentsCount: 0,
                 source: 'convertiser',
                 dealType: 'sale',
-                tags: ['wędkarstwo', 'convertiser', 'promocje wędkarskie', 'żona nie widzi'],
-                postedBy: 'Wędkarskie Promocje (Convertiser Partner)',
+                tags: ['wędkarstwo', 'convertiser', 'promocje wędkarskie', 'żona nie widzi', merchant.toLowerCase()],
+                postedBy: `Wędkarskie Promocje (${merchant})`,
                 postedAt: new Date().toISOString(),
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -1245,8 +1343,8 @@ export async function harvestFishingPartnerOffersAction(options?: {
               };
 
               await adminDb.collection('deals').add(dealDoc);
-              existingLinks.add(link);
-              existingTitles.add(title.toLowerCase().trim());
+              existingLinks.add(affiliateLink);
+              existingTitles.add(titleLower);
               resultsBySource.convertiser++;
               totalImported++;
               if (resultsBySource.convertiser >= limitPerSource) break;
