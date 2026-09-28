@@ -210,7 +210,28 @@ function parseDealFields(rawDeal: any) {
   const merchant = merchantName ? ` w ${merchantName}` : '';
 
   const linkUrl = `https://okazjeplus.pl/pl/deals/${rawDeal.id}`;
-  const imageUrl = rawDeal.imageUrl || rawDeal.image;
+
+  let imageUrl: string | undefined = undefined;
+  if (typeof rawDeal.imageUrl === 'string' && rawDeal.imageUrl.trim()) {
+    imageUrl = rawDeal.imageUrl.trim();
+  } else if (typeof rawDeal.image === 'string' && rawDeal.image.trim()) {
+    imageUrl = rawDeal.image.trim();
+  } else if (Array.isArray(rawDeal.images) && rawDeal.images.length > 0) {
+    const firstImg = rawDeal.images[0];
+    imageUrl = typeof firstImg === 'string' ? firstImg : firstImg?.url;
+  } else if (typeof rawDeal.thumbnail === 'string' && rawDeal.thumbnail.trim()) {
+    imageUrl = rawDeal.thumbnail.trim();
+  } else if (Array.isArray(rawDeal.media) && rawDeal.media.length > 0) {
+    imageUrl = rawDeal.media[0]?.url;
+  }
+
+  // Ensure absolute HTTPS URL for Facebook Graph API
+  if (imageUrl && imageUrl.startsWith('//')) {
+    imageUrl = `https:${imageUrl}`;
+  }
+
+  const category = rawDeal.categoryName || rawDeal.category || rawDeal.mainCategory;
+  const tags = rawDeal.tags || rawDeal.searchTags;
   const temperature = Number(rawDeal.temperature) || 100;
 
   return {
@@ -220,10 +241,77 @@ function parseDealFields(rawDeal: any) {
     oldPriceStr,
     discountStr,
     merchant,
+    category,
+    tags,
     temperature,
     imageUrl,
     linkUrl,
   };
+}
+
+/**
+ * Generate 5-8 smart, high-performing hashtags for Facebook post
+ * Combines brand/product keywords, store, category, and deal tags
+ */
+export function generateSmartHashtags(deal: {
+  title: string;
+  merchant?: string;
+  category?: string;
+  tags?: string[];
+}): string[] {
+  const result: string[] = [];
+  const seen = new Set<string>();
+
+  const addTag = (raw: string) => {
+    if (!raw) return;
+    const clean = raw.toLowerCase().replace(/[^a-z0-9ąćęłńóśźż]/gi, '').trim();
+    if (clean.length < 2 || clean.length > 25) return;
+    const tag = `#${clean}`;
+    if (!seen.has(tag)) {
+      seen.add(tag);
+      result.push(tag);
+    }
+  };
+
+  // 1. Merchant / Store tag (e.g. #aliexpress, #amazon, #allegro)
+  if (deal.merchant) {
+    addTag(deal.merchant.replace(' w ', ''));
+  }
+
+  // 2. Specific Brand / Product keywords from title
+  const words = deal.title
+    .replace(/[^\w\sąćęłńóśźż]/gi, ' ')
+    .split(/\s+/)
+    .filter(w => w.length >= 3 && !/^\d+$/.test(w));
+
+  for (const word of words) {
+    if (result.length >= 3) break;
+    const lower = word.toLowerCase();
+    if (['dla', 'lub', 'oraz', 'jest', 'nowy', 'super', 'hit', 'mega', 'duzy', 'maly', 'zestaw'].includes(lower)) continue;
+    addTag(word);
+  }
+
+  // 3. Category tag if available
+  if (deal.category) {
+    addTag(deal.category);
+  }
+
+  // 4. Custom tags from deal
+  if (Array.isArray(deal.tags)) {
+    for (const t of deal.tags) {
+      if (result.length >= 5) break;
+      addTag(t);
+    }
+  }
+
+  // 5. Core deal & community tags
+  const coreTags = ['okazjeplus', 'promocje', 'okazje', 'znizki', 'hitcenowy'];
+  for (const t of coreTags) {
+    if (result.length >= 7) break;
+    addTag(t);
+  }
+
+  return result.slice(0, 8);
 }
 
 /**
@@ -372,6 +460,13 @@ export async function executeBotRun(
         linkUrl = parsed.linkUrl;
         imageUrl = parsed.imageUrl;
 
+        const dynamicHashtags = generateSmartHashtags({
+          title: itemTitle,
+          merchant: parsed.merchant,
+          category: parsed.category,
+          tags: parsed.tags,
+        });
+        const hashtagsLine = dynamicHashtags.join(' ');
         const customUserNote = topicHint ? `\n💡 Wskazówka: ${topicHint}\n` : '';
 
         // Dynamic, diverse copywriting angles:
@@ -383,7 +478,7 @@ export async function executeBotRun(
           customUserNote +
           `\nŁowcy Okazje Plus zweryfikowali tę ofertę – cena jest warta uwagi!\n\n` +
           `👉 Bezpośredni link do okazji i kod rabatowy znajdziesz w pierwszym komentarzu ⬇️ oraz tutaj:\n${linkUrl}\n\n` +
-          `#okazje #promocje #okazjeplus #znizki #zakupy`,
+          hashtagsLine,
 
           // Style 2: Błąd cenowy / Mocna zniżka
           `⚡ MOCNA OBNIŻKA CENY: ${itemTitle}!\n\n` +
@@ -393,7 +488,7 @@ export async function executeBotRun(
           customUserNote +
           `\nTaka oferta może szybko zniknąć lub wyprzedać się zapas magazynowy.\n\n` +
           `👉 Bezpośredni link do zakupu czeka w pierwszym komentarzu ⬇️ oraz tutaj:\n${linkUrl}\n\n` +
-          `#promocja #hitcenowy #okazjeplus #zakupy #znizka`,
+          hashtagsLine,
 
           // Style 3: Perełka dla Łowców / Rekomendacja
           `💎 ZNALEZISKO DNIA: ${itemTitle}!\n\n` +
@@ -401,7 +496,7 @@ export async function executeBotRun(
           `Nasi użytkownicy i moderatorzy ocenili ten deal na ${parsed.temperature}°. Realna oszczędność potwierdzona historią cen!\n` +
           customUserNote +
           `\n👉 Sprawdź szczegóły i kod rabatowy w 1. komentarzu ⬇️ oraz na stronie:\n${linkUrl}\n\n` +
-          `#lowcyokazji #okazjeplus #rabaty #prawdziweokazje`,
+          hashtagsLine,
 
           // Style 4: Alert Cenowy / Błyskawiczny
           `🚨 ALERT CENOWY OKAZJE PLUS 🚨\n\n` +
@@ -411,7 +506,7 @@ export async function executeBotRun(
           customUserNote +
           `\nSprawdź ofertę zanim cena wróci do normy!\n\n` +
           `🔗 Bezpośredni link czeka w pierwszym komentarzu ⬇️ oraz pod adresem:\n${linkUrl}\n\n` +
-          `#alertcenowy #okazjeplus #promocje #cenabezsciemy`
+          hashtagsLine
         ];
 
         const chosenIndex = Math.floor(Math.random() * styles.length);
@@ -439,6 +534,13 @@ export async function executeBotRun(
         linkUrl = parsed.linkUrl;
         imageUrl = parsed.imageUrl;
 
+        const expertTags = generateSmartHashtags({
+          title: parsed.title,
+          merchant: parsed.merchant,
+          category: parsed.category,
+          tags: parsed.tags,
+        });
+
         postText = `🛡️ OCENA EKSPERTA OKAZJE PLUS: ${parsed.title}\n\n` +
           `💰 Cena w promocji: ${parsed.priceStr}${parsed.oldPriceStr}${parsed.discountStr}${parsed.merchant}\n` +
           `🌡️ Ocena społeczności: ${parsed.temperature}°\n\n` +
@@ -448,7 +550,7 @@ export async function executeBotRun(
           `✅ Dobry stosunek ceny do oferowanych możliwości\n\n` +
           (topicHint ? `💬 Uwagi eksperta: ${topicHint}\n\n` : '') +
           `👉 Bezpośredni link do okazji i kod rabatowy znajdziesz w 1. komentarzu ⬇️ oraz tutaj:\n${linkUrl}\n\n` +
-          `#testy #jakosc #ekspert #okazjeplus #swiadomykonsument`;
+          expertTags.join(' ');
       } else {
         itemTitle = topicHint || 'Jak kupować mądrze i nie dać się nabrać na „sztuczne promocje”';
         postText = `🛡️ PORADNIK EKSPERTA OKAZJE PLUS: ${itemTitle}\n\n` +
@@ -477,6 +579,9 @@ export async function executeBotRun(
         `#faq #porady #okazjeplus #pomoc`;
     }
 
+    // Extract hashtags from the post text
+    const matchedHashtags = (postText.match(/#[a-z0-9ąćęłńóśźż]+/gi) || ['#okazjeplus']);
+
     // 2. Prepare post payload
     const initialStatus = immediatePublish || bot.autoApprove ? 'approved' : 'pending';
     const postPayload: Omit<SocialPost, 'id'> = {
@@ -494,7 +599,7 @@ export async function executeBotRun(
         text: postText,
         linkUrl,
         imageUrl,
-        hashtags: ['#okazjeplus'],
+        hashtags: matchedHashtags,
       },
       attempts: 0,
       metadata: {
