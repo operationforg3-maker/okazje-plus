@@ -165,7 +165,7 @@ export interface PromotableDeal {
   postedRecently?: boolean;
 }
 
-export function parseDealFields(rawDeal: any) {
+function parseDealFields(rawDeal: any) {
   const rawTitle = rawDeal.title;
   let title = 'Gorąca Okazja';
   if (typeof rawTitle === 'string') {
