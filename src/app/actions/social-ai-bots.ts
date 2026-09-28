@@ -226,6 +226,14 @@ function parseDealFields(rawDeal: any) {
   };
 }
 
+function getSearchWordVariations(query: string): string[] {
+  const trimmed = query.trim();
+  const lower = trimmed.toLowerCase();
+  const upper = trimmed.toUpperCase();
+  const capitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+  return Array.from(new Set([trimmed, upper, capitalized, lower]));
+}
+
 /**
  * Fetch approved deals with suggestions and search support for social media promotion
  */
@@ -248,15 +256,91 @@ export async function getPromotableDealsAction(
       .get();
     const recentDealIds = new Set(recentPostsSnap.docs.map(d => d.data().itemId).filter(Boolean));
 
-    // 2. Fetch approved deals
-    const dealsSnap = await adminDb
-      .collection('deals')
-      .where('status', '==', 'approved')
-      .limit(60)
-      .get();
+    const rawDealsMap = new Map<string, any>();
+    const q = searchQuery?.trim();
 
-    let allDeals: PromotableDeal[] = dealsSnap.docs.map(doc => {
-      const parsed = parseDealFields({ id: doc.id, ...doc.data() });
+    if (q && q.length > 0) {
+      // 1. Direct deal ID or URL lookup
+      let cleanId = q;
+      if (cleanId.includes('/deals/')) {
+        cleanId = cleanId.split('/deals/')[1].split(/[?#/]/)[0];
+      }
+      if (cleanId.length > 3) {
+        try {
+          const docSnap = await adminDb.collection('deals').doc(cleanId).get();
+          if (docSnap.exists) {
+            rawDealsMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
+          }
+        } catch {}
+      }
+
+      // 2. Prefix queries on title and title.pl across all case variations
+      const variations = getSearchWordVariations(q);
+      const queryPromises = [];
+      for (const v of variations) {
+        queryPromises.push(
+          adminDb.collection('deals')
+            .where('title', '>=', v)
+            .where('title', '<=', v + '\uf8ff')
+            .limit(30)
+            .get()
+        );
+        queryPromises.push(
+          adminDb.collection('deals')
+            .where('title.pl', '>=', v)
+            .where('title.pl', '<=', v + '\uf8ff')
+            .limit(30)
+            .get()
+        );
+      }
+
+      // 3. Substring check on recent 150 approved deals
+      try {
+        queryPromises.push(
+          adminDb.collection('deals')
+            .where('status', '==', 'approved')
+            .orderBy('createdAt', 'desc')
+            .limit(150)
+            .get()
+        );
+      } catch {}
+
+      const snapshots = await Promise.all(queryPromises);
+      for (const snap of snapshots) {
+        snap.docs.forEach(doc => {
+          const data = doc.data();
+          const status = data.status || 'approved';
+          if (status === 'approved' || status === 'active') {
+            rawDealsMap.set(doc.id, { id: doc.id, ...data });
+          }
+        });
+      }
+    } else {
+      // Default: fetch the freshest approved deals
+      try {
+        const defaultSnap = await adminDb
+          .collection('deals')
+          .where('status', '==', 'approved')
+          .orderBy('createdAt', 'desc')
+          .limit(60)
+          .get();
+        defaultSnap.docs.forEach(doc => {
+          rawDealsMap.set(doc.id, { id: doc.id, ...doc.data() });
+        });
+      } catch (e) {
+        const fallbackSnap = await adminDb
+          .collection('deals')
+          .where('status', '==', 'approved')
+          .limit(60)
+          .get();
+        fallbackSnap.docs.forEach(doc => {
+          rawDealsMap.set(doc.id, { id: doc.id, ...doc.data() });
+        });
+      }
+    }
+
+    let allDeals: PromotableDeal[] = Array.from(rawDealsMap.values()).map(data => {
+      const parsed = parseDealFields(data);
       return {
         id: parsed.id,
         title: parsed.title,
@@ -271,12 +355,14 @@ export async function getPromotableDealsAction(
     });
 
     // 3. Filter by search query if provided
-    if (searchQuery && searchQuery.trim().length > 0) {
-      const q = searchQuery.toLowerCase().trim();
-      allDeals = allDeals.filter(d => 
-        d.title.toLowerCase().includes(q) || 
-        (d.merchant && d.merchant.toLowerCase().includes(q))
-      );
+    if (q && q.length > 0) {
+      const qLower = q.toLowerCase();
+      allDeals = allDeals.filter(d => {
+        const titleMatch = d.title.toLowerCase().includes(qLower);
+        const merchantMatch = d.merchant ? d.merchant.toLowerCase().includes(qLower) : false;
+        const idMatch = d.id.toLowerCase().includes(qLower);
+        return titleMatch || merchantMatch || idMatch;
+      });
     }
 
     // 4. Sort: unposted first, then by temperature desc

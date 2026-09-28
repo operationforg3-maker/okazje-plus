@@ -82,7 +82,7 @@ export function SocialAIBotsPanel() {
   const loadPromotableDeals = async (search?: string) => {
     try {
       setLoadingDeals(true);
-      const res = await getPromotableDealsAction(search, 12);
+      const res = await getPromotableDealsAction(search, 24);
       if (res.success) {
         setPromotableDeals(res.deals);
       }
@@ -95,8 +95,14 @@ export function SocialAIBotsPanel() {
 
   useEffect(() => {
     loadBots();
-    loadPromotableDeals();
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadPromotableDeals(dealSearchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [dealSearchQuery]);
 
   const handleToggle = async (botId: string, currentEnabled: boolean) => {
     const nextEnabled = !currentEnabled;
@@ -280,17 +286,24 @@ export function SocialAIBotsPanel() {
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="relative w-64">
+              <div className="relative w-72">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Wyszukaj okazję..."
+                  placeholder="Wyszukaj okazję (np. popdeer, lego, ID)..."
                   value={dealSearchQuery}
-                  onChange={(e) => {
-                    setDealSearchQuery(e.target.value);
-                    loadPromotableDeals(e.target.value);
-                  }}
-                  className="pl-8 h-9 text-xs"
+                  onChange={(e) => setDealSearchQuery(e.target.value)}
+                  className="pl-8 pr-7 h-9 text-xs"
                 />
+                {dealSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setDealSearchQuery('')}
+                    className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground text-xs px-1"
+                    title="Wyczyść"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
               <Button
                 variant="outline"
@@ -312,12 +325,18 @@ export function SocialAIBotsPanel() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : promotableDeals.length === 0 ? (
-            <div className="text-center py-8 text-xs text-muted-foreground">
-              Brak zatwierdzonych okazji spełniających kryteria wyszukiwania.
+            <div className="text-center py-8 text-xs text-muted-foreground space-y-2">
+              <p>Brak okazji spełniających kryteria dla „<strong>{dealSearchQuery}</strong>”.</p>
+              <p className="text-[11px] opacity-80">Wskazówka: możesz wpisać nazwę (np. <em>popdeer</em>), markę, lub wkleić bezpośredni link/ID okazji.</p>
+              {dealSearchQuery && (
+                <Button size="sm" variant="outline" className="h-7 text-xs mt-2" onClick={() => setDealSearchQuery('')}>
+                  Wyczyść wyszukiwanie
+                </Button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {promotableDeals.slice(0, 4).map((deal) => (
+              {promotableDeals.slice(0, 8).map((deal) => (
                 <div
                   key={deal.id}
                   className="p-3 rounded-xl border border-border/70 bg-background/80 hover:border-primary/50 transition-all flex flex-col justify-between space-y-3"
@@ -740,19 +759,26 @@ export function SocialAIBotsPanel() {
                   <div className="relative">
                     <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                     <Input
-                      placeholder="Lub wyszukaj inną okazję do promowania..."
+                      placeholder="Wyszukaj inną okazję (np. popdeer, lego, link, ID)..."
                       value={dealSearchQuery}
-                      onChange={(e) => {
-                        setDealSearchQuery(e.target.value);
-                        loadPromotableDeals(e.target.value);
-                      }}
-                      className="pl-8 h-8 text-xs bg-background"
+                      onChange={(e) => setDealSearchQuery(e.target.value)}
+                      className="pl-8 pr-7 h-8 text-xs bg-background"
                     />
+                    {dealSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setDealSearchQuery('')}
+                        className="absolute right-2 top-2 text-muted-foreground hover:text-foreground text-xs px-1"
+                        title="Wyczyść"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
 
                   {/* Lista podpowiedzi do wyboru */}
-                  <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto pr-1">
-                    {promotableDeals.slice(0, 5).map(deal => (
+                  <div className="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto pr-1">
+                    {promotableDeals.slice(0, 10).map(deal => (
                       <div
                         key={deal.id}
                         onClick={() => setSelectedDealId(deal.id)}
