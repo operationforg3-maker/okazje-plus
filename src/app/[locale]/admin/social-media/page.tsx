@@ -27,7 +27,22 @@ import {
 } from '@/lib/social-automation';
 import type { SocialConfig, SocialPost, SocialTemplate, SocialPlatform, SocialPostStatus } from '@/lib/types';
 import { toast } from 'sonner';
-import { createAndPublishFacebookTestPostAction } from '@/app/actions/publish-social-post';
+import { 
+  createAndPublishFacebookTestPostAction,
+  updateSocialPostAction,
+  deleteSocialPostAction,
+  savePostAsTemplateAction,
+  publishSocialPostAction
+} from '@/app/actions/publish-social-post';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { SocialAIBotsPanel } from '@/components/admin/social-ai-bots-panel';
 import { 
   Facebook, 
@@ -48,7 +63,12 @@ import {
   XCircle,
   AlertCircle,
   Calendar,
-  Bot
+  Bot,
+  Edit3,
+  BookmarkPlus,
+  Sparkles,
+  ExternalLink,
+  Filter
 } from 'lucide-react';
 
 const PLATFORMS: SocialPlatform[] = ['facebook', 'instagram', 'twitter', 'linkedin', 'tiktok'];
@@ -174,6 +194,28 @@ export default function SocialMediaAdminPage() {
       toast.error('Błąd ponowienia posta');
     }
   }
+
+  async function handleDeletePost(postId: string) {
+    if (!confirm('Czy na pewno chcesz bezpowrotnie usunąć ten post z kolejki?')) return;
+    try {
+      const res = await deleteSocialPostAction(postId);
+      if (!res.success) {
+        toast.error(res.error || 'Nie udało się usunąć posta');
+        return;
+      }
+      toast.success('Post został trwale usunięty z kolejki');
+      await loadData();
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast.error('Błąd usuwania posta');
+    }
+  }
+
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const filteredPosts = posts.filter(post => {
+    if (statusFilter === 'all') return true;
+    return post.status === statusFilter;
+  });
 
   async function handlePublishFacebookTestPost() {
     try {
@@ -376,22 +418,51 @@ export default function SocialMediaAdminPage() {
 
         {/* QUEUE TAB */}
         <TabsContent value="queue" className="space-y-4">
+          {/* Status Filter Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/40 p-3 rounded-lg border">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Filtruj status:</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { id: 'all', label: `Wszystkie (${posts.length})` },
+                { id: 'pending', label: `Oczekujące (${posts.filter(p => p.status === 'pending').length})` },
+                { id: 'approved', label: `Zatwierdzone (${posts.filter(p => p.status === 'approved').length})` },
+                { id: 'posted', label: `Opublikowane (${posts.filter(p => p.status === 'posted').length})` },
+                { id: 'failed', label: `Błędy (${posts.filter(p => p.status === 'failed').length})` },
+                { id: 'cancelled', label: `Anulowane (${posts.filter(p => p.status === 'cancelled').length})` },
+              ].map(f => (
+                <Button
+                  key={f.id}
+                  variant={statusFilter === f.id ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => setStatusFilter(f.id)}
+                >
+                  {f.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid gap-4">
-            {posts.length === 0 ? (
+            {filteredPosts.length === 0 ? (
               <Card>
-                <CardContent className="flex flex-col items-center justify-center h-64">
-                  <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Brak postów w kolejce</p>
+                <CardContent className="flex flex-col items-center justify-center h-48">
+                  <AlertCircle className="h-10 w-10 text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground font-medium">Brak postów w wybranej kategorii</p>
                 </CardContent>
               </Card>
             ) : (
-              posts.map(post => (
+              filteredPosts.map(post => (
                 <PostCard
                   key={post.id}
                   post={post}
                   onApprove={handleApprovePost}
                   onCancel={handleCancelPost}
                   onRetry={handleRetryPost}
+                  onDelete={handleDeletePost}
                   onUpdate={loadData}
                 />
               ))
@@ -610,15 +681,17 @@ function PostCard({
   onApprove,
   onCancel,
   onRetry,
+  onDelete,
   onUpdate
 }: {
   post: SocialPost;
   onApprove: (id: string) => void;
   onCancel: (id: string) => void;
   onRetry: (id: string) => void;
+  onDelete?: (id: string) => void;
   onUpdate?: () => void;
 }) {
-  const Icon = PLATFORM_ICONS[post.platform];
+  const Icon = PLATFORM_ICONS[post.platform] || Facebook;
   const statusColors: Record<SocialPostStatus, string> = {
     pending: 'bg-yellow-500',
     approved: 'bg-blue-500',
@@ -628,89 +701,562 @@ function PostCard({
     cancelled: 'bg-gray-500'
   };
 
+  // Edit post state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(post.content?.text || '');
+  const [editTitle, setEditTitle] = useState(getSafeSocialString(post.itemData?.title) || '');
+  const [editLinkUrl, setEditLinkUrl] = useState(post.content?.linkUrl || '');
+  const [editImageUrl, setEditImageUrl] = useState(post.itemData?.image || post.content?.imageUrl || '');
+  const [editHashtags, setEditHashtags] = useState(
+    Array.isArray(post.content?.hashtags) ? post.content.hashtags.join(' ') : (post.content?.hashtags || '')
+  );
+  const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+
+  // Template modal state
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templateName, setTemplateName] = useState(
+    `Wzorzec: ${getSafeSocialString(post.itemData?.title).slice(0, 30) || 'Nowy Wzorzec'}`
+  );
+  const [templateContent, setTemplateContent] = useState(post.content?.text || '');
+  const [templateHashtags, setTemplateHashtags] = useState(
+    Array.isArray(post.content?.hashtags) ? post.content.hashtags.join(' ') : (post.content?.hashtags || '')
+  );
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  useEffect(() => {
+    setEditText(post.content?.text || '');
+    setEditTitle(getSafeSocialString(post.itemData?.title) || '');
+    setEditLinkUrl(post.content?.linkUrl || '');
+    setEditImageUrl(post.itemData?.image || post.content?.imageUrl || '');
+    setEditHashtags(Array.isArray(post.content?.hashtags) ? post.content.hashtags.join(' ') : (post.content?.hashtags || ''));
+  }, [post]);
+
+  const handleSaveEdit = async () => {
+    try {
+      setSaving(true);
+      const hashtagsArray = editHashtags
+        .split(/[,\s]+/)
+        .map(t => t.trim())
+        .filter(t => t.length > 0)
+        .map(t => t.startsWith('#') ? t : `#${t}`);
+
+      const result = await updateSocialPostAction(post.id, {
+        title: editTitle,
+        text: editText,
+        linkUrl: editLinkUrl,
+        imageUrl: editImageUrl,
+        hashtags: hashtagsArray,
+      });
+
+      if (!result.success) {
+        toast.error(result.error || 'Nie udało się zapisać zmian');
+        return;
+      }
+
+      toast.success('Zmiany w poście zostały pomyślnie zapisane');
+      setIsEditing(false);
+      onUpdate?.();
+    } catch (err) {
+      console.error('Error updating post:', err);
+      toast.error('Błąd podczas zapisywania zmian');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveAndPublishNow = async () => {
+    try {
+      setPublishing(true);
+      const hashtagsArray = editHashtags
+        .split(/[,\s]+/)
+        .map(t => t.trim())
+        .filter(t => t.length > 0)
+        .map(t => t.startsWith('#') ? t : `#${t}`);
+
+      const saveRes = await updateSocialPostAction(post.id, {
+        title: editTitle,
+        text: editText,
+        linkUrl: editLinkUrl,
+        imageUrl: editImageUrl,
+        hashtags: hashtagsArray,
+        status: 'approved',
+      });
+
+      if (!saveRes.success) {
+        toast.error(saveRes.error || 'Błąd zapisu przed publikacją');
+        return;
+      }
+
+      const pubRes = await publishSocialPostAction(post.id);
+      if (!pubRes.success) {
+        const errMsg = typeof pubRes.error === 'string' ? pubRes.error : pubRes.error?.message || 'Błąd publikacji';
+        toast.error(`Nie udało się opublikować: ${errMsg}`);
+        setIsEditing(false);
+        onUpdate?.();
+        return;
+      }
+
+      toast.success('Post zaktualizowany i opublikowany na Facebooku!');
+      setIsEditing(false);
+      onUpdate?.();
+    } catch (err) {
+      console.error('Error publishing post:', err);
+      toast.error('Wystąpił błąd podczas publikacji');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleSaveAsTemplate = async () => {
+    if (!templateName.trim()) {
+      toast.error('Podaj nazwę wzorca');
+      return;
+    }
+    try {
+      setSavingTemplate(true);
+      const res = await savePostAsTemplateAction(
+        post.id,
+        templateName,
+        templateContent,
+        templateHashtags
+      );
+      if (!res.success) {
+        toast.error(res.error || 'Nie udało się zapisać wzorca');
+        return;
+      }
+      toast.success('Wzorzec zapisany! Znajdziesz go w zakładce Szablony');
+      setShowTemplateModal(false);
+      onUpdate?.();
+    } catch (err) {
+      console.error('Error saving template:', err);
+      toast.error('Błąd zapisu wzorca');
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const insertVariable = (varName: string) => {
+    setTemplateContent(prev => prev + varName);
+  };
+
   return (
-    <Card>
+    <Card className="transition-all duration-150">
       <CardHeader>
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <Icon className="h-5 w-5" />
+            <div className="p-2 bg-muted rounded-md">
+              <Icon className="h-5 w-5" />
+            </div>
             <div>
-              <CardTitle className="text-base">{getSafeSocialString(post.itemData?.title)}</CardTitle>
+              <CardTitle className="text-base leading-snug">
+                {getSafeSocialString(post.itemData?.title) || 'Post bez tytułu'}
+              </CardTitle>
               <CardDescription className="flex items-center gap-2 mt-1">
                 <Badge className={statusColors[post.status]}>
                   {STATUS_LABELS[post.status]}
                 </Badge>
-                <span className="text-xs">
+                <span className="text-xs text-muted-foreground">
                   {new Date(post.createdAt).toLocaleString('pl-PL')}
                 </span>
+                {post.metadata?.botName && (
+                  <Badge variant="outline" className="text-xs font-normal">
+                    🤖 {post.metadata.botName}
+                  </Badge>
+                )}
               </CardDescription>
             </div>
           </div>
-          <div className="flex gap-2">
-            {post.status === 'pending' && (
+
+          {/* Action buttons */}
+          <div className="flex items-center flex-wrap gap-1.5 self-end sm:self-auto">
+            {!isEditing && (
               <>
-                <Button onClick={() => onApprove(post.id)} size="sm" variant="default">
-                  <Check className="h-4 w-4" />
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  title="Edytuj treść posta przed publikacją"
+                >
+                  <Edit3 className="h-3.5 w-3.5 mr-1" />
+                  Edytuj
                 </Button>
-                <Button onClick={() => onCancel(post.id)} size="sm" variant="destructive">
-                  <X className="h-4 w-4" />
+
+                <Button
+                  onClick={() => {
+                    setTemplateContent(post.content?.text || '');
+                    setTemplateName(`Wzorzec: ${getSafeSocialString(post.itemData?.title).slice(0, 30) || 'Nowy Wzorzec'}`);
+                    setShowTemplateModal(true);
+                  }}
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900"
+                  title="Zapisz ten post jako wzorzec / szablon"
+                >
+                  <BookmarkPlus className="h-3.5 w-3.5 mr-1" />
+                  Zapisz wzór
                 </Button>
               </>
             )}
-            {post.status === 'failed' && (
-              <Button onClick={() => onRetry(post.id)} size="sm" variant="outline">
-                <RefreshCw className="h-4 w-4 mr-2" />
+
+            {post.status === 'pending' && !isEditing && (
+              <>
+                <Button 
+                  onClick={() => onApprove(post.id)} 
+                  size="sm" 
+                  variant="default"
+                  className="h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
+                  title="Zatwierdź do publikacji"
+                >
+                  <Check className="h-3.5 w-3.5 mr-1" />
+                  Zatwierdź
+                </Button>
+                <Button 
+                  onClick={() => onCancel(post.id)} 
+                  size="sm" 
+                  variant="outline"
+                  className="h-8 text-xs text-muted-foreground"
+                  title="Anuluj publikację"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </>
+            )}
+
+            {post.status === 'failed' && !isEditing && (
+              <Button onClick={() => onRetry(post.id)} size="sm" variant="outline" className="h-8 text-xs">
+                <RefreshCw className="h-3.5 w-3.5 mr-1" />
                 Ponów
+              </Button>
+            )}
+
+            {!isEditing && onDelete && (
+              <Button
+                onClick={() => onDelete(post.id)}
+                size="sm"
+                variant="ghost"
+                className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                title="Usuń trwale ten post z kolejki"
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             )}
           </div>
         </div>
       </CardHeader>
+
       <CardContent>
-        <div className="space-y-4">
-          {/* Content Preview */}
-          <div className="space-y-3">
-            <div className="p-3 bg-muted rounded text-sm whitespace-pre-wrap">
-              {post.content.text}
+        {isEditing ? (
+          /* ================= EDIT MODE ================= */
+          <div className="space-y-4 p-4 border rounded-lg bg-muted/40">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                <Edit3 className="h-3.5 w-3.5" />
+                Tryb edycji posta przed publikacją
+              </span>
+              <span className="text-xs text-muted-foreground">
+                Długość tekstu: {editText.length} znaków
+              </span>
             </div>
-            {post.itemData.image && (
-              <img 
-                src={post.itemData.image} 
-                alt={getSafeSocialString(post.itemData?.title)}
-                className="w-full max-w-md h-48 object-cover rounded"
+
+            <div>
+              <Label htmlFor={`edit-title-${post.id}`} className="text-xs font-medium">
+                Tytuł okazji / produktu
+              </Label>
+              <Input
+                id={`edit-title-${post.id}`}
+                value={editTitle}
+                onChange={e => setEditTitle(e.target.value)}
+                placeholder="np. Klocki LEGO Technic 42151"
+                className="mt-1"
               />
-            )}
-            {post.content.linkUrl && (
-              <div className="text-sm text-muted-foreground break-all">
-                🔗 {post.content.linkUrl}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label htmlFor={`edit-text-${post.id}`} className="text-xs font-medium">
+                  Treść posta (Facebook / Grupa)
+                </Label>
+                <div className="flex gap-1 text-xs">
+                  <button 
+                    type="button" 
+                    onClick={() => setEditText(prev => prev + '\n🔥 GORĄCA OKAZJA: ')} 
+                    className="px-1.5 py-0.5 bg-muted rounded border text-muted-foreground hover:text-foreground"
+                  >
+                    +🔥 Nagłówek
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setEditText(prev => prev + '\n👉 Sprawdź szczegóły w 1. komentarzu!')} 
+                    className="px-1.5 py-0.5 bg-muted rounded border text-muted-foreground hover:text-foreground"
+                  >
+                    +👉 CTA
+                  </button>
+                </div>
+              </div>
+              <Textarea
+                id={`edit-text-${post.id}`}
+                rows={6}
+                value={editText}
+                onChange={e => setEditText(e.target.value)}
+                placeholder="Wpisz treść posta..."
+                className="font-sans text-sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor={`edit-link-${post.id}`} className="text-xs font-medium">
+                  Link docelowy do okazji
+                </Label>
+                <Input
+                  id={`edit-link-${post.id}`}
+                  value={editLinkUrl}
+                  onChange={e => setEditLinkUrl(e.target.value)}
+                  placeholder="https://okazjeplus.pl/pl/deals/..."
+                  className="mt-1 text-xs"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                  <Check className="h-3 w-3 text-green-500" />
+                  Bot automatycznie wstawi ten link jako 1. komentarz pod postem!
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor={`edit-image-${post.id}`} className="text-xs font-medium">
+                  URL zdjęcia oferty
+                </Label>
+                <Input
+                  id={`edit-image-${post.id}`}
+                  value={editImageUrl}
+                  onChange={e => setEditImageUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="mt-1 text-xs"
+                />
+                {editImageUrl && (
+                  <p className="text-[11px] text-muted-foreground mt-1 truncate">
+                    Podgląd: {editImageUrl}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor={`edit-hashtags-${post.id}`} className="text-xs font-medium">
+                Hashtagi (oddziel spacją)
+              </Label>
+              <Input
+                id={`edit-hashtags-${post.id}`}
+                value={editHashtags}
+                onChange={e => setEditHashtags(e.target.value)}
+                placeholder="#okazje #promocje #okazjeplus"
+                className="mt-1 text-xs"
+              />
+            </div>
+
+            {/* Edit actions */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setEditText(post.content?.text || '');
+                  setEditTitle(getSafeSocialString(post.itemData?.title) || '');
+                  setIsEditing(false);
+                }}
+                disabled={saving || publishing}
+              >
+                <X className="h-4 w-4 mr-1.5" />
+                Anuluj
+              </Button>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleSaveEdit}
+                  size="sm"
+                  variant="default"
+                  disabled={saving || publishing}
+                >
+                  {saving ? (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                      Zapisywanie...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-3.5 w-3.5 mr-1.5" />
+                      Zapisz zmiany
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  onClick={handleSaveAndPublishNow}
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  disabled={saving || publishing}
+                >
+                  {publishing ? (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                      Publikowanie na FB...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-3.5 w-3.5 mr-1.5" />
+                      Zapisz i Opublikuj teraz
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* ================= VIEW MODE ================= */
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <div className="p-3 bg-muted rounded text-sm whitespace-pre-wrap leading-relaxed">
+                {post.content.text}
+              </div>
+
+              {post.itemData.image && (
+                <div className="relative group max-w-md overflow-hidden rounded-md border">
+                  <img 
+                    src={post.itemData.image} 
+                    alt={getSafeSocialString(post.itemData?.title)}
+                    className="w-full h-48 object-cover transition-transform group-hover:scale-105"
+                  />
+                </div>
+              )}
+
+              {post.content.linkUrl && (
+                <div className="text-xs text-muted-foreground flex items-center gap-1.5 bg-muted/60 p-2 rounded">
+                  <span>🔗 Link okazji (będzie w 1. komentarzu):</span>
+                  <a 
+                    href={post.content.linkUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-primary underline font-medium truncate hover:text-primary/80"
+                  >
+                    {post.content.linkUrl}
+                  </a>
+                </div>
+              )}
+
+              {post.content.hashtags && post.content.hashtags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {post.content.hashtags.map((tag, idx) => (
+                    <Badge key={idx} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Error Display */}
+            {post.error && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-600 dark:text-red-400">
+                <strong>Błąd:</strong> {post.error.message}
               </div>
             )}
-            {post.content.hashtags && post.content.hashtags.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {post.content.hashtags.map((tag, idx) => (
-                  <Badge key={idx} variant="secondary" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
+
+            {/* Manual Publisher Integration */}
+            {(post.status === 'approved' || post.status === 'posted') && (
+              <>
+                <Separator />
+                <ManualPublisher post={post} onUpdate={onUpdate} />
+              </>
             )}
           </div>
+        )}
 
-          {/* Error Display */}
-          {post.error && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-sm text-red-600 dark:text-red-400">
-              <strong>Błąd:</strong> {post.error.message}
+        {/* Dialog Zapisz jako wzorzec */}
+        <Dialog open={showTemplateModal} onOpenChange={setShowTemplateModal}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <BookmarkPlus className="h-5 w-5 text-blue-500" />
+                Zapisz post jako wzorzec / szablon
+              </DialogTitle>
+              <DialogDescription>
+                Wzorzec zostanie zapisany w zakładce <strong>Szablony</strong>. Możesz używać zmiennych takich jak &#123;title&#125;, &#123;price&#125;, &#123;discount&#125; lub &#123;url&#125;, aby boty automatycznie wypełniały je danymi okazji.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div>
+                <Label htmlFor="tpl-name" className="text-xs font-medium">Nazwa wzorca</Label>
+                <Input
+                  id="tpl-name"
+                  value={templateName}
+                  onChange={e => setTemplateName(e.target.value)}
+                  placeholder="np. Hit Dnia z Linkiem w Komentarzu"
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <Label htmlFor="tpl-content" className="text-xs font-medium">Treść wzorca</Label>
+                  <span className="text-[11px] text-muted-foreground">Kliknij zmienną, by dodać:</span>
+                </div>
+
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {['{title}', '{price}', '{oldPrice}', '{discount}', '{merchant}', '{temperature}', '{url}'].map(v => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => insertVariable(v)}
+                      className="px-2 py-0.5 text-xs bg-secondary hover:bg-secondary/80 rounded border font-mono text-primary"
+                    >
+                      +{v}
+                    </button>
+                  ))}
+                </div>
+
+                <Textarea
+                  id="tpl-content"
+                  rows={7}
+                  value={templateContent}
+                  onChange={e => setTemplateContent(e.target.value)}
+                  className="font-mono text-xs"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="tpl-hashtags" className="text-xs font-medium">Hashtagi</Label>
+                <Input
+                  id="tpl-hashtags"
+                  value={templateHashtags}
+                  onChange={e => setTemplateHashtags(e.target.value)}
+                  placeholder="#okazje #promocje #okazjeplus"
+                  className="mt-1 text-xs"
+                />
+              </div>
             </div>
-          )}
 
-          {/* Manual Publisher Integration */}
-          {(post.status === 'approved' || post.status === 'posted') && (
-            <>
-              <Separator />
-              <ManualPublisher post={post} onUpdate={onUpdate} />
-            </>
-          )}
-        </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowTemplateModal(false)} disabled={savingTemplate}>
+                Anuluj
+              </Button>
+              <Button onClick={handleSaveAsTemplate} disabled={savingTemplate}>
+                {savingTemplate ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Zapisywanie...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Zapisz wzorzec
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

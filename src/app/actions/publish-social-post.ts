@@ -479,3 +479,279 @@ export async function createAndPublishFacebookTestPostAction(): Promise<PublishR
     };
   }
 }
+
+/**
+ * Update an existing social post before publishing
+ */
+export async function updateSocialPostAction(
+  postId: string,
+  data: {
+    title?: string;
+    text?: string;
+    linkUrl?: string;
+    imageUrl?: string;
+    hashtags?: string[];
+    scheduledFor?: string | null;
+    status?: SocialPost['status'];
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    const postRef = adminDb.collection('socialPosts').doc(postId);
+    const postSnap = await postRef.get();
+
+    if (!postSnap.exists) {
+      return { success: false, error: 'Nie znaleziono posta' };
+    }
+
+    const currentPost = postSnap.data() as SocialPost;
+    const now = new Date().toISOString();
+
+    const updatePayload: Record<string, any> = {
+      updatedAt: now,
+    };
+
+    if (data.text !== undefined) {
+      updatePayload['content.text'] = data.text;
+    }
+    if (data.linkUrl !== undefined) {
+      updatePayload['content.linkUrl'] = data.linkUrl;
+      updatePayload['itemData.url'] = data.linkUrl;
+    }
+    if (data.imageUrl !== undefined) {
+      updatePayload['content.imageUrl'] = data.imageUrl;
+      updatePayload['itemData.image'] = data.imageUrl;
+    }
+    if (data.hashtags !== undefined) {
+      updatePayload['content.hashtags'] = data.hashtags;
+    }
+    if (data.title !== undefined) {
+      updatePayload['itemData.title'] = data.title;
+    }
+    if (data.scheduledFor !== undefined) {
+      updatePayload.scheduledFor = data.scheduledFor;
+    }
+    if (data.status !== undefined) {
+      updatePayload.status = data.status;
+    }
+
+    await postRef.update(updatePayload);
+
+    await addSocialLog(
+      postId,
+      currentPost.platform,
+      'approved',
+      data.status || currentPost.status,
+      'Post zaktualizowany przez administratora',
+      session.uid
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error('[UpdateSocialPost] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Błąd podczas aktualizacji posta',
+    };
+  }
+}
+
+/**
+ * Delete a post completely from the queue
+ */
+export async function deleteSocialPostAction(
+  postId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    const postRef = adminDb.collection('socialPosts').doc(postId);
+    const postSnap = await postRef.get();
+
+    if (postSnap.exists) {
+      const postData = postSnap.data() as SocialPost;
+      await postRef.delete();
+      await addSocialLog(
+        postId,
+        postData.platform,
+        'cancelled',
+        'cancelled',
+        'Post trwale usunięty z kolejki przez administratora',
+        session.uid
+      );
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('[DeleteSocialPost] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Błąd podczas usuwania posta',
+    };
+  }
+}
+
+/**
+ * Save a post's content and structure as a reusable template
+ */
+export async function savePostAsTemplateAction(
+  postId: string,
+  name: string,
+  contentTemplate?: string,
+  hashtagsTemplate?: string
+): Promise<{ success: boolean; templateId?: string; error?: string }> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    const postRef = adminDb.collection('socialPosts').doc(postId);
+    const postSnap = await postRef.get();
+
+    if (!postSnap.exists) {
+      return { success: false, error: 'Nie znaleziono posta źródłowego' };
+    }
+
+    const postData = postSnap.data() as SocialPost;
+    const now = new Date().toISOString();
+
+    const templatePayload = {
+      name: name.trim(),
+      platform: postData.platform || 'facebook',
+      type: postData.type || 'deal',
+      contentTemplate: contentTemplate || postData.content?.text || '',
+      hashtagsTemplate: hashtagsTemplate !== undefined
+        ? hashtagsTemplate
+        : (Array.isArray(postData.content?.hashtags) ? postData.content.hashtags.join(' ') : ''),
+      imageStyle: 'clean',
+      enabled: true,
+      createdAt: now,
+      updatedAt: now,
+      metadata: {
+        createdFromPostId: postId,
+        createdBy: session.uid,
+      },
+    };
+
+    const templateRef = await adminDb.collection('socialTemplates').add(templatePayload);
+
+    return { success: true, templateId: templateRef.id };
+  } catch (error) {
+    console.error('[SavePostAsTemplate] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Błąd podczas zapisywania wzorca',
+    };
+  }
+}
+
+/**
+ * Seed curated high-converting templates for Okazje Plus
+ */
+export async function seedCuratedTemplatesAction(): Promise<{ success: boolean; count: number; error?: string }> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, count: 0, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    const curatedTemplates = [
+      {
+        name: '🔥 Hit Dnia z Komentarzem (Okazja)',
+        platform: 'facebook',
+        type: 'deal',
+        contentTemplate: 
+          '🔥 GORĄCA OKAZJA: {title}!\n\n' +
+          '💰 Cena: {price} {oldPrice} {discount}\n' +
+          '🌡️ Ocena społeczności: {temperature}°\n\n' +
+          'Łowcy Okazje Plus zweryfikowali tę ofertę – cena jest warta uwagi!\n\n' +
+          '👉 Bezpośredni link i kod rabatowy znajdziesz w pierwszym komentarzu ⬇️ oraz tutaj:\n{url}\n\n' +
+          '#okazje #promocje #okazjeplus #znizki #zakupy',
+        hashtagsTemplate: '#okazje #promocje #okazjeplus #znizki #zakupy',
+        imageStyle: 'clean',
+        enabled: true,
+      },
+      {
+        name: '💬 Pytanie Społecznościowe (Wzrost Zasięgów)',
+        platform: 'facebook',
+        type: 'article',
+        contentTemplate:
+          '👋 Cześć Łowcy Okazji!\n\n' +
+          'Mamy pytanie do naszej społeczności:\n' +
+          '💬 Jaki jest Wasz najlepszy zakup tego miesiąca? Co udało Wam się upolować w rekordowo niskiej cenie?\n\n' +
+          'Pochwalcie się w komentarzu linkiem lub zdjęciem! Najciekawsze perełki wyróżnimy na stronie głównej 🏆\n\n' +
+          'Codzienne sprawdzone okazje:\nhttps://okazjeplus.pl\n\n' +
+          '#spolecznosc #lowcyokazji #okazjeplus #dyskusja #zakupyonline',
+        hashtagsTemplate: '#spolecznosc #lowcyokazji #okazjeplus #dyskusja',
+        imageStyle: 'clean',
+        enabled: true,
+      },
+      {
+        name: '🛡️ Poradnik Eksperta (Dyrektywa Omnibus i Jakość)',
+        platform: 'facebook',
+        type: 'article',
+        contentTemplate:
+          '🛡️ PORADNIK EKSPERTA OKAZJE PLUS: Jak nie dać się nabrać na „fałszywe promocje”?\n\n' +
+          'Czy wiesz, że ponad 30% promocji w sieci to tylko sztucznie zawyżone ceny wyjściowe?\n' +
+          'W redakcji Okazje Plus każda rekomendacja przechodzi rygorystyczny test:\n' +
+          '✅ Analiza 90-dniowej historii cen (Omnibus + autorskie boty)\n' +
+          '✅ Weryfikacja wiarygodności i opinii o sprzedawcy\n' +
+          '✅ Ocena realnej relacji jakości do ceny\n\n' +
+          'Kupuj mądrze ze sprawdzoną społecznością:\nhttps://okazjeplus.pl\n\n' +
+          '#testy #jakosc #ekspert #okazjeplus #swiadomykonsument #poradnik',
+        hashtagsTemplate: '#testy #jakosc #ekspert #okazjeplus #swiadomykonsument',
+        imageStyle: 'clean',
+        enabled: true,
+      },
+      {
+        name: '⚡ Błyskawiczny Flash Deal (Limitowany Czas)',
+        platform: 'facebook',
+        type: 'deal',
+        contentTemplate:
+          '⚡ BŁYSKAWICZNA OKAZJA: {title}!\n' +
+          '⏳ Uwaga: oferta może wygasnąć w każdej chwili lub zapas ulegnie wyczerpaniu!\n\n' +
+          '📉 Tylko teraz: {price} (zamiast {oldPrice}) {discount}\n' +
+          '🛒 Sklep: {merchant}\n\n' +
+          '👉 Łap okazję zanim zniknie – bezpośredni link czeka w 1. komentarzu ⬇️ oraz tutaj:\n{url}\n\n' +
+          '#flashdeal #okazja #okazjeplus #promocja #szybkazmiana',
+        hashtagsTemplate: '#flashdeal #okazja #okazjeplus #promocja',
+        imageStyle: 'bold',
+        enabled: true,
+      }
+    ];
+
+    const now = new Date().toISOString();
+    let count = 0;
+
+    for (const t of curatedTemplates) {
+      await adminDb.collection('socialTemplates').add({
+        ...t,
+        createdAt: now,
+        updatedAt: now,
+        metadata: {
+          curated: true,
+          createdBy: session.uid,
+        },
+      });
+      count++;
+    }
+
+    return { success: true, count };
+  } catch (error) {
+    console.error('[SeedCuratedTemplates] Error:', error);
+    return {
+      success: false,
+      count: 0,
+      error: error instanceof Error ? error.message : 'Błąd podczas wgrywania wzorców',
+    };
+  }
+}
+
