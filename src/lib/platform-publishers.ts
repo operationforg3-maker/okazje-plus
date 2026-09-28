@@ -63,6 +63,25 @@ export async function publishToFacebook(
 
     const data = await response.json();
     
+    // Automatically post first comment with direct deal link
+    if (data.id && post.content?.linkUrl) {
+      try {
+        const commentUrl = `https://graph.facebook.com/v19.0/${data.id}/comments`;
+        await fetch(commentUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: `🔗 Bezpośredni link do oferty i szczegółów:\n${post.content.linkUrl}`,
+            access_token: accessToken,
+          }),
+        });
+      } catch (commentErr) {
+        console.warn('[Facebook] First comment creation failed:', commentErr);
+      }
+    }
+
     return {
       success: true,
       platformPostId: data.id,

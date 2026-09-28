@@ -192,23 +192,66 @@ export async function executeBotRun(
         const topDeal = deals[0];
 
         itemId = topDeal.id;
+
+        // 1. Safe title extraction
         const rawTitle = topDeal.title;
-        itemTitle = typeof rawTitle === 'object' && rawTitle !== null
-          ? (rawTitle.pl || rawTitle.en || rawTitle.de || Object.values(rawTitle)[0] || 'Gorąca Okazja')
-          : String(rawTitle || 'Gorąca Okazja');
-        const priceStr = topDeal.currentPrice ? `${topDeal.currentPrice} zł` : '';
-        const oldPriceStr = topDeal.originalPrice ? ` (zamiast ${topDeal.originalPrice} zł)` : '';
-        const discountStr = topDeal.discount ? ` -${topDeal.discount}%` : '';
-        const merchant = topDeal.merchant ? ` w ${topDeal.merchant}` : '';
-        linkUrl = topDeal.slug ? `https://okazjeplus.pl/okazje/${topDeal.slug}` : 'https://okazjeplus.pl';
+        if (typeof rawTitle === 'string') {
+          itemTitle = rawTitle;
+        } else if (typeof rawTitle === 'object' && rawTitle !== null) {
+          itemTitle = rawTitle.pl || rawTitle.en || rawTitle.de || rawTitle.es || Object.values(rawTitle)[0] || 'Gorąca Okazja';
+        } else {
+          itemTitle = 'Gorąca Okazja';
+        }
+
+        // 2. Safe current price extraction
+        let currentPriceVal: number | undefined = undefined;
+        if (typeof topDeal.price === 'number') {
+          currentPriceVal = topDeal.price;
+        } else if (typeof topDeal.price === 'object' && topDeal.price !== null && typeof topDeal.price.amount === 'number') {
+          currentPriceVal = topDeal.price.amount;
+        } else if (typeof topDeal.currentPrice === 'number') {
+          currentPriceVal = topDeal.currentPrice;
+        }
+        const priceStr = currentPriceVal !== undefined ? `${currentPriceVal.toFixed(2)} zł` : '';
+
+        // 3. Safe original price extraction
+        let originalPriceVal: number | undefined = undefined;
+        if (typeof topDeal.originalPrice === 'number') {
+          originalPriceVal = topDeal.originalPrice;
+        } else if (typeof topDeal.originalPrice === 'object' && topDeal.originalPrice !== null && typeof topDeal.originalPrice.amount === 'number') {
+          originalPriceVal = topDeal.originalPrice.amount;
+        }
+        const oldPriceStr = originalPriceVal && (!currentPriceVal || originalPriceVal > currentPriceVal) 
+          ? ` (zamiast ${originalPriceVal.toFixed(2)} zł)` 
+          : '';
+
+        // 4. Safe discount extraction
+        let discountNum: number | undefined = undefined;
+        if (typeof topDeal.discount === 'number') {
+          discountNum = topDeal.discount;
+        } else if (typeof topDeal.discount === 'object' && topDeal.discount !== null) {
+          discountNum = topDeal.discount.percentage ?? topDeal.discount.amount;
+        } else if (typeof topDeal.discountPercent === 'number') {
+          discountNum = topDeal.discountPercent;
+        } else if (currentPriceVal && originalPriceVal && originalPriceVal > currentPriceVal) {
+          discountNum = Math.round(((originalPriceVal - currentPriceVal) / originalPriceVal) * 100);
+        }
+        const discountStr = discountNum && discountNum > 0 ? ` -${Math.round(discountNum)}%` : '';
+
+        // 5. Merchant extraction
+        const merchantName = topDeal.merchantName || topDeal.merchant || topDeal.source;
+        const merchant = merchantName ? ` w ${merchantName}` : '';
+
+        // 6. Direct deal link on Okazje Plus
+        linkUrl = `https://okazjeplus.pl/pl/deals/${topDeal.id}`;
         imageUrl = topDeal.imageUrl || topDeal.image;
 
         postText = `🔥 GORĄCA OKAZJA: ${itemTitle}!\n\n` +
           `💰 Cena: ${priceStr}${oldPriceStr}${discountStr}${merchant}\n` +
           `🌡️ Ocena społeczności: ${topDeal.temperature || 100}°\n\n` +
           `Łowcy Okazje Plus sprawdzili tę ofertę – cena jest warta uwagi!\n\n` +
-          `👉 Szczegóły i kod rabatowy tutaj:\n${linkUrl}\n\n` +
-          `#okazje #promocje #promocja #okazjeplus #znizki #zakupy`;
+          `👉 Bezpośredni link do okazji i kod rabatowy znajdziesz w pierwszym komentarzu ⬇️ oraz tutaj:\n${linkUrl}\n\n` +
+          `#okazje #promocje #okazjeplus #znizki #zakupy`;
       } else {
         itemTitle = 'Przegląd Najlepszych Okazji Dnia';
         postText = `🔥 CODZIENNY RAPORT OKAZJI Okazje Plus (${timestampStr})!\n\n` +

@@ -62,7 +62,7 @@ export async function publishSocialPostAction(
     const postRef = adminDb.collection('socialPosts').doc(postId);
     const postSnap = await postRef.get();
 
-    if (!postSnap.exists()) {
+    if (!postSnap.exists) {
       return { success: false, error: 'Post not found' };
     }
 
@@ -87,7 +87,7 @@ export async function publishSocialPostAction(
     const configRef = adminDb.collection('socialConfig').doc(post.platform);
     const configSnap = await configRef.get();
 
-    if (!configSnap.exists()) {
+    if (!configSnap.exists) {
       return {
         success: false,
         error: `Platform configuration not found for ${post.platform}`,
@@ -186,7 +186,7 @@ export async function fetchPostAnalyticsAction(
     const postRef = adminDb.collection('socialPosts').doc(postId);
     const postSnap = await postRef.get();
 
-    if (!postSnap.exists()) {
+    if (!postSnap.exists) {
       return { success: false, error: 'Post not found' };
     }
 
@@ -203,7 +203,7 @@ export async function fetchPostAnalyticsAction(
     const configRef = adminDb.collection('socialConfig').doc(post.platform);
     const configSnap = await configRef.get();
 
-    if (!configSnap.exists()) {
+    if (!configSnap.exists) {
       return { success: false, error: 'Platform config not found' };
     }
 
@@ -259,7 +259,7 @@ export async function schedulePostAction(
     const postRef = adminDb.collection('socialPosts').doc(postId);
     const postSnap = await postRef.get();
 
-    if (!postSnap.exists()) {
+    if (!postSnap.exists) {
       return { success: false, error: 'Post not found' };
     }
 
@@ -313,7 +313,7 @@ export async function cancelScheduleAction(
     const postRef = adminDb.collection('socialPosts').doc(postId);
     const postSnap = await postRef.get();
     
-    if (!postSnap.exists()) {
+    if (!postSnap.exists) {
       return { success: false, error: 'Post not found' };
     }
 
