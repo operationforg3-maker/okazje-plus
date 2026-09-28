@@ -31,43 +31,103 @@ export async function publishToFacebook(
     const { accessToken, pageId } = config.credentials;
     
     if (!accessToken || !pageId) {
-      throw new Error('Missing Facebook credentials');
+      throw new Error('Brak danych uwierzytelniających Facebook (brak tokena lub Page ID)');
     }
 
-    // Facebook Graph API v19.0
-    const url = `https://graph.facebook.com/v19.0/${pageId}/feed`;
-    
-    const body: any = {
-      message: post.content.text,
-      link: post.content.linkUrl,
-      access_token: accessToken,
-    };
+    let finalPostId: string | undefined;
 
-    // Add image if present
+    // Check if post includes an image
     if (post.content.imageUrl) {
-      body.picture = post.content.imageUrl;
+      // 1. Post as a Photo via /{pageId}/photos
+      // Facebook Graph API allows posting photos directly with caption without domain verification.
+      // This strictly avoids Meta error: (#100) Only owners of the URL have the ability to specify the picture, name, thumbnail or description params.
+      const photoUrl = `https://graph.facebook.com/v19.0/${pageId}/photos`;
+      
+      const photoResponse = await fetch(photoUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: post.content.imageUrl,
+          caption: post.content.text,
+          access_token: accessToken,
+        }),
+      });
+
+      if (photoResponse.ok) {
+        const photoData = await photoResponse.json();
+        // Photo response contains id (photo id) and post_id (feed story id: {page_id}_{post_id})
+        finalPostId = photoData.post_id || photoData.id;
+      } else {
+        const photoError = await photoResponse.json();
+        console.warn('[Facebook] Photo upload endpoint returned error, attempting feed fallback:', photoError);
+
+        // Fallback to feed (text only or link without custom 'picture' param)
+        const feedUrl = `https://graph.facebook.com/v19.0/${pageId}/feed`;
+        const feedBody: any = {
+          message: post.content.text,
+          access_token: accessToken,
+        };
+        if (post.content.linkUrl) {
+          feedBody.link = post.content.linkUrl;
+        }
+
+        const feedResponse = await fetch(feedUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(feedBody),
+        });
+
+        if (!feedResponse.ok) {
+          const feedError = await feedResponse.json();
+          throw new Error(
+            feedError.error?.message || photoError.error?.message || 'Facebook API error'
+          );
+        }
+
+        const feedData = await feedResponse.json();
+        finalPostId = feedData.id;
+      }
+    } else {
+      // 2. Post as Feed message (Text + OpenGraph Link, strictly NO 'picture' param)
+      const feedUrl = `https://graph.facebook.com/v19.0/${pageId}/feed`;
+      const feedBody: any = {
+        message: post.content.text,
+        access_token: accessToken,
+      };
+      if (post.content.linkUrl) {
+        feedBody.link = post.content.linkUrl;
+      }
+
+      const response = await fetch(feedUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(feedBody),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Facebook API error');
+      }
+
+      const data = await response.json();
+      finalPostId = data.id;
     }
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Facebook API error');
+    if (!finalPostId) {
+      throw new Error('Facebook nie zwrócił identyfikatora posta.');
     }
 
-    const data = await response.json();
-    
     // Automatically post first comment with direct deal link
-    if (data.id && post.content?.linkUrl) {
+    if (finalPostId && post.content?.linkUrl) {
       try {
-        const commentUrl = `https://graph.facebook.com/v19.0/${data.id}/comments`;
-        await fetch(commentUrl, {
+        const commentUrl = `https://graph.facebook.com/v19.0/${finalPostId}/comments`;
+        const commentRes = await fetch(commentUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -77,6 +137,10 @@ export async function publishToFacebook(
             access_token: accessToken,
           }),
         });
+        if (!commentRes.ok) {
+          const commentErr = await commentRes.json();
+          console.warn('[Facebook] First comment creation returned error:', commentErr);
+        }
       } catch (commentErr) {
         console.warn('[Facebook] First comment creation failed:', commentErr);
       }
@@ -84,8 +148,8 @@ export async function publishToFacebook(
 
     return {
       success: true,
-      platformPostId: data.id,
-      platformUrl: `https://www.facebook.com/${data.id}`,
+      platformPostId: finalPostId,
+      platformUrl: `https://www.facebook.com/${finalPostId}`,
     };
   } catch (error: any) {
     console.error('Facebook publish error:', error);

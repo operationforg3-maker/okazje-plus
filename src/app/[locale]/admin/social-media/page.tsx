@@ -32,7 +32,8 @@ import {
   updateSocialPostAction,
   deleteSocialPostAction,
   savePostAsTemplateAction,
-  publishSocialPostAction
+  publishSocialPostAction,
+  validateFacebookCredentialsAction
 } from '@/app/actions/publish-social-post';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -62,6 +63,8 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  AlertTriangle,
+  ShieldCheck,
   Calendar,
   Bot,
   Edit3,
@@ -109,6 +112,14 @@ export default function SocialMediaAdminPage() {
   const [selectedTab, setSelectedTab] = useState('config');
   const [editingPlatform, setEditingPlatform] = useState<SocialPlatform | null>(null);
   const [publishingFacebookTest, setPublishingFacebookTest] = useState(false);
+  const [validatingFb, setValidatingFb] = useState(false);
+  const [fbValidationResult, setFbValidationResult] = useState<{
+    valid: boolean;
+    pageName?: string;
+    pageId?: string;
+    permissions?: string[];
+    error?: string;
+  } | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -216,6 +227,24 @@ export default function SocialMediaAdminPage() {
     if (statusFilter === 'all') return true;
     return post.status === statusFilter;
   });
+
+  async function handleValidateFacebook(token?: string, pageId?: string) {
+    try {
+      setValidatingFb(true);
+      setFbValidationResult(null);
+      const res = await validateFacebookCredentialsAction(token, pageId);
+      setFbValidationResult(res);
+      if (res.valid) {
+        toast.success(`Token poprawny! Strona: ${res.pageName || res.pageId}`);
+      } else {
+        toast.error(`Błąd walidacji: ${res.error || 'Nieprawidłowy token lub ID strony'}`);
+      }
+    } catch (error: any) {
+      toast.error(`Błąd walidacji: ${error?.message || 'Nieoczekiwany błąd'}`);
+    } finally {
+      setValidatingFb(false);
+    }
+  }
 
   async function handlePublishFacebookTestPost() {
     try {
@@ -361,28 +390,85 @@ export default function SocialMediaAdminPage() {
         <TabsContent value="config" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Test publikacji Facebook</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Facebook className="h-5 w-5 text-blue-600" />
+                Diagnostyka i Test publikacji Facebook
+              </CardTitle>
               <CardDescription>
-                Użyj zapisanej konfiguracji Facebook, aby od razu wysłać testowy post i zweryfikować integrację API.
+                Zweryfikuj ważność Page Access Token, uprawnienia strony oraz wykonaj próbny post testowy bezpośrednio na Facebooka.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button
-                onClick={handlePublishFacebookTestPost}
-                disabled={publishingFacebookTest}
-              >
-                {publishingFacebookTest ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Publikowanie testu...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4 mr-2" />
-                    Opublikuj testowy post na Facebooku
-                  </>
-                )}
-              </Button>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => handleValidateFacebook()}
+                  disabled={validatingFb}
+                >
+                  {validatingFb ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Weryfikowanie tokena...
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="h-4 w-4 mr-2 text-green-600" />
+                      Sprawdź token i uprawnienia FB
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  onClick={handlePublishFacebookTestPost}
+                  disabled={publishingFacebookTest}
+                >
+                  {publishingFacebookTest ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Publikowanie testu...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Opublikuj testowy post na Facebooku
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {fbValidationResult && (
+                <div
+                  className={`p-4 rounded-lg border text-sm ${
+                    fbValidationResult.valid
+                      ? 'bg-green-500/10 border-green-500/30 text-green-800 dark:text-green-300'
+                      : 'bg-red-500/10 border-red-500/30 text-red-800 dark:text-red-300'
+                  }`}
+                >
+                  {fbValidationResult.valid ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 font-semibold">
+                        <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                        <span>Token poprawny! Połączono ze stroną: <strong>{fbValidationResult.pageName}</strong> (ID: {fbValidationResult.pageId})</span>
+                      </div>
+                      {fbValidationResult.permissions && fbValidationResult.permissions.length > 0 && (
+                        <p className="text-xs opacity-90 pl-6">
+                          Aktywne uprawnienia API: {fbValidationResult.permissions.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 font-semibold text-red-700 dark:text-red-400">
+                        <AlertTriangle className="h-4 w-4 shrink-0" />
+                        <span>Błąd weryfikacji tokena Facebooka:</span>
+                      </div>
+                      <p className="text-xs text-red-600 dark:text-red-400 font-mono pl-6 mt-1 break-all">
+                        {fbValidationResult.error}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -536,6 +622,30 @@ function PlatformConfig({
     }
   });
 
+  const [testingToken, setTestingToken] = useState(false);
+  const [inlineStatus, setInlineStatus] = useState<{ valid: boolean; pageName?: string; error?: string } | null>(null);
+
+  async function handleTestToken() {
+    try {
+      setTestingToken(true);
+      setInlineStatus(null);
+      const res = await validateFacebookCredentialsAction(
+        formData.credentials?.accessToken,
+        formData.credentials?.pageId
+      );
+      setInlineStatus(res);
+      if (res.valid) {
+        toast.success(`Token zweryfikowany pomyślnie! Strona: ${res.pageName}`);
+      } else {
+        toast.error(`Błąd weryfikacji tokena: ${res.error}`);
+      }
+    } catch (err: any) {
+      toast.error(`Błąd: ${err.message}`);
+    } finally {
+      setTestingToken(false);
+    }
+  }
+
   if (!isEditing) {
     return (
       <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -612,6 +722,35 @@ function PlatformConfig({
                 credentials: { ...formData.credentials, pageId: e.target.value }
               })}
             />
+          </div>
+        )}
+
+        {platform === 'facebook' && (
+          <div className="p-3 bg-background/80 border rounded-lg space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Sprawdź czy token i Page ID są sprawne w Meta API:</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={testingToken || !formData.credentials?.accessToken}
+                onClick={handleTestToken}
+              >
+                {testingToken ? (
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <ShieldCheck className="h-3.5 w-3.5 mr-1.5 text-blue-600" />
+                )}
+                Sprawdź poprawność danych FB
+              </Button>
+            </div>
+            {inlineStatus && (
+              <p className={`text-xs font-medium ${inlineStatus.valid ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {inlineStatus.valid
+                  ? `✓ Połączono pomyślnie ze stroną: ${inlineStatus.pageName}`
+                  : `✗ Błąd: ${inlineStatus.error}`}
+              </p>
+            )}
           </div>
         )}
 

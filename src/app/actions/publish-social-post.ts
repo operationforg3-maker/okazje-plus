@@ -755,3 +755,89 @@ export async function seedCuratedTemplatesAction(): Promise<{ success: boolean; 
   }
 }
 
+export interface FacebookValidationResult {
+  valid: boolean;
+  pageName?: string;
+  pageId?: string;
+  permissions?: string[];
+  error?: string;
+}
+
+export async function validateFacebookCredentialsAction(
+  accessToken?: string,
+  pageId?: string
+): Promise<FacebookValidationResult> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session) {
+      return { valid: false, error: 'Wymagane logowanie' };
+    }
+    if (session.role !== 'admin') {
+      return { valid: false, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    let token = accessToken?.trim();
+    let targetPageId = pageId?.trim();
+
+    if (!token || !targetPageId) {
+      const configRef = adminDb.collection('socialConfig').doc('facebook');
+      const snap = await configRef.get();
+      if (snap.exists) {
+        const data = snap.data() as SocialConfig;
+        token = token || data.credentials?.accessToken?.trim();
+        targetPageId = targetPageId || data.credentials?.pageId?.trim();
+      }
+    }
+
+    if (!token) {
+      return { valid: false, error: 'Brak tokena dostępu Facebook (Page Access Token).' };
+    }
+    if (!targetPageId) {
+      return { valid: false, error: 'Brak Page ID strony Facebook.' };
+    }
+
+    // 1. Verify Page access & info
+    const pageUrl = `https://graph.facebook.com/v19.0/${targetPageId}?fields=id,name,category,link,is_published&access_token=${token}`;
+    const pageRes = await fetch(pageUrl);
+    const pageData = await pageRes.json();
+
+    if (!pageRes.ok || pageData.error) {
+      const errMsg = pageData.error?.message || 'Błąd autoryzacji Facebook API';
+      const code = pageData.error?.code;
+      const subcode = pageData.error?.error_subcode;
+      return {
+        valid: false,
+        error: `${errMsg} (Kod: ${code}${subcode ? `, Podkod: ${subcode}` : ''})`,
+      };
+    }
+
+    // 2. Fetch permissions if available
+    let permissions: string[] = [];
+    try {
+      const permRes = await fetch(`https://graph.facebook.com/v19.0/me/permissions?access_token=${token}`);
+      if (permRes.ok) {
+        const permData = await permRes.json();
+        if (Array.isArray(permData.data)) {
+          permissions = permData.data
+            .filter((p: any) => p.status === 'granted')
+            .map((p: any) => p.permission);
+        }
+      }
+    } catch {
+      // permissions are optional
+    }
+
+    return {
+      valid: true,
+      pageName: pageData.name,
+      pageId: pageData.id,
+      permissions,
+    };
+  } catch (err: any) {
+    return {
+      valid: false,
+      error: err.message || 'Wystąpił nieoczekiwany błąd podczas sprawdzania tokena.',
+    };
+  }
+}
+
