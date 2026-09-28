@@ -16,6 +16,7 @@ import {
   Clock,
 } from 'lucide-react';
 import type { SocialPost, SocialPlatform } from '@/lib/types';
+import { getSafeSocialString } from '@/lib/social-automation';
 
 interface CalendarViewProps {
   posts: SocialPost[];
@@ -178,9 +179,9 @@ export function CalendarView({ posts, onPostClick, onDateClick }: CalendarViewPr
                           text-xs px-1 py-0.5 rounded truncate
                           ${platformColors[post.platform]} text-white
                         `}
-                        title={post.itemData.title}
+                        title={getSafeSocialString(post.itemData?.title)}
                       >
-                        {post.itemData.title.slice(0, 10)}
+                        {getSafeSocialString(post.itemData?.title).slice(0, 10)}
                       </div>
                     ))}
                     {dayPosts.length > 3 && (
@@ -294,7 +295,7 @@ export function DayView({ date, posts, onPostClick }: DayViewProps) {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm font-medium">{post.itemData.title}</p>
+                    <p className="text-sm font-medium">{getSafeSocialString(post.itemData?.title)}</p>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                       {post.content.text}
                     </p>

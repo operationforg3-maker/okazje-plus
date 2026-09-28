@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Facebook, Instagram, Twitter, Linkedin } from 'lucide-react';
 import type { SocialPost, SocialPlatform } from '@/lib/types';
+import { getSafeSocialString } from '@/lib/social-automation';
 
 interface PostPreviewProps {
   post: Partial<SocialPost> & {
@@ -119,7 +120,7 @@ function FacebookPreview({ post }: { post: PostPreviewProps['post'] }) {
         <div className="relative aspect-[1200/630] bg-gray-100 dark:bg-gray-800">
           <img
             src={post.content.imageUrl}
-            alt={post.itemData.title}
+            alt={getSafeSocialString(post.itemData?.title)}
             className="w-full h-full object-cover"
           />
         </div>
@@ -128,7 +129,7 @@ function FacebookPreview({ post }: { post: PostPreviewProps['post'] }) {
       {/* Link Preview */}
       <div className="p-3 bg-gray-50 dark:bg-gray-800 border-t">
         <p className="text-xs text-gray-500 uppercase">OKAZJE.PLUS</p>
-        <p className="font-semibold text-sm">{post.itemData.title}</p>
+        <p className="font-semibold text-sm">{getSafeSocialString(post.itemData?.title)}</p>
         {post.itemData.price && (
           <p className="text-sm text-green-600 dark:text-green-400 font-semibold">
             {post.itemData.price} zł
@@ -173,7 +174,7 @@ function InstagramPreview({ post }: { post: PostPreviewProps['post'] }) {
         <div className="relative aspect-square bg-gray-100 dark:bg-gray-800">
           <img
             src={post.content.imageUrl}
-            alt={post.itemData.title}
+            alt={getSafeSocialString(post.itemData?.title)}
             className="w-full h-full object-cover"
           />
         </div>
@@ -232,7 +233,7 @@ function TwitterPreview({ post }: { post: PostPreviewProps['post'] }) {
             <div className="mt-3 relative aspect-[1200/675] bg-gray-100 dark:bg-gray-800 rounded-2xl overflow-hidden border">
               <img
                 src={post.content.imageUrl}
-                alt={post.itemData.title}
+                alt={getSafeSocialString(post.itemData?.title)}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -242,7 +243,7 @@ function TwitterPreview({ post }: { post: PostPreviewProps['post'] }) {
           <div className="mt-3 border rounded-2xl overflow-hidden">
             <div className="p-3">
               <p className="text-xs text-gray-500">🔗 okazje.plus</p>
-              <p className="font-semibold text-sm mt-1">{post.itemData.title}</p>
+              <p className="font-semibold text-sm mt-1">{getSafeSocialString(post.itemData?.title)}</p>
               {post.itemData.merchant && (
                 <p className="text-xs text-gray-500 mt-1">{post.itemData.merchant}</p>
               )}
@@ -297,7 +298,7 @@ function LinkedInPreview({ post }: { post: PostPreviewProps['post'] }) {
         <div className="relative aspect-[1200/627] bg-gray-100 dark:bg-gray-800">
           <img
             src={post.content.imageUrl}
-            alt={post.itemData.title}
+            alt={getSafeSocialString(post.itemData?.title)}
             className="w-full h-full object-cover"
           />
         </div>
@@ -305,7 +306,7 @@ function LinkedInPreview({ post }: { post: PostPreviewProps['post'] }) {
 
       {/* Link Preview */}
       <div className="p-3 bg-gray-50 dark:bg-gray-800 border-t">
-        <p className="font-semibold text-sm">{post.itemData.title}</p>
+        <p className="font-semibold text-sm">{getSafeSocialString(post.itemData?.title)}</p>
         <p className="text-xs text-gray-500 mt-1">okazje.plus</p>
       </div>
 
@@ -342,7 +343,7 @@ function TikTokPreview({ post }: { post: PostPreviewProps['post'] }) {
         <div className="relative aspect-[9/16] bg-gray-900">
           <img
             src={post.content.imageUrl}
-            alt={post.itemData.title}
+            alt={getSafeSocialString(post.itemData?.title)}
             className="w-full h-full object-cover"
           />
           

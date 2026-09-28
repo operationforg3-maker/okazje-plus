@@ -159,7 +159,11 @@ export async function createSocialPost(
     status: options?.autoApprove ? 'approved' : 'pending',
     type,
     itemId,
-    itemData,
+    itemData: {
+      ...itemData,
+      title: getSafeSocialString(itemData?.title),
+      description: getSafeSocialString(itemData?.description),
+    },
     content,
     scheduledFor: options?.scheduledFor,
     attempts: 0,
@@ -180,6 +184,32 @@ export async function createSocialPost(
   await logSocialPostAction(docRef.id, platform, 'created', 'pending', 'Post created', options?.createdBy);
   
   return docRef.id;
+}
+
+export function getSafeSocialString(val: any): string {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    return val.pl || val.en || val.de || val.es || val.fr || val.uk || Object.values(val)[0] || '';
+  }
+  return String(val);
+}
+
+export function normalizeSocialPost(id: string, data: any): SocialPost {
+  const itemData = data.itemData || {};
+  return {
+    ...data,
+    id,
+    itemData: {
+      ...itemData,
+      title: getSafeSocialString(itemData.title),
+      description: getSafeSocialString(itemData.description),
+    },
+    content: {
+      ...data.content,
+      text: getSafeSocialString(data.content?.text),
+    }
+  } as SocialPost;
 }
 
 /**
@@ -203,10 +233,7 @@ export async function getSocialPosts(
   }
   
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  } as SocialPost));
+  return querySnapshot.docs.map(doc => normalizeSocialPost(doc.id, doc.data()));
 }
 
 /**
@@ -234,10 +261,7 @@ export async function getPendingPosts(platform?: SocialPlatform): Promise<Social
   }
   
   const querySnapshot = await getDocs(q);
-  const posts = querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  } as SocialPost));
+  const posts = querySnapshot.docs.map(doc => normalizeSocialPost(doc.id, doc.data()));
   
   // Filter by scheduledFor
   return posts.filter(post => !post.scheduledFor || post.scheduledFor <= now);

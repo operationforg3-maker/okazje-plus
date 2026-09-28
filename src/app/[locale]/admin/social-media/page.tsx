@@ -23,6 +23,7 @@ import {
   getSocialTemplates,
   getSocialPostStats,
   getPlatformDisplayName,
+  getSafeSocialString,
 } from '@/lib/social-automation';
 import type { SocialConfig, SocialPost, SocialTemplate, SocialPlatform, SocialPostStatus } from '@/lib/types';
 import { toast } from 'sonner';
@@ -634,7 +635,7 @@ function PostCard({
           <div className="flex items-center gap-3">
             <Icon className="h-5 w-5" />
             <div>
-              <CardTitle className="text-base">{post.itemData.title}</CardTitle>
+              <CardTitle className="text-base">{getSafeSocialString(post.itemData?.title)}</CardTitle>
               <CardDescription className="flex items-center gap-2 mt-1">
                 <Badge className={statusColors[post.status]}>
                   {STATUS_LABELS[post.status]}
@@ -675,7 +676,7 @@ function PostCard({
             {post.itemData.image && (
               <img 
                 src={post.itemData.image} 
-                alt={post.itemData.title}
+                alt={getSafeSocialString(post.itemData?.title)}
                 className="w-full max-w-md h-48 object-cover rounded"
               />
             )}

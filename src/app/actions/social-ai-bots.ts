@@ -192,7 +192,10 @@ export async function executeBotRun(
         const topDeal = deals[0];
 
         itemId = topDeal.id;
-        itemTitle = topDeal.title || 'Gorąca Okazja';
+        const rawTitle = topDeal.title;
+        itemTitle = typeof rawTitle === 'object' && rawTitle !== null
+          ? (rawTitle.pl || rawTitle.en || rawTitle.de || Object.values(rawTitle)[0] || 'Gorąca Okazja')
+          : String(rawTitle || 'Gorąca Okazja');
         const priceStr = topDeal.currentPrice ? `${topDeal.currentPrice} zł` : '';
         const oldPriceStr = topDeal.originalPrice ? ` (zamiast ${topDeal.originalPrice} zł)` : '';
         const discountStr = topDeal.discount ? ` -${topDeal.discount}%` : '';
