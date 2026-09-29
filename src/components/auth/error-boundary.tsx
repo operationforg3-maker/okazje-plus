@@ -22,6 +22,30 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     return { hasError: true, error };
   }
 
+  componentDidMount() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('error', (event) => {
+        const msg = event?.message || '';
+        const target = event?.target as HTMLElement | null;
+        const isResourceError = target && (target.tagName === 'SCRIPT' || target.tagName === 'LINK');
+        if (
+          isResourceError ||
+          msg.includes('Loading chunk') ||
+          msg.includes('ChunkLoadError') ||
+          msg.includes('CSS')
+        ) {
+          const lastReload = sessionStorage.getItem('chunk_error_reload');
+          const now = Date.now();
+          if (!lastReload || now - parseInt(lastReload, 10) > 15000) {
+            sessionStorage.setItem('chunk_error_reload', String(now));
+            console.warn('[ErrorBoundary] Stale deployment asset detected. Refreshing for new version...');
+            window.location.reload();
+          }
+        }
+      }, true);
+    }
+  }
+
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('[ErrorBoundary] Caught error:', error, errorInfo);
 
@@ -31,11 +55,19 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       name === 'ChunkLoadError' ||
       message.includes('Loading chunk') ||
       message.includes('Failed to fetch dynamically imported module') ||
-      message.includes('Loading CSS chunk');
+      message.includes('Loading CSS chunk') ||
+      message.includes('Minified React error #418') ||
+      message.includes('Minified React error #423') ||
+      message.includes('Hydration failed');
 
     if (isChunkError && typeof window !== 'undefined') {
-      console.warn('[ErrorBoundary] Chunk load error detected. Forcing page reload to fetch the latest assets.');
-      window.location.reload();
+      const lastReload = sessionStorage.getItem('chunk_error_reload');
+      const now = Date.now();
+      if (!lastReload || now - parseInt(lastReload, 10) > 15000) {
+        sessionStorage.setItem('chunk_error_reload', String(now));
+        console.warn('[ErrorBoundary] Chunk load or deployment mismatch error detected. Forcing page reload to fetch the latest assets.');
+        window.location.reload();
+      }
     }
   }
 

@@ -37,13 +37,26 @@ export async function GET(request: NextRequest) {
     // Fetch actual documents for requested statuses
     const items: Record<string, unknown>[] = [];
     for (const status of statuses.slice(0, 3)) {
-      if (!['pending', 'running', 'failed', 'done'].includes(status)) continue;
-      const snap = await adminDb
-        .collection('product_cores')
-        .where('scrapingStatus', '==', status)
-        .orderBy('updatedAt', 'desc')
-        .limit(Math.ceil(limit / statuses.length))
-        .get();
+      let snap;
+      try {
+        snap = await adminDb
+          .collection('product_cores')
+          .where('scrapingStatus', '==', status)
+          .orderBy('updatedAt', 'desc')
+          .limit(Math.ceil(limit / statuses.length))
+          .get();
+      } catch (queryErr: any) {
+        if (queryErr?.message?.includes('requires an index') || queryErr?.code === 9) {
+          console.warn('[scraping-queue] Missing composite index, falling back to unordered query:', queryErr.message);
+          snap = await adminDb
+            .collection('product_cores')
+            .where('scrapingStatus', '==', status)
+            .limit(Math.ceil(limit / statuses.length))
+            .get();
+        } else {
+          throw queryErr;
+        }
+      }
 
       snap.docs.forEach(doc => {
         const d = doc.data();
@@ -63,6 +76,8 @@ export async function GET(request: NextRequest) {
         });
       });
     }
+
+    items.sort((a: any, b: any) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
 
     return NextResponse.json({ ok: true, counts, items });
   } catch (err: unknown) {
