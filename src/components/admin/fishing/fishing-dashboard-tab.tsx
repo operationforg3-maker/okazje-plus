@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +52,8 @@ interface FishingDashboardTabProps {
   bots: FishingBotPersona[];
   deals: FishingDealItem[];
   onRefreshQueue: () => void;
+  selectedDealIdProp?: string | null;
+  onClearSelectedDeal?: () => void;
 }
 
 export function FishingDashboardTab({
@@ -59,13 +61,23 @@ export function FishingDashboardTab({
   bots,
   deals,
   onRefreshQueue,
+  selectedDealIdProp,
+  onClearSelectedDeal,
 }: FishingDashboardTabProps) {
   const [postType, setPostType] = useState<'deal' | 'versus' | 'lifestyle'>('deal');
   const [selectedRole, setSelectedRole] = useState<FishingBotRole>('wife_secret');
-  const [selectedDealId, setSelectedDealId] = useState<string>('');
+  const [selectedDealId, setSelectedDealId] = useState<string>(selectedDealIdProp || '');
   const [selectedDealId2, setSelectedDealId2] = useState<string>('');
   const [customTopic, setCustomTopic] = useState<string>('');
   const [humorLevel, setHumorLevel] = useState<'subtle' | 'high' | 'legendary' | 'none'>('legendary');
+
+  // Reaguj na przekazanie wybranej okazji z Bazy Okazji
+  useEffect(() => {
+    if (selectedDealIdProp) {
+      setSelectedDealId(selectedDealIdProp);
+      setPostType('deal');
+    }
+  }, [selectedDealIdProp]);
 
   // Generator state
   const [generating, setGenerating] = useState(false);
@@ -487,14 +499,21 @@ export function FishingDashboardTab({
               ) : (
                 <>
                   {/* Select Deal from Database */}
-                  <div>
+                  <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
                       <span>Wybierz Okazję z Bazy Okazje Plus</span>
                       <span className="text-[11px] text-muted-foreground lowercase">
                         {deals.length} znalezionych ofert
                       </span>
                     </Label>
-                    <Select value={selectedDealId} onValueChange={setSelectedDealId}>
+                    <Select
+                      value={selectedDealId || 'none'}
+                      onValueChange={(val) => {
+                        const newId = val === 'none' ? '' : val;
+                        setSelectedDealId(newId);
+                        if (!newId) onClearSelectedDeal?.();
+                      }}
+                    >
                       <SelectTrigger className="mt-1.5 text-xs">
                         <SelectValue placeholder="Wybierz ofertę wędkarską (lub zostaw puste dla postu ogólnego)..." />
                       </SelectTrigger>
@@ -507,6 +526,72 @@ export function FishingDashboardTab({
                         ))}
                       </SelectContent>
                     </Select>
+
+                    {/* Podgląd wybranej okazji */}
+                    {(() => {
+                      const chosenDeal = deals.find(d => d.id === selectedDealId);
+                      if (!chosenDeal) return null;
+                      return (
+                        <div className="p-3 bg-muted/40 rounded-lg border border-border/80 flex items-start gap-3 mt-2 animate-in fade-in-50 duration-200">
+                          {chosenDeal.imageUrl ? (
+                            <img
+                              src={chosenDeal.imageUrl}
+                              alt={chosenDeal.title}
+                              className="w-16 h-16 object-cover rounded-md border shrink-0 bg-background"
+                              onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                            />
+                          ) : (
+                            <div className="w-16 h-16 rounded-md border bg-muted flex items-center justify-center text-2xl shrink-0">
+                              🎣
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-semibold text-xs leading-snug line-clamp-1">{chosenDeal.title}</span>
+                              {chosenDeal.discount && (
+                                <Badge className="bg-destructive text-[10px] px-1 py-0 h-4">
+                                  {chosenDeal.discount}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-baseline gap-2 mt-1">
+                              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                                {chosenDeal.price}
+                              </span>
+                              {chosenDeal.oldPrice && (
+                                <span className="text-xs text-muted-foreground line-through font-mono">
+                                  {chosenDeal.oldPrice}
+                                </span>
+                              )}
+                              <span className="text-[11px] text-muted-foreground">· {chosenDeal.merchant}</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2">
+                              <a
+                                href={chosenDeal.dealUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[11px] text-primary hover:underline inline-flex items-center gap-1 font-medium"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                Podgląd oferty ze sklepu
+                              </a>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedDealId('');
+                                  onClearSelectedDeal?.();
+                                }}
+                                className="text-[10px] h-5 px-1.5 text-muted-foreground hover:text-destructive"
+                              >
+                                Usuń wybór
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Custom Topic / Instruction */}

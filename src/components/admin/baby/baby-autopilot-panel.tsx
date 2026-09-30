@@ -189,6 +189,8 @@ export function BabyAutopilotPanel() {
               bots={bots}
               deals={deals}
               onRefreshQueue={loadData}
+              selectedDealIdProp={selectedDealForPost}
+              onClearSelectedDeal={() => setSelectedDealForPost(null)}
             />
           )}
         </TabsContent>

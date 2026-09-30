@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +52,8 @@ interface BabyDashboardTabProps {
   bots: BabyBotPersona[];
   deals: BabyDealItem[];
   onRefreshQueue: () => void;
+  selectedDealIdProp?: string | null;
+  onClearSelectedDeal?: () => void;
   onSelectDeal?: (dealId: string) => void;
 }
 
@@ -60,13 +62,23 @@ export function BabyDashboardTab({
   bots,
   deals,
   onRefreshQueue,
+  selectedDealIdProp,
+  onClearSelectedDeal,
 }: BabyDashboardTabProps) {
   const [postType, setPostType] = useState<'deal' | 'versus' | 'lifestyle'>('deal');
   const [selectedRole, setSelectedRole] = useState<BabyBotRole>('bargain_mom');
-  const [selectedDealId, setSelectedDealId] = useState<string>('');
+  const [selectedDealId, setSelectedDealId] = useState<string>(selectedDealIdProp || '');
   const [selectedDealId2, setSelectedDealId2] = useState<string>('');
   const [customTopic, setCustomTopic] = useState<string>('');
   const [humorLevel, setHumorLevel] = useState<'subtle' | 'high' | 'legendary' | 'none'>('high');
+
+  // Reaguj na przekazanie wybranej okazji z Bazy Okazji
+  useEffect(() => {
+    if (selectedDealIdProp) {
+      setSelectedDealId(selectedDealIdProp);
+      setPostType('deal');
+    }
+  }, [selectedDealIdProp]);
 
   // Generator state
   const [generating, setGenerating] = useState(false);
@@ -579,9 +591,30 @@ export function BabyDashboardTab({
               ) : (
                 <>
                   {/* Wybór okazji z bazy */}
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold">Wybierz okazję z bazy (lub zostaw puste):</Label>
-                    <Select value={selectedDealId} onValueChange={setSelectedDealId}>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-semibold">Wybierz okazję z bazy ({deals.length}):</Label>
+                      {selectedDealId && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedDealId('');
+                            onClearSelectedDeal?.();
+                          }}
+                          className="text-[11px] text-pink-600 dark:text-pink-400 hover:underline"
+                        >
+                          Wyczyść wybór
+                        </button>
+                      )}
+                    </div>
+                    <Select
+                      value={selectedDealId || 'none'}
+                      onValueChange={(val) => {
+                        const newId = val === 'none' ? '' : val;
+                        setSelectedDealId(newId);
+                        if (!newId) onClearSelectedDeal?.();
+                      }}
+                    >
                       <SelectTrigger className="text-xs h-9">
                         <SelectValue placeholder="Wybierz okazję z bazy produktów..." />
                       </SelectTrigger>
@@ -594,28 +627,58 @@ export function BabyDashboardTab({
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
 
-                  {/* Podgląd wybranej okazji */}
-                  {chosenDeal && (
-                    <div className="p-3 border rounded-lg bg-background/50 flex gap-3 items-center">
-                      {chosenDeal.imageUrl && (
-                        <img
-                          src={chosenDeal.imageUrl}
-                          alt={chosenDeal.title}
-                          className="w-14 h-14 object-cover rounded border flex-shrink-0"
-                        />
-                      )}
-                      <div className="min-w-0 flex-1 text-xs">
-                        <p className="font-bold truncate">{chosenDeal.title}</p>
-                        <p className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                          {chosenDeal.price} {chosenDeal.oldPrice && <span className="line-through text-muted-foreground text-[11px] ml-1">{chosenDeal.oldPrice}</span>}
-                          {chosenDeal.discount && <span className="ml-1.5 text-xs bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 px-1 py-0.5 rounded">{chosenDeal.discount}</span>}
-                        </p>
-                        <p className="text-muted-foreground text-[10px]">Sklep: {chosenDeal.merchant}</p>
+                    {/* Podgląd wybranej okazji */}
+                    {chosenDeal && (
+                      <div className="p-3 border rounded-lg bg-background/50 flex gap-3 items-center mt-2 animate-in fade-in-50 duration-200">
+                        {chosenDeal.imageUrl ? (
+                          <img
+                            src={chosenDeal.imageUrl}
+                            alt={chosenDeal.title}
+                            className="w-14 h-14 object-cover rounded border flex-shrink-0"
+                            onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded border bg-muted flex items-center justify-center text-2xl shrink-0">
+                            👶
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1 text-xs">
+                          <p className="font-bold truncate">{chosenDeal.title}</p>
+                          <p className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                            {chosenDeal.price} {chosenDeal.oldPrice && <span className="line-through text-muted-foreground text-[11px] ml-1">{chosenDeal.oldPrice}</span>}
+                            {chosenDeal.discount && <span className="ml-1.5 text-xs bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 px-1 py-0.5 rounded">{chosenDeal.discount}</span>}
+                          </p>
+                          <div className="flex items-center justify-between gap-2 mt-1">
+                            <p className="text-muted-foreground text-[10px]">Sklep: {chosenDeal.merchant}</p>
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={chosenDeal.dealUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[11px] text-pink-600 dark:text-pink-400 hover:underline inline-flex items-center gap-1 font-medium"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                Sklep
+                              </a>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedDealId('');
+                                  onClearSelectedDeal?.();
+                                }}
+                                className="text-[10px] h-5 px-1.5 text-muted-foreground hover:text-destructive"
+                              >
+                                Usuń
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {/* Temat własny */}
                   <div className="space-y-1.5">

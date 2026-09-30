@@ -189,6 +189,8 @@ export function FishingAutopilotPanel() {
               bots={bots}
               deals={deals}
               onRefreshQueue={loadData}
+              selectedDealIdProp={selectedDealForPost}
+              onClearSelectedDeal={() => setSelectedDealForPost(null)}
             />
           )}
         </TabsContent>

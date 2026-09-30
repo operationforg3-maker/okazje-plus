@@ -190,6 +190,8 @@ export function GeneralAutopilotPanel() {
               bots={bots}
               deals={deals}
               onRefreshQueue={loadData}
+              selectedDealIdProp={selectedDealForPost}
+              onClearSelectedDeal={() => setSelectedDealForPost(null)}
               onSelectDeal={handleSelectDealForPost}
             />
           )}

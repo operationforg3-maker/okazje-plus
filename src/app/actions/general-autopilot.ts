@@ -463,6 +463,7 @@ export async function updateGeneralQueueItemAction(
 export async function generateGeneralPostAction(params: {
   botRole: GeneralBotRole;
   dealId?: string;
+  targetDealData?: Partial<GeneralDealItem>;
   customTopic?: string;
   humorLevel?: 'subtle' | 'high' | 'legendary' | 'none';
   target?: 'facebook' | 'portal' | 'both';
@@ -477,7 +478,7 @@ export async function generateGeneralPostAction(params: {
       return { success: false, error: 'Wymagane uprawnienia administratora' };
     }
 
-    const { botRole, dealId, customTopic } = params;
+    const { botRole, dealId, customTopic, targetDealData } = params;
 
     const botsRes = await getGeneralBots(true);
     const bot = botsRes.bots.find(b => b.role === botRole) || DEFAULT_GENERAL_BOTS[0];
@@ -488,7 +489,26 @@ export async function generateGeneralPostAction(params: {
 
     let dealInfo: GeneralDealItem | null = null;
 
-    if (dealId) {
+    if (targetDealData) {
+      dealInfo = {
+        id: targetDealData.id || dealId || 'manual_deal',
+        title: targetDealData.title || 'Okazja Cenowa',
+        price: targetDealData.price || 'Promocja',
+        oldPrice: targetDealData.oldPrice,
+        discount: targetDealData.discount,
+        merchant: targetDealData.merchant || 'Okazje Plus',
+        imageUrl: targetDealData.imageUrl || '',
+        temperature: targetDealData.temperature || 25,
+        dealUrl: targetDealData.dealUrl || '',
+        portalUrl: targetDealData.portalUrl || (targetDealData.id ? `https://okazjeplus.pl/pl/deals/${targetDealData.id}` : undefined),
+        rawLink: targetDealData.rawLink || targetDealData.dealUrl || '',
+        source: targetDealData.source || 'Okazje Plus',
+        category: targetDealData.category || 'Ogólne',
+        description: targetDealData.description,
+        specs: targetDealData.specs,
+        tags: targetDealData.tags || [],
+      };
+    } else if (dealId) {
       const dealDoc = await adminDb.collection('deals').doc(dealId).get();
       if (dealDoc.exists) {
         const d = dealDoc.data()!;
