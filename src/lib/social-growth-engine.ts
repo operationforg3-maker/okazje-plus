@@ -10,13 +10,14 @@
  */
 
 import { ai } from '@/ai/genkit';
-import type {
-  SocialNiche,
-  TargetGroupItem,
-  FbCommentItem,
-  TelegramConfig,
-  VersusDealInput,
-  TelegramAlertPayload,
+import {
+  sanitizeSocialPostText,
+  type SocialNiche,
+  type TargetGroupItem,
+  type FbCommentItem,
+  type TelegramConfig,
+  type VersusDealInput,
+  type TelegramAlertPayload,
 } from './social-growth-types';
 
 export type {
@@ -77,7 +78,7 @@ Zasady:
     });
 
     if (res && res.text) {
-      return res.text.trim().replace(/^["']|["']$/g, '');
+      return sanitizeSocialPostText(res.text.replace(/^["']|["']$/g, ''));
     }
   } catch (err) {
     console.warn('[SocialGrowthEngine] Error generating engagement comment, fallback:', err);
@@ -133,7 +134,7 @@ Napisz krótką, uprzejmą, pomocną i naturalną odpowiedź na komentarz użytk
     });
 
     if (res && res.text) {
-      return res.text.trim().replace(/^["']|["']$/g, '');
+      return sanitizeSocialPostText(res.text.replace(/^["']|["']$/g, ''));
     }
   } catch (err) {
     console.warn('[SocialGrowthEngine] Error generating reply, fallback:', err);
@@ -166,7 +167,7 @@ export async function generateVersusPost(
   }
 
   const prompt = `
-Napisz wirusowy, angażujący post na Facebooka w formie "WIELKIEGO POJEDYNKU OKAZJI (A vs B)".
+Napisz angażujący post na Facebooka w formie "WIELKIEGO POJEDYNKU OKAZJI (A vs B)".
 Nisza: ${nicheName}
 Persona bota: ${botPersonaName || 'Ekspert Promocji'}
 
@@ -183,16 +184,14 @@ PRODUKT B:
 - Głosowanie: Reakcja ${emojiReactionB}
 
 WYMOGI POSTA:
-1. 🥊 Chwytliwy, emocjonujący nagłówek (np. "🔥 POJEDYNEK GIGANTÓW! CO WYBIERASZ?").
-2. 🥊 Krótki opis dlaczego ten pojedynek ma sens (oba w świetnej cenie).
-3. 🥊 KARTA ZAWODNIKA A: zwięzłe zalety, cena i wezwanie do kliknięcia ${emojiReactionA}.
-4. 🥊 KARTA ZAWODNIKA B: zwięzłe zalety, cena i wezwanie do kliknięcia ${emojiReactionB}.
-5. 🗳️ Wyraźne wezwanie do głosowania reakcjami i uzasadnienia w komentarzach.
-6. 🔗 Wezwanie do sprawdzenia linków w pierwszym komentarzu:
-   "👉 Bezpośrednie linki i kody rabatowe do OBU okazji znajdziecie w PIERWSZYM KOMENTARZU ⬇️!"
-7. #️⃣ Pasujące hashtagi (#pojedynek #okazje #promocje).
-
-Nie urywaj posta! Zwróć PEŁNĄ treść posta.
+1. Zwięźle i konkretnie (około 80-140 słów).
+2. BEZWZGLĘDNY ZAKAZ UŻYWANIA GWIAZDEK I MARKDOWNU (**tekst**, *tekst*, # nagłówek). Facebook NIE obsługuje Markdownu, a podwójne gwiazdki wyglądają jak bot!
+3. Chwytliwy nagłówek (np. 🥊 WIELKI POJEDYNEK OKAZJI: CO WYBIERASZ?).
+4. Zawodnik A (${dealA.title}, ${dealA.price}) -> kliknij ${emojiReactionA}.
+5. Zawodnik B (${dealB.title}, ${dealB.price}) -> kliknij ${emojiReactionB}.
+6. Wezwanie do komentowania i głosowania.
+7. Informacja: "👉 Bezpośrednie linki do OBU okazji znajdziecie w PIERWSZYM KOMENTARZU ⬇️!"
+8. Hashtagi na końcu (#pojedynek #okazje).
 `;
 
   let postText = '';
@@ -201,29 +200,31 @@ Nie urywaj posta! Zwróć PEŁNĄ treść posta.
       prompt,
       config: {
         temperature: 0.7,
-        maxOutputTokens: 2500,
+        maxOutputTokens: 2000,
       },
     });
     if (res && res.text) {
-      postText = res.text.trim();
+      postText = sanitizeSocialPostText(res.text);
     }
   } catch (err) {
     console.warn('[SocialGrowthEngine] Error generating versus post:', err);
   }
 
   if (!postText) {
-    postText = `🥊 🔥 WIELKI POJEDYNEK OKAZJI! CO WYBIERASZ? 🔥 🥊\n\n` +
+    postText = `🥊 WIELKI POJEDYNEK OKAZJI! CO WYBIERASZ? 🥊\n\n` +
       `Mamy dla Was dwa hity cenowe, ale wybór może być tylko jeden!\n\n` +
       `🔵 ZAWODNIK A: ${dealA.title}\n` +
-      `💰 Cena: ${dealA.price}\n` +
+      `Cena: ${dealA.price}\n` +
       `👉 Zostaw ${emojiReactionA} jeśli wybierasz opcję A!\n\n` +
       `🔴 ZAWODNIK B: ${dealB.title}\n` +
-      `💰 Cena: ${dealB.price}\n` +
+      `Cena: ${dealB.price}\n` +
       `👉 Zostaw ${emojiReactionB} jeśli wybierasz opcję B!\n\n` +
       `Napiszcie w komentarzu, dlaczego właśnie ten wybór! ⬇️\n\n` +
       `👉 Bezpośrednie linki do OBU okazji znajdziecie w PIERWSZYM KOMENTARZU ⬇️!\n\n` +
       `#pojedynek #okazjeplus #promocje #zakupy`;
   }
+
+  postText = sanitizeSocialPostText(postText);
 
   const firstComment = `🔗 Bezpośrednie linki do pojedynku:\n` +
     `1️⃣ Opcja A (${dealA.title}):\n${dealA.dealUrl}\n\n` +
@@ -256,11 +257,12 @@ ${context}
 ${topic ? `Sugerowany temat: ${topic}` : ''}
 
 Zasady:
-- Lekki, naturalny ton, budujący silną relację ze społecznością.
-- Użyj odpowiednich emoji.
+- Zwięźle i konkretnie (około 60-120 słów).
+- BEZWZGLĘDNY ZAKAZ UŻYWANIA GWIAZDEK I FORMATOWANIA MARKDOWN (**tekst**, *tekst*, # nagłówek). Facebook NIE obsługuje Markdownu, a podwójne gwiazdki wyglądają jak bot!
+- Lekki, autentyczny ton żywego człowieka / członka społeczności, budujący relację.
+- Użyj 2-3 odpowiednich emoji.
 - Zakończ pytaniem otwartym do społeczności.
-- Dodaj 3-4 hashtagi.
-- Zwróć PEŁNĄ treść posta.
+- Dodaj 2-3 pasujące hashtagi.
 `;
 
   try {
@@ -272,7 +274,7 @@ Zasady:
       },
     });
     if (res && res.text) {
-      return res.text.trim();
+      return sanitizeSocialPostText(res.text);
     }
   } catch (err) {
     console.warn('[SocialGrowthEngine] Error generating lifestyle post:', err);

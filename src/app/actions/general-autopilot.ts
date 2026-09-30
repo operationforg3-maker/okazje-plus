@@ -13,6 +13,7 @@ import { adminDb } from '@/lib/firebase-admin';
 import { getServerAuthSession } from '@/lib/auth-server';
 import { revalidatePath } from 'next/cache';
 import { ai } from '@/ai/genkit';
+import { sanitizeSocialPostText } from '@/lib/social-growth-types';
 import type {
   GeneralAutopilotConfig,
   GeneralBotPersona,
@@ -558,42 +559,54 @@ ${dealInfo?.specs ? `- Parametry techniczne / specyfikacja:\n${dealInfo.specs}` 
 - Dodatkowy kontekst/temat: ${customTopic || 'brak'}
 - Sugerowane hashtagi: ${dynamicHashtags.join(' ')}
 
-STRUKTURA I WYMOGI POSTA:
-Napisz kompletny, dynamiczny i angażujący post na Facebooka (około 200-350 słów), używając formatowania z punktorami i pasującymi emoji (🔥, ⚡, 🛍️, 💻, 📱, 📦, 💡).
-Post MUSI zawierać:
-1. 🎯 Chwytliwy nagłówek z tytułem okazji, rabatem i nazwą sklepu.
-2. 🚀 Krótkie podsumowanie dlaczego ta oferta jest warta uwagi.
-3. ⚙️ Kluczowe parametry i specyfikację (3-4 punkty).
-4. 💰 Zestawienie cenowe:
-   • 💰 Cena promocyjna: ${dealInfo?.price || 'Okazyjna'}
-   ${dealInfo?.oldPrice ? `• 🏷️ Cena regularna: ${dealInfo.oldPrice}` : ''}
-   ${dealInfo?.discount ? `• 📉 Oszczędność: ${dealInfo.discount}` : ''}
-   • 🏬 Sklep: ${dealInfo?.merchant || 'Sklep'}
-5. 💡 Poradę bota / pytanie do społeczności (np. pro-tip zakupowy lub opinia o marce).
-6. 🔗 Wyraźne wezwanie do działania: "👉 Bezpośredni link do okazji i kod rabatowy znajdziecie w PIERWSZYM KOMENTARZU ⬇️!"
-7. #️⃣ Blok hashtagów: ${dynamicHashtags.join(' ')}.
+STRUKTURA I WYMOGI POSTA (BARDZO WAŻNE):
+Napisz zwięzły, dynamiczny i angażujący post na Facebooka (około 90-150 słów - NIE PISZ TASIEMCÓW ANI ŚCIANY TEKSTU!).
+Pisz naturalnie jak prawdziwy pasjonat i łowca okazji, a NIE jak sztuczny chatbot AI!
 
-Nie urywaj posta! Zwróć PEŁNĄ treść gotową do publikacji.
+BEZWZGLĘDNY ZAKAZ UŻYWANIA FORMATOWANIA MARKDOWN (**pogrubienie**, *kursywa*, # nagłówek)!
+Facebook NIE interpretuje Markdownu i wyświetla brzydkie gwiazdki '**', co drażni odbiorców.
+Jeśli chcesz coś zaakcentować, użyj WIELKICH LITER, czytelnej nowej linii lub emoji (🔥, ⚡, 🛍️, 💡). NIGDY NIE UŻYWAJ ZNAKÓW '**' ANI '*' W TREŚCI!
+
+Elementy posta:
+1. 🎯 CHWYTLIWY NAGŁÓWEK Z TYTUŁEM OKAZJI (np. 🔥 MOCNA OKAZJA: ${dealInfo?.title || customTopic} w ${dealInfo?.merchant || 'super cenie'}!)
+2. 🚀 KRÓTKI OPIS: Dlaczego ta oferta jest warta uwagi i dla kogo.
+3. ⚙️ KLUCZOWE PARAMETRY: 2-3 najważniejsze cechy wypunktowane punktorami '• ' (bez '**').
+4. 💰 CENY:
+   • Cena promocyjna: ${dealInfo?.price || 'Okazyjna'}
+   ${dealInfo?.oldPrice ? `• Cena regularna: ${dealInfo.oldPrice}` : ''}
+   ${dealInfo?.discount ? `• Oszczędność: ${dealInfo.discount}` : ''}
+   • Sklep: ${dealInfo?.merchant || 'Sklep'}
+5. 💡 PRO-TIP BOTA: Krótka, naturalna rada zakupowa lub pytanie do czytelników.
+6. 🔗 CALL TO ACTION:
+   "👉 Bezpośredni link do okazji i kod rabatowy znajdziecie w PIERWSZYM KOMENTARZU ⬇️!"
+7. #️⃣ HASHTAGI NA KOŃCU:
+   Zakończ post hashtagami: ${dynamicHashtags.join(' ')}.
+
+Pamiętaj: zero '**', zwięźle, naturalny język!
 `;
 
       const aiResponse = await ai.generate({
         prompt: promptText,
         config: {
           temperature: botRole === 'bargain_hunter' ? 0.7 : 0.4,
-          maxOutputTokens: 4000,
+          maxOutputTokens: 2500,
         },
       });
 
       if (aiResponse && aiResponse.text) {
-        postText = aiResponse.text.trim();
+        postText = sanitizeSocialPostText(aiResponse.text);
         aiGenerated = true;
       }
     } catch (aiErr) {
       console.warn('AI generation error for general post, fallback:', aiErr);
     }
 
-    if (postText && !postText.includes('#')) {
-      postText = `${postText.trim()}\n\n${dynamicHashtags.join(' ')}`;
+    // Gwarancja braku '**' i obecności hashtagów
+    if (postText) {
+      postText = sanitizeSocialPostText(postText);
+      if (!postText.includes('#')) {
+        postText = `${postText.trim()}\n\n${dynamicHashtags.join(' ')}`;
+      }
     }
 
     if (!aiGenerated || !postText) {

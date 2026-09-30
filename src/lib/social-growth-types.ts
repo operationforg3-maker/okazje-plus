@@ -64,3 +64,41 @@ export function buildFacebookShareDialogUrl(postUrl: string, quote?: string): st
   }
   return `${base}?${params.toString()}`;
 }
+
+/**
+ * Usuwa formatowanie Markdown (w szczególności podwójne gwiazdki **pogrubienie**,
+ * pojedyncze gwiazdki *kursywa*, znaczniki nagłówków ### oraz markdownowe linki),
+ * ponieważ Facebook NIE interpretuje Markdownu i wyświetla brzydkie znaki '**'.
+ * Ujednolica także punktor na estetyczne kropki '• '.
+ */
+export function sanitizeSocialPostText(text: string): string {
+  if (!text) return '';
+
+  let cleaned = text;
+
+  // 1. Zamień nagłówki Markdown '### Tytuł' lub '## Tytuł' na czysty tekst
+  cleaned = cleaned.replace(/^#{1,6}\s*(.*?)$/gm, '$1');
+
+  // 2. Zamień bold Markdown **tekst** lub __tekst__ na czysty tekst
+  cleaned = cleaned.replace(/\*\*([\s\S]*?)\*\*/g, '$1');
+  cleaned = cleaned.replace(/__([\s\S]*?)__/g, '$1');
+
+  // 3. Zamień italic Markdown *tekst* lub _tekst_ na czysty tekst
+  cleaned = cleaned.replace(/(^|[^\w*])\*([^*\n]+)\*([^\w*]|$)/g, '$1$2$3');
+  cleaned = cleaned.replace(/(^|[^\w_])_([^_\n]+)_([^\w_]|$)/g, '$1$2$3');
+
+  // 4. Zamień Markdownowe punktor listy (* punkt lub - punkt) na ładne '• punkt'
+  cleaned = cleaned.replace(/^[\*\-]\s+/gm, '• ');
+
+  // 5. Zamień Markdownowe linki [tekst](url) na sam tekst (url)
+  cleaned = cleaned.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '$1 ($2)');
+
+  // 6. Usuń wielokrotne puste linie (maksymalnie dwie pod rząd)
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+
+  // 7. Bezpieczeństwo końcowe: usuń pojedyncze wiszące gwiazdki **
+  cleaned = cleaned.replace(/\*\*/g, '');
+
+  return cleaned.trim();
+}
+

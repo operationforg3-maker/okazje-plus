@@ -17,6 +17,7 @@ import {
 } from '@/lib/types';
 import { ai } from '@/ai/genkit';
 import { applyFishingTracking, resolveFishingAffiliateUrl } from '@/lib/fishing-utils';
+import { sanitizeSocialPostText } from '@/lib/social-growth-types';
 
 const CONFIG_DOC_ID = 'fishing-autopilot-settings';
 
@@ -951,53 +952,58 @@ ${dealInfo?.specs ? `- Parametry techniczne:\n${dealInfo.specs}` : ''}
 - Dodatkowy kontekst/temat: ${customTopic || 'brak'}
 - Sugerowane hashtagi: ${dynamicHashtags.join(' ')}
 
-STRUKTURA I WYMOGI POSTA (BARDZO WAŻNE - ZASTOSUJ WSZYSTKIE PUNKTY):
-Napisz kompletny, mięsisty, bogaty i angażujący post na Facebooka (około 200-350 słów), używając formatowania z punktorami i emoji (🎣, 🐟, 🤫, 🔥, 💰, ⚡, 🛠️, 📦).
-Post MUSI zawierać następujące sekcje:
+STRUKTURA I WYMOGI POSTA (BARDZO WAŻNE):
+Napisz zwięzły, konkretny i naturalny post na Facebooka (około 90-150 słów - NIE PISZ TASIEMCÓW ANI ŚCIANY TEKSTU!).
+Pisz jak żywy człowiek, pasjonat wędkarstwa i kumpel po kiju, a NIE jak chatbot AI czy reklama z telewizji!
 
-1. 🎯 CHWYTLIWY NAGŁÓWEK Z TYTUŁEM OKAZJI:
-   W pierwszej linijce postu zamieść wyraźny nagłówek z nazwą sprzętu i sklepem (np. "🚨 [PETARDA SPRZĘTOWA] ${dealInfo?.title || customTopic} w ${dealInfo?.merchant || 'super cenie'}!").
-2. 📖 OPIS I ZASTOSOWANIE:
-   Opisz szczegółowo ten sprzęt – dlaczego jest warty uwagi, do jakich metod wędkarskich (feeder, spinning, karpiowanie, grunt, spławik itp.), na jakie łowiska i ryby się nadaje. Wykorzystaj podany opis produktu.
-3. 🛠️ KLUCZOWE PARAMETRY TECHNICZNE (wypunktowane z emoji):
-   Wyciągnij konkretne parametry (długość, c.w., łożyska, przełożenie, waga, materiał blanku, nośność, moc silnika itp.) i przedstaw je w czytelnej liście punktowanej.
-4. 💸 ZESTAWIENIE CENOWE:
-   • 💰 Cena promocyjna: ${dealInfo?.price || 'Okazyjna'}
-   ${dealInfo?.oldPrice ? `• 🏷️ Cena regularna: ${dealInfo.oldPrice}` : ''}
-   ${dealInfo?.discount ? `• 📉 Oszczędność: ${dealInfo.discount}` : ''}
-   • 🏬 Sklep: ${dealInfo?.merchant || 'Sklep Wędkarski'}
+BEZWZGLĘDNY ZAKAZ UŻYWANIA FORMATOWANIA MARKDOWN (**pogrubienie**, *kursywa*, # nagłówek)!
+Facebook NIE interpretuje Markdownu i wyświetla brzydkie gwiazdki '**', co wkurza czytelników.
+Jeśli chcesz coś zaakcentować, użyj WIELKICH LITER, czytelnej nowej linii lub emoji. NIGDY NIE UŻYWAJ ZNAKÓW '**' ANI '*' W TREŚCI!
+
+Elementy posta:
+1. 🎯 CHWYTLIWY NAGŁÓWEK Z TYTUŁEM OKAZJI (wielkimi literami z emoji, np. 🚨 OKAZJA DLA WĘDKARZY: ${dealInfo?.title || customTopic})
+2. 🎣 KRÓTKI OPIS I ZASTOSOWANIE: Do jakiej metody (feeder, spinning, karp itp.) i dlaczego warto.
+3. 🛠️ KLUCZOWE PARAMETRY: 2-3 najważniejsze cechy wypunktowane punktorami '• ' (bez '**').
+4. 💰 CENY:
+   • Cena promocyjna: ${dealInfo?.price || 'Okazyjna'}
+   ${dealInfo?.oldPrice ? `• Cena regularna: ${dealInfo.oldPrice}` : ''}
+   ${dealInfo?.discount ? `• Oszczędność: ${dealInfo.discount}` : ''}
+   • Sklep: ${dealInfo?.merchant || 'Sklep Wędkarski'}
 5. 🤫 SEKCJA SPECJALNA BOTA:
-${botRole === 'wife_secret' ? '   Napisz oficjalną wymówkę / alibi dla żony ("Kochanie, wygrałem w konkursie za 20 zł" lub "Kumpel oddawał za grosze"), żart o paczkomacie nocą (21:30) i chowaniu sprzętu w bagażniku pod kołem zapasowym.' : ''}
-${botRole === 'deal_hunter' ? '   Przedstaw bezlitosną analizę opłacalności, porównanie do cen w polskich sklepach stacjonarnych i podkreśl dlaczego to okazja życia bez ściemy.' : ''}
-${botRole === 'gear_expert' ? '   Wypunktuj 3 kluczowe zalety techniczne z perspektywy testera i daj radę ekspercką jak wycisnąć z tego sprzętu 100% nad wodą.' : ''}
-${botRole === 'angler_chatter' ? '   Zadaj mocne, prowokujące pytanie do ekipy w grupie i zachęć do komentowania i wrzucania fotek swoich ryb/zestawów w komentarzach.' : ''}
+${botRole === 'wife_secret' ? '   Krótka, zabawna wymówka / alibi dla żony ("Kochanie, kumpel oddawał za 25 zł") i plan na paczkomat po 21:30.' : ''}
+${botRole === 'deal_hunter' ? '   Krótkie, bezlitosne porównanie do cen sklepowych i wyliczenie oszczędności.' : ''}
+${botRole === 'gear_expert' ? '   Jedna konkretna rada testerska jak wycisnąć z tego maksa nad wodą.' : ''}
+${botRole === 'angler_chatter' ? '   Otwarte pytanie do grupy o ich doświadczenia z tym modelem.' : ''}
 6. 🔗 CALL TO ACTION:
-   Poinformuj wyraźnie: "👉 Bezpośredni link do okazji i kod rabatowy znajdziecie w PIERWSZYM KOMENTARZU ⬇️!"
+   "👉 Bezpośredni link do okazji i kod rabatowy znajdziecie w PIERWSZYM KOMENTARZU ⬇️!"
 7. #️⃣ HASHTAGI NA KOŃCU:
-   Zakończ post obowiązkowym blokiem hashtagów (umieść: ${dynamicHashtags.join(' ')}).
+   Zakończ post hashtagami: ${dynamicHashtags.join(' ')}.
 
-Nie urywaj posta! Zwróć PEŁNĄ, kompletną treść gotową do publikacji na Facebooku.
+Pamiętaj: zero '**', zwięźle, ludzki język!
 `;
 
       const aiResponse = await ai.generate({
         prompt: promptText,
         config: {
           temperature: botRole === 'wife_secret' || botRole === 'angler_chatter' ? 0.75 : 0.4,
-          maxOutputTokens: 4000,
+          maxOutputTokens: 2500,
         },
       });
 
       if (aiResponse && aiResponse.text) {
-        postText = aiResponse.text.trim();
+        postText = sanitizeSocialPostText(aiResponse.text);
         aiGenerated = true;
       }
     } catch (aiErr) {
       console.warn('AI Genkit generation error, falling back to curated fishing templates:', aiErr);
     }
 
-    // Gwarancja hashtagów: jeśli model AI nie zawarł hashtagów w treści, dołącz je na końcu
-    if (postText && !postText.includes('#')) {
-      postText = `${postText.trim()}\n\n${dynamicHashtags.join(' ')}`;
+    // Gwarancja braku '**' i obecności hashtagów
+    if (postText) {
+      postText = sanitizeSocialPostText(postText);
+      if (!postText.includes('#')) {
+        postText = `${postText.trim()}\n\n${dynamicHashtags.join(' ')}`;
+      }
     }
 
     // Jeśli AI było offline, użyj bogatych, sprawdzonych szablonów zawierających tytuł, parametry i hashtagi

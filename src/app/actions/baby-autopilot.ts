@@ -13,6 +13,7 @@ import { adminDb } from '@/lib/firebase-admin';
 import { getServerAuthSession } from '@/lib/auth-server';
 import { revalidatePath } from 'next/cache';
 import { ai } from '@/ai/genkit';
+import { sanitizeSocialPostText } from '@/lib/social-growth-types';
 import type {
   BabyAutopilotConfig,
   BabyBotPersona,
@@ -512,55 +513,58 @@ ${dealInfo?.specs ? `- Parametry techniczne / atesty:\n${dealInfo.specs}` : ''}
 - Dodatkowy kontekst/temat: ${customTopic || 'brak'}
 - Sugerowane hashtagi: ${dynamicHashtags.join(' ')}
 
-STRUKTURA I WYMOGI POSTA (BARDZO WAŻNE - ZASTOSUJ WSZYSTKIE PUNKTY):
-Napisz kompletny, bogaty, ciepły i angażujący post na Facebooka (około 200-350 słów), używając formatowania z punktorami i pasującymi emoji (👶, 🍼, 🛍️, ✨, 🧸, 🩺, 💖, 📦).
-Post MUSI zawierać następujące sekcje:
+STRUKTURA I WYMOGI POSTA (BARDZO WAŻNE):
+Napisz zwięzły, ciepły, naturalny i angażujący post na Facebooka (około 90-150 słów - NIE PISZ TASIEMCÓW ANI ŚCIANY TEKSTU!).
+Pisz jak prawdziwa, życzliwa mama z grupy rodzicielskiej, a NIE jak chatbot AI czy oficjalny komunikat!
 
-1. 🎯 CHWYTLIWY NAGŁÓWEK Z TYTUŁEM OKAZJI I SKLEPEM:
-   W pierwszej linijce postu zamieść wyraźny nagłówek z nazwą produktu i sklepem (np. "✨ 👶 [PEREŁKA DLA MALUCHA] ${dealInfo?.title || customTopic} w ${dealInfo?.merchant || 'super cenie'}!").
-2. 👶 PRZEZNACZENIE I WIEK DZIECKA:
-   Wskaż dla jakiego wieku/etapu jest ten produkt (np. niemowlę 0-6m, maluch 1-3 lata, przedszkolak, mama w ciąży, wyprawka).
-3. 📖 DLACZEGO WARTO / ZASTOSOWANIE:
-   Opisz jak ten produkt ułatwia życie rodzicom lub wspiera rozwój dziecka (bezpieczny sen, higiena, wygoda na spacerze, ząbkowanie itp.).
-4. 🛡️ BEZPIECZEŃSTWO I PARAMETRY (wypunktowane z emoji):
-   Wypunktuj kluczowe parametry techniczne i atesty (np. atest Oeko-Tex, certyfikat CE / EN-71, brak BPA, 100% bawełna organiczna, norma i-Size, wymiary itp.).
-5. 💰 ZESTAWIENIE CENOWE:
-   • 💰 Cena promocyjna: ${dealInfo?.price || 'Okazyjna'}
-   ${dealInfo?.oldPrice ? `• 🏷️ Cena regularna: ${dealInfo.oldPrice}` : ''}
-   ${dealInfo?.discount ? `• 📉 Oszczędność: ${dealInfo.discount}` : ''}
-   • 🏬 Sklep: ${dealInfo?.merchant || 'Sklep'}
-6. 🤱 SEKCJA SPECJALNA BOTA:
-${botRole === 'bargain_mom' ? '   Przelicz opłacalność (np. koszt 1 sztuki pieluszki/chusteczki lub porównanie z drogerią Rossmann/Hebe), napisz ile zostaje w portfelu na inne przyjemności dla mamy.' : ''}
-${botRole === 'safety_expert' ? '   Wypunktuj 2-3 kluczowe zalety z punktu widzenia zdrowia i bezpieczeństwa malucha (atesty, brak szkodliwych substancji, ergonomia).' : ''}
-${botRole === 'mom_community' ? '   Zadaj ciepłe, angażujące pytanie do innych mam o ich doświadczenia i sprawdzone sposoby ("Dziewczyny, jak to jest u Was?", "Sprawdza się w praktyce czy zbiera kurz?").' : ''}
-${botRole === 'montessori_play' ? '   Wyjaśnij jak ten przedmiot rozwija małą motorykę, wyobraźnię lub zmysły dziecka i zaproponuj 1 prostą zabawę z maluchem.' : ''}
-7. 🔗 CALL TO ACTION:
-   Napisz wyraźnie: "👉 Bezpośredni link do okazji i kod rabatowy znajdziecie w PIERWSZYM KOMENTARZU ⬇️!"
-8. #️⃣ HASHTAGI NA KOŃCU:
-   Zakończ post blokiem hashtagów (umieść: ${dynamicHashtags.join(' ')}).
+BEZWZGLĘDNY ZAKAZ UŻYWANIA FORMATOWANIA MARKDOWN (**pogrubienie**, *kursywa*, # nagłówek)!
+Facebook NIE interpretuje Markdownu i wyświetla brzydkie gwiazdki '**', co drażni czytelników.
+Jeśli chcesz coś zaakcentować, użyj WIELKICH LITER, nowej linii lub emoji (👶, 🍼, 🛍️, ✨, 🧸, 💖). NIGDY NIE UŻYWAJ ZNAKÓW '**' ANI '*' W TREŚCI!
 
-Nie urywaj posta! Zwróć PEŁNĄ, kompletną treść gotową do publikacji na Facebooku.
+Elementy posta:
+1. 🎯 CHWYTLIWY NAGŁÓWEK Z TYTUŁEM OKAZJI (np. ✨ PEREŁKA DLA MALUCHA: ${dealInfo?.title || customTopic})
+2. 👶 DLA KOGO I DLACZEGO WARTO: Wskazanie wieku (niemowlak, roczniak, przedszkolak itp.) i w czym ułatwia życie rodzicom.
+3. 🛡️ BEZPIECZEŃSTWO I ZALETY: 2-3 najważniejsze atuty wypunktowane punktorami '• ' (bez '**').
+4. 💰 CENY:
+   • Cena promocyjna: ${dealInfo?.price || 'Okazyjna'}
+   ${dealInfo?.oldPrice ? `• Cena regularna: ${dealInfo.oldPrice}` : ''}
+   ${dealInfo?.discount ? `• Oszczędność: ${dealInfo.discount}` : ''}
+   • Sklep: ${dealInfo?.merchant || 'Sklep'}
+5. 🤱 PERSPEKTYWA MAMY:
+${botRole === 'bargain_mom' ? '   Krótka wskazówka ile oszczędzamy w porównaniu do cen w znanych sieciówkach/drogeriach.' : ''}
+${botRole === 'safety_expert' ? '   Krótka uwaga o atestach, bezpieczeństwie materiałów bez BPA i delikatności dla skóry.' : ''}
+${botRole === 'mom_community' ? '   Ciepłe pytanie do innych mam czy też używają takiego rozwiązania.' : ''}
+${botRole === 'montessori_play' ? '   Krótka wzmianka jak ta zabawka rozwija zmysły i kreatywność malucha.' : ''}
+6. 🔗 CALL TO ACTION:
+   "👉 Bezpośredni link do okazji i kod rabatowy znajdziecie w PIERWSZYM KOMENTARZU ⬇️!"
+7. #️⃣ HASHTAGI NA KOŃCU:
+   Zakończ post hashtagami: ${dynamicHashtags.join(' ')}.
+
+Pamiętaj: zero '**', zwięźle, ludzki ciepły język!
 `;
 
       const aiResponse = await ai.generate({
         prompt: promptText,
         config: {
           temperature: botRole === 'bargain_mom' || botRole === 'mom_community' ? 0.75 : 0.4,
-          maxOutputTokens: 4000,
+          maxOutputTokens: 2500,
         },
       });
 
       if (aiResponse && aiResponse.text) {
-        postText = aiResponse.text.trim();
+        postText = sanitizeSocialPostText(aiResponse.text);
         aiGenerated = true;
       }
     } catch (aiErr) {
       console.warn('AI generation error for baby post, falling back to curated templates:', aiErr);
     }
 
-    // Gwarancja hashtagów
-    if (postText && !postText.includes('#')) {
-      postText = `${postText.trim()}\n\n${dynamicHashtags.join(' ')}`;
+    // Gwarancja braku '**' i obecności hashtagów
+    if (postText) {
+      postText = sanitizeSocialPostText(postText);
+      if (!postText.includes('#')) {
+        postText = `${postText.trim()}\n\n${dynamicHashtags.join(' ')}`;
+      }
     }
 
     // Fallback gdyby AI było offline

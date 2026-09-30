@@ -25,6 +25,8 @@ import {
 import type { GeneralAutopilotConfig, GeneralPostQueueItem } from '@/lib/types';
 import { GroupShareModal } from '@/components/admin/social/group-share-modal';
 import { CommentsModerationModal } from '@/components/admin/social/comments-moderation-modal';
+import { PostEditDialog } from '@/components/admin/social/post-edit-dialog';
+import { sanitizeSocialPostText } from '@/lib/social-growth-types';
 import {
   approveGeneralPostAction,
   rejectGeneralPostAction,
@@ -49,6 +51,7 @@ export function GeneralQueueTab({
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'posted' | 'failed'>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
+  const [editingItem, setEditingItem] = useState<GeneralPostQueueItem | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [shareModalPost, setShareModalPost] = useState<GeneralPostQueueItem | null>(null);
   const [commentsModalPost, setCommentsModalPost] = useState<GeneralPostQueueItem | null>(null);
@@ -256,7 +259,7 @@ export function GeneralQueueTab({
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground whitespace-pre-wrap font-sans bg-muted/30 p-3 rounded border">
-                    {item.content}
+                    {sanitizeSocialPostText(item.content)}
                   </p>
                 )}
 
@@ -308,12 +311,10 @@ export function GeneralQueueTab({
                       </Button>
                     </>
                   )}
-                  {editingId !== item.id && (
-                    <Button variant="ghost" size="sm" onClick={() => startEditing(item)} className="text-xs h-7">
-                      <Edit3 className="w-3 h-3 mr-1" />
-                      Edytuj
-                    </Button>
-                  )}
+                  <Button variant="ghost" size="sm" onClick={() => setEditingItem(item)} className="text-xs h-7">
+                    <Edit3 className="w-3 h-3 mr-1" />
+                    Edytuj
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -394,6 +395,15 @@ export function GeneralQueueTab({
           post={commentsModalPost}
         />
       )}
+
+      {/* Comprehensive Post Edit Dialog */}
+      <PostEditDialog
+        open={Boolean(editingItem)}
+        onOpenChange={(open) => !open && setEditingItem(null)}
+        niche="general"
+        item={editingItem as any}
+        onSaved={onRefresh}
+      />
     </div>
   );
 }

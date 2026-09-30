@@ -22,10 +22,18 @@ import {
   Zap,
   ArrowRight,
   Filter,
+  Edit,
+  Loader2,
+  Tag,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CalendarTimelineItem, UnifiedCalendarData } from '@/app/actions/calendar-schedule';
-import { getUnifiedCalendarDataAction } from '@/app/actions/calendar-schedule';
+import {
+  getUnifiedCalendarDataAction,
+  preGenerateSlotPostAction,
+} from '@/app/actions/calendar-schedule';
+import { PostEditDialog, type EditablePostItem } from '@/components/admin/social/post-edit-dialog';
+import { sanitizeSocialPostText } from '@/lib/social-growth-types';
 import {
   Dialog,
   DialogContent,
@@ -47,6 +55,11 @@ export function UnifiedCalendarTab() {
 
   // Modal inspection state
   const [selectedItem, setSelectedItem] = useState<CalendarTimelineItem | null>(null);
+
+  // Edit and Pre-generate state
+  const [editingPostItem, setEditingPostItem] = useState<EditablePostItem | null>(null);
+  const [editingNiche, setEditingNiche] = useState<'general' | 'fishing' | 'baby'>('general');
+  const [preGeneratingId, setPreGeneratingId] = useState<string | null>(null);
 
   const loadCalendarData = useCallback(async () => {
     try {
@@ -71,6 +84,59 @@ export function UnifiedCalendarTab() {
   useEffect(() => {
     loadCalendarData();
   }, [loadCalendarData]);
+
+  const handlePreGenerate = async (item: CalendarTimelineItem) => {
+    try {
+      setPreGeneratingId(item.id);
+      toast.info('Generowanie posta przez AI dla wybranej okazji...');
+      const res = await preGenerateSlotPostAction({
+        niche: item.niche,
+        scheduledTime: item.scheduledTime,
+        dealId: item.dealId || item.candidateDeal?.id,
+      });
+
+      if (res.success && res.post) {
+        toast.success('Post wygenerowany! Otwieram edytor...');
+        await loadCalendarData();
+        setSelectedItem(null);
+        setEditingNiche(item.niche);
+        setEditingPostItem({
+          id: res.queueItemId || res.post.id,
+          title: res.post.title || '',
+          content: sanitizeSocialPostText(res.post.content || ''),
+          firstComment: res.post.firstComment || '',
+          imageUrl: res.post.imageUrl || item.candidateDeal?.imageUrl || '',
+          linkUrl: res.post.linkUrl || item.candidateDeal?.dealUrl || '',
+          scheduledFor: res.post.scheduledFor || item.scheduledTime,
+          status: res.post.status || 'approved',
+          dealId: res.post.dealId || item.dealId,
+          wifeAlibi: res.post.wifeAlibi,
+        });
+      } else {
+        toast.error(res.error || 'Nie udało się wygenerować posta');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Błąd generowania');
+    } finally {
+      setPreGeneratingId(null);
+    }
+  };
+
+  const handleEditPost = (item: CalendarTimelineItem) => {
+    setSelectedItem(null);
+    setEditingNiche(item.niche);
+    setEditingPostItem({
+      id: item.queueItemId || item.id,
+      title: item.title,
+      content: sanitizeSocialPostText(item.content),
+      firstComment: item.firstComment,
+      imageUrl: item.imageUrl || item.candidateDeal?.imageUrl,
+      linkUrl: item.linkUrl || item.candidateDeal?.dealUrl,
+      scheduledFor: item.scheduledTime,
+      status: item.status === 'pending' ? 'pending' : 'approved',
+      dealId: item.dealId,
+    });
+  };
 
   // Month navigation helpers
   const firstDayOfMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
@@ -351,13 +417,21 @@ export function UnifiedCalendarTab() {
                     >
                       <CardContent className="p-4 space-y-2.5">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xl p-1.5 rounded-lg bg-muted/60 border border-border/50">
-                              {item.botAvatar}
-                            </span>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-bold text-foreground">
+                          <div className="flex items-center gap-3 flex-wrap min-w-0">
+                            {item.imageUrl ? (
+                              <img
+                                src={item.imageUrl}
+                                alt=""
+                                className="w-11 h-11 rounded-lg object-cover border border-border/60 shrink-0 bg-muted/30"
+                              />
+                            ) : (
+                              <span className="text-xl p-1.5 rounded-lg bg-muted/60 border border-border/50 shrink-0">
+                                {item.botAvatar}
+                              </span>
+                            )}
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-sm font-bold text-foreground truncate">
                                   {item.title}
                                 </span>
                                 {getNicheBadge(item.niche)}
@@ -382,23 +456,71 @@ export function UnifiedCalendarTab() {
                           </div>
                         </div>
 
+                        {/* Candidate deal pill if slot */}
+                        {item.candidateDeal && (
+                          <div className="flex items-center gap-2 p-1.5 px-2 rounded-md bg-primary/5 border border-primary/20 text-xs">
+                            <Tag className="w-3.5 h-3.5 text-primary shrink-0" />
+                            <span className="font-medium text-foreground truncate">
+                              Planowana okazja: <strong>{item.candidateDeal.title}</strong>
+                            </span>
+                            <Badge variant="secondary" className="ml-auto text-[10px] shrink-0 font-bold">
+                              {item.candidateDeal.price}
+                            </Badge>
+                          </div>
+                        )}
+
                         {/* Content snippet */}
                         <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed bg-muted/20 p-2 rounded border border-border/40 font-sans">
-                          {item.content}
+                          {sanitizeSocialPostText(item.content)}
                         </p>
 
-                        <div className="flex items-center justify-between pt-1 text-[11px] text-muted-foreground border-t border-border/40">
+                        <div className="flex items-center justify-between pt-1 text-[11px] text-muted-foreground border-t border-border/40 gap-2 flex-wrap">
                           <span className="flex items-center gap-1">
                             {item.status === 'scheduled_slot' ? (
-                              <span className="text-blue-500 font-medium">⚡ Automatyczne zasilenie przez bota</span>
+                              <span className="text-blue-500 font-medium">⚡ Proponowana okazja (niewygenerowany)</span>
                             ) : (
-                              <span className="text-emerald-600 font-medium">✓ Post gotowy z dedykowaną treścią</span>
+                              <span className="text-emerald-600 font-medium">✓ Post gotowy w kolejce</span>
                             )}
                           </span>
 
-                          <span className="text-primary hover:underline flex items-center gap-1 font-semibold">
-                            Zobacz szczegóły <ArrowRight className="w-3 h-3" />
-                          </span>
+                          <div className="flex items-center gap-2">
+                            {item.status === 'scheduled_slot' ? (
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handlePreGenerate(item);
+                                }}
+                                disabled={preGeneratingId === item.id}
+                                className="h-7 text-xs px-2.5 gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                              >
+                                {preGeneratingId === item.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <Sparkles className="w-3 h-3 text-amber-300" />
+                                )}
+                                Wygeneruj post wcześniej
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditPost(item);
+                                }}
+                                className="h-7 text-xs px-2.5 gap-1.5"
+                              >
+                                <Edit className="w-3 h-3" />
+                                Edytuj post
+                              </Button>
+                            )}
+
+                            <span className="text-primary hover:underline flex items-center gap-0.5 font-semibold text-xs ml-1">
+                              Szczegóły <ArrowRight className="w-3 h-3" />
+                            </span>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -650,10 +772,28 @@ export function UnifiedCalendarTab() {
                 </Badge>
               </div>
 
+              {selectedItem.candidateDeal && (
+                <div className="p-2.5 rounded-lg border border-primary/20 bg-primary/5 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-foreground flex items-center gap-1.5">
+                      <Tag className="w-3.5 h-3.5 text-primary" />
+                      Planowana okazja z katalogu:
+                    </span>
+                    <Badge variant="secondary" className="font-bold">
+                      {selectedItem.candidateDeal.price}
+                    </Badge>
+                  </div>
+                  <p className="font-medium text-foreground">{selectedItem.candidateDeal.title}</p>
+                  {selectedItem.candidateDeal.merchant && (
+                    <p className="text-[11px] text-muted-foreground">Sklep: {selectedItem.candidateDeal.merchant}</p>
+                  )}
+                </div>
+              )}
+
               <div className="space-y-1.5">
                 <span className="font-semibold text-foreground">Treść wpisu:</span>
                 <p className="p-3 bg-muted/30 rounded-lg border text-muted-foreground whitespace-pre-wrap leading-relaxed font-sans max-h-[220px] overflow-y-auto">
-                  {selectedItem.content}
+                  {sanitizeSocialPostText(selectedItem.content)}
                 </p>
               </div>
 
@@ -677,7 +817,33 @@ export function UnifiedCalendarTab() {
               )}
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="gap-2 sm:gap-0 flex-wrap">
+              {selectedItem.status === 'scheduled_slot' ? (
+                <Button
+                  size="sm"
+                  onClick={() => handlePreGenerate(selectedItem)}
+                  disabled={preGeneratingId === selectedItem.id}
+                  className="text-xs gap-1.5 bg-primary text-primary-foreground font-semibold"
+                >
+                  {preGeneratingId === selectedItem.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  )}
+                  Wygeneruj post wcześniej
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => handleEditPost(selectedItem)}
+                  className="text-xs gap-1.5"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  Edytuj post
+                </Button>
+              )}
+
               {selectedItem.fbPostUrl && (
                 <Button variant="outline" size="sm" asChild className="text-xs">
                   <a href={selectedItem.fbPostUrl} target="_blank" rel="noopener noreferrer">
@@ -686,13 +852,22 @@ export function UnifiedCalendarTab() {
                   </a>
                 </Button>
               )}
-              <Button size="sm" onClick={() => setSelectedItem(null)} className="text-xs">
+              <Button size="sm" variant="outline" onClick={() => setSelectedItem(null)} className="text-xs">
                 Zamknij
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
+
+      {/* POST EDIT DIALOG */}
+      <PostEditDialog
+        open={Boolean(editingPostItem)}
+        onOpenChange={open => !open && setEditingPostItem(null)}
+        niche={editingNiche}
+        item={editingPostItem}
+        onSaved={loadCalendarData}
+      />
     </div>
   );
 }

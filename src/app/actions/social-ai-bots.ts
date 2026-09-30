@@ -10,6 +10,7 @@ import { getServerAuthSession } from '@/lib/auth-server';
 import { publishToSocialPlatform } from '@/lib/platform-publishers';
 import type { SocialAIBot, SocialPost, SocialConfig } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
+import { sanitizeSocialPostText } from '@/lib/social-growth-types';
 
 const DEFAULT_BOTS: SocialAIBot[] = [
   {
@@ -691,30 +692,34 @@ ${deal.description ? `- Opis produktu:\n${deal.description.slice(0, 800)}` : ''}
 ${topicHint ? `- Dodatkowa uwaga/wskazówka od użytkownika: ${topicHint}` : ''}
 
 ZASADY:
-- Pisz po polsku, żywym, naturalnym i angażującym językiem.
-- Używaj akapitów, czytelnych punktorów i estetycznych emoji.
-- Nie urywaj tekstu. Zwróć kompletny post gotowy do publikacji na Facebooku.
+- Zwięźle i konkretnie (około 90-150 słów). Nie twórz długich elaboratów ani ściany tekstu!
+- BEZWZGLĘDNY ZAKAZ UŻYWANIA GWIAZDEK I FORMATOWANIA MARKDOWN (**tekst**, *tekst*, # nagłówek)! Facebook NIE interpretuje Markdownu i wyświetla brzydkie gwiazdki '**', co drażni odbiorców.
+- Jeśli chcesz coś zaakcentować, użyj WIELKICH LITER, czytelnej nowej linii lub emoji. NIGDY NIE UŻYWAJ ZNAKÓW '**' ANI '*'!
+- Pisz po polsku, żywym, naturalnym i angażującym językiem jak człowiek, a nie sztuczny bot.
 - Umieść podane hashtagi na samym końcu.`;
 
     const aiResponse = await ai.generate({
       prompt: fullPrompt,
       config: {
         temperature: bot.role === 'hunter' || bot.role === 'community' ? 0.75 : 0.4,
-        maxOutputTokens: 3000,
+        maxOutputTokens: 2500,
       },
     });
 
-    if (aiResponse && aiResponse.text && aiResponse.text.trim().length > 80) {
-      postText = aiResponse.text.trim();
+    if (aiResponse && aiResponse.text && aiResponse.text.trim().length > 40) {
+      postText = sanitizeSocialPostText(aiResponse.text);
       aiGenerated = true;
     }
   } catch (err) {
     console.warn('[generateEngagingSocialPost] AI generation error, using rich curated template:', err);
   }
 
-  // Ensure hashtags are included
-  if (postText && !postText.includes('#')) {
-    postText = `${postText.trim()}\n\n${hashtagsLine}`;
+  // Ensure hashtags are included and sanitized
+  if (postText) {
+    postText = sanitizeSocialPostText(postText);
+    if (!postText.includes('#')) {
+      postText = `${postText.trim()}\n\n${hashtagsLine}`;
+    }
   }
 
   // Fallback if AI was unavailable

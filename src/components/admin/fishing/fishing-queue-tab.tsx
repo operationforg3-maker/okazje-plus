@@ -33,6 +33,7 @@ import {
 import type { FishingAutopilotConfig, FishingPostQueueItem } from '@/lib/types';
 import { GroupShareModal } from '@/components/admin/social/group-share-modal';
 import { CommentsModerationModal } from '@/components/admin/social/comments-moderation-modal';
+import { PostEditDialog } from '@/components/admin/social/post-edit-dialog';
 import {
   publishFishingPostAction,
   updateFishingQueueItemAction,
@@ -60,9 +61,6 @@ export function FishingQueueTab({
 
   // Edit dialog state
   const [editingItem, setEditingItem] = useState<FishingPostQueueItem | null>(null);
-  const [editContent, setEditContent] = useState('');
-  const [editAlibi, setEditAlibi] = useState('');
-  const [savingEdit, setSavingEdit] = useState(false);
 
   const filteredItems = queueItems.filter(item => {
     if (statusFilter === 'all') return true;
@@ -116,30 +114,6 @@ export function FishingQueueTab({
 
   const openEditDialog = (item: FishingPostQueueItem) => {
     setEditingItem(item);
-    setEditContent(item.content);
-    setEditAlibi(item.wifeAlibi || '');
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingItem) return;
-    try {
-      setSavingEdit(true);
-      const res = await updateFishingQueueItemAction(editingItem.id, {
-        content: editContent,
-        wifeAlibi: editAlibi || undefined,
-      });
-      if (res.success) {
-        toast.success('Zapisano zmiany w poście');
-        setEditingItem(null);
-        onRefresh();
-      } else {
-        toast.error(res.error || 'Błąd zapisu zmian');
-      }
-    } catch {
-      toast.error('Błąd zapisu');
-    } finally {
-      setSavingEdit(false);
-    }
   };
 
   const getStatusBadge = (status: FishingPostQueueItem['status']) => {
@@ -423,58 +397,14 @@ export function FishingQueueTab({
         </div>
       )}
 
-      {/* Edit Dialog */}
-      <Dialog open={Boolean(editingItem)} onOpenChange={(open) => !open && setEditingItem(null)}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Edycja Posta przed Publikacją</DialogTitle>
-            <DialogDescription>
-              Wprowadź poprawki w treści lub alibi przed zatwierdzeniem.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div>
-              <Label className="text-xs font-semibold">Treść posta</Label>
-              <Textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                className="min-h-[180px] text-xs font-sans mt-1 leading-relaxed"
-              />
-            </div>
-
-            {editingItem?.wifeAlibi && (
-              <div>
-                <Label className="text-xs font-semibold text-amber-500">Oficjalne Alibi dla Żony</Label>
-                <Input
-                  value={editAlibi}
-                  onChange={(e) => setEditAlibi(e.target.value)}
-                  className="text-xs mt-1"
-                />
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditingItem(null)}
-              disabled={savingEdit}
-            >
-              Anuluj
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSaveEdit}
-              disabled={savingEdit}
-            >
-              {savingEdit ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
-              Zapisz Zmiany
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Comprehensive Post Edit Dialog */}
+      <PostEditDialog
+        open={Boolean(editingItem)}
+        onOpenChange={(open) => !open && setEditingItem(null)}
+        niche="fishing"
+        item={editingItem as any}
+        onSaved={onRefresh}
+      />
 
       {/* Modal Udostępniania w Grupach i Telegramie */}
       {shareModalPost && (

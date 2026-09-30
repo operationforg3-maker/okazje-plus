@@ -35,7 +35,7 @@ function getNicheCollectionNames(niche: SocialNiche) {
   if (niche === 'fishing') {
     return {
       settingsDoc: 'fishing-autopilot-settings',
-      queueColl: 'fishingPostQueue',
+      queueColl: 'fishingPostsQueue',
       dealsColl: 'fishingDealsCatalog',
       botsColl: 'fishingBotPersonas',
       defaultCampaign: 'Fishing_2',

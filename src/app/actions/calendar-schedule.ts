@@ -9,9 +9,23 @@
 
 import { adminDb } from '@/lib/firebase-admin';
 import { getServerAuthSession } from '@/lib/auth-server';
-import { getGeneralAutopilotConfig } from '@/app/actions/general-autopilot';
-import { getFishingAutopilotConfig } from '@/app/actions/fishing-autopilot';
-import { getBabyAutopilotConfig } from '@/app/actions/baby-autopilot';
+import { revalidatePath } from 'next/cache';
+import { getGeneralAutopilotConfig, getGeneralDeals, generateGeneralPostAction } from '@/app/actions/general-autopilot';
+import { getFishingAutopilotConfig, getFishingDeals, generateFishingPost } from '@/app/actions/fishing-autopilot';
+import { getBabyAutopilotConfig, getBabyDeals, generateBabyPost } from '@/app/actions/baby-autopilot';
+import { sanitizeSocialPostText } from '@/lib/social-growth-types';
+
+export interface CandidateDealSummary {
+  id: string;
+  title: string;
+  price: string;
+  oldPrice?: string;
+  discount?: string;
+  merchant?: string;
+  imageUrl?: string;
+  dealUrl: string;
+  description?: string;
+}
 
 export interface CalendarTimelineItem {
   id: string;
@@ -35,6 +49,7 @@ export interface CalendarTimelineItem {
   dealId?: string;
   queueItemId?: string;
   fbPostUrl?: string;
+  candidateDeal?: CandidateDealSummary;
 }
 
 export interface UnifiedCalendarData {
@@ -101,21 +116,60 @@ export async function getUnifiedCalendarDataAction(options?: {
     const daysAhead = options?.daysAhead || 14;
     const filterNiche = options?.filterNiche || 'all';
 
-    // 1. Fetch configs for all niches
-    const [genConfigRes, fishConfigRes, babyConfigRes] = await Promise.all([
+    // 1. Fetch configs and available candidate deals for all niches
+    const [genConfigRes, fishConfigRes, babyConfigRes, genDealsRes, fishDealsRes, babyDealsRes] = await Promise.all([
       getGeneralAutopilotConfig(true),
       getFishingAutopilotConfig(true),
       getBabyAutopilotConfig(true),
+      getGeneralDeals({ limit: 40 }, true),
+      getFishingDeals(undefined, 40, undefined, true),
+      getBabyDeals({ limit: 40 }, true),
     ]);
 
     const genConfig = genConfigRes.config;
     const fishConfig = fishConfigRes.config;
     const babyConfig = babyConfigRes.config;
 
-    // 2. Fetch Queued Items from all 3 collections
+    const genAvailableDeals: CandidateDealSummary[] = (genDealsRes.deals || []).map(d => ({
+      id: d.id,
+      title: d.title || 'Hit Cenowy',
+      price: String(d.price || ''),
+      oldPrice: d.oldPrice ? String(d.oldPrice) : undefined,
+      discount: d.discount ? `-${d.discount}%` : undefined,
+      merchant: d.merchant,
+      imageUrl: d.imageUrl,
+      dealUrl: d.dealUrl,
+      description: d.description,
+    }));
+
+    const fishAvailableDeals: CandidateDealSummary[] = (fishDealsRes.deals || []).map(d => ({
+      id: d.id,
+      title: d.title || 'Sprzęt Wędkarski',
+      price: d.price || '',
+      oldPrice: d.oldPrice,
+      discount: d.discount,
+      merchant: d.merchant,
+      imageUrl: d.imageUrl,
+      dealUrl: d.dealUrl,
+      description: d.description,
+    }));
+
+    const babyAvailableDeals: CandidateDealSummary[] = (babyDealsRes.deals || []).map(d => ({
+      id: d.id,
+      title: d.title || 'Akcesoria dla Malucha i Mamy',
+      price: d.price || '',
+      oldPrice: d.oldPrice,
+      discount: d.discount,
+      merchant: d.merchant,
+      imageUrl: d.imageUrl,
+      dealUrl: d.dealUrl,
+      description: d.description,
+    }));
+
+    // 2. Fetch Queued Items from all 3 collections (fixing fishingPostsQueue with 's')
     const [genQueueSnap, fishQueueSnap, babyQueueSnap] = await Promise.all([
       adminDb.collection('generalPostQueue').orderBy('createdAt', 'desc').limit(50).get(),
-      adminDb.collection('fishingPostQueue').orderBy('createdAt', 'desc').limit(50).get(),
+      adminDb.collection('fishingPostsQueue').orderBy('createdAt', 'desc').limit(50).get(),
       adminDb.collection('babyPostQueue').orderBy('createdAt', 'desc').limit(50).get(),
     ]);
 
@@ -136,6 +190,7 @@ export async function getUnifiedCalendarDataAction(options?: {
         defaultBot: 'Łowca Perełek',
         defaultAvatar: '🔥',
         queue: genQueue,
+        availableDeals: genAvailableDeals,
         scheduleTimes: genConfig.schedule?.scheduleTimes || ['09:00', '12:00', '15:00', '18:00', '21:00'],
       },
       {
@@ -146,6 +201,7 @@ export async function getUnifiedCalendarDataAction(options?: {
         defaultBot: 'Żona Nie Widzi',
         defaultAvatar: '🤫',
         queue: fishQueue,
+        availableDeals: fishAvailableDeals,
         scheduleTimes: fishConfig.schedule?.scheduleTimes || ['06:30', '12:00', '17:30', '21:30'],
       },
       {
@@ -156,6 +212,7 @@ export async function getUnifiedCalendarDataAction(options?: {
         defaultBot: 'Oszczędna Mama Ania',
         defaultAvatar: '🛍️',
         queue: babyQueue,
+        availableDeals: babyAvailableDeals,
         scheduleTimes: babyConfig.schedule?.scheduleTimes || ['08:00', '11:00', '14:00', '17:00', '20:00'],
       },
     ];
@@ -168,6 +225,7 @@ export async function getUnifiedCalendarDataAction(options?: {
         item => item.status === 'pending' || item.status === 'approved'
       );
       let queueCursor = 0;
+      let candidateCursor = 0;
 
       // Generate future slots
       for (let dayOffset = 0; dayOffset < daysAhead; dayOffset++) {
@@ -221,7 +279,13 @@ export async function getUnifiedCalendarDataAction(options?: {
               queueItemId: matchedQueueItem.id,
             });
           } else {
-            // Autopilot Automated Slot (no manual item in queue -> bot will harvest/generate automatically)
+            // Assign candidate deal from the top available deals in this niche
+            let candidateDeal: CandidateDealSummary | undefined;
+            if (n.availableDeals.length > 0) {
+              candidateDeal = n.availableDeals[candidateCursor % n.availableDeals.length];
+              candidateCursor++;
+            }
+
             timelineItems.push({
               id: `slot-${n.key}-${dateKey}-${timeStr.replace(':', '')}`,
               niche: n.key,
@@ -230,14 +294,20 @@ export async function getUnifiedCalendarDataAction(options?: {
               botName: n.defaultBot,
               botAvatar: n.defaultAvatar,
               botRole: 'autopilot',
-              title: `${n.label} (Autopilot)`,
-              content: `Zaplanowany slot publikacji. Autopilot automatycznie pobierze najnowszą ofertę z bazy okazji lub feeda partnerskiego i wygeneruje post na fanpage Facebooka.`,
+              title: candidateDeal ? candidateDeal.title : `${n.label} (Autopilot)`,
+              content: candidateDeal
+                ? `Planowana okazja: ${candidateDeal.title} (${candidateDeal.price}${candidateDeal.merchant ? ` • ${candidateDeal.merchant}` : ''}).\nTreść posta nie została jeszcze wygenerowana — kliknij "Wygeneruj post wcześniej", aby przygotować wpis i dowolnie go edytować przed publikacją!`
+                : `Zaplanowany slot publikacji. Autopilot automatycznie pobierze najnowszą ofertę z bazy okazji lub feeda partnerskiego i wygeneruje post na fanpage Facebooka.`,
               scheduledTime: slotDateTime.toISOString(),
               timeDisplay: formatDisplayDate(slotDateTime, now),
               dateKey,
               hoursFromNow: countdown.hours,
               countdownText: countdown.text,
               status: 'scheduled_slot',
+              imageUrl: candidateDeal?.imageUrl,
+              linkUrl: candidateDeal?.dealUrl,
+              dealId: candidateDeal?.id,
+              candidateDeal,
             });
           }
         }
@@ -346,3 +416,217 @@ export async function getUnifiedCalendarDataAction(options?: {
     };
   }
 }
+
+/**
+ * Generuje post z wyprzedzeniem dla planowanego slotu czasowego i zapisuje go w kolejce do moderacji/edycji.
+ */
+export async function preGenerateSlotPostAction(params: {
+  niche: 'general' | 'fishing' | 'baby';
+  scheduledTime: string;
+  dealId?: string;
+  botId?: string;
+  customTopic?: string;
+}): Promise<{
+  success: boolean;
+  queueItemId?: string;
+  post?: any;
+  error?: string;
+}> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    const { niche, scheduledTime, dealId, customTopic } = params;
+
+    if (niche === 'fishing') {
+      const genRes = await generateFishingPost({
+        botRole: 'deal_hunter',
+        dealId,
+        customTopic,
+      }, true);
+
+      if (!genRes.success || !genRes.item) {
+        return { success: false, error: genRes.error || 'Nie udało się wygenerować posta wędkarskiego' };
+      }
+
+      const postData = {
+        ...genRes.item,
+        scheduledFor: scheduledTime,
+        status: 'approved' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const docRef = await adminDb.collection('fishingPostsQueue').add(postData);
+      revalidatePath('/[locale]/admin/social-media', 'page');
+      revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
+      return { success: true, queueItemId: docRef.id, post: { id: docRef.id, ...postData } };
+    } else if (niche === 'baby') {
+      const genRes = await generateBabyPost({
+        botRole: 'bargain_mom',
+        dealId,
+        customTopic,
+      }, true);
+
+      if (!genRes.success || !genRes.item) {
+        return { success: false, error: genRes.error || 'Nie udało się wygenerować posta dla malucha' };
+      }
+
+      const postData = {
+        ...genRes.item,
+        scheduledFor: scheduledTime,
+        status: 'approved' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const docRef = await adminDb.collection('babyPostQueue').add(postData);
+      revalidatePath('/[locale]/admin/social-media', 'page');
+      revalidatePath('/[locale]/admin/baby-autopilot', 'page');
+      return { success: true, queueItemId: docRef.id, post: { id: docRef.id, ...postData } };
+    } else {
+      const genRes = await generateGeneralPostAction({
+        botRole: 'bargain_hunter',
+        dealId,
+        customTopic,
+      });
+
+      if (!genRes.success || !genRes.post) {
+        return { success: false, error: genRes.error || 'Nie udało się wygenerować posta Okazje Plus' };
+      }
+
+      const postData = {
+        ...genRes.post,
+        scheduledFor: scheduledTime,
+        status: 'approved' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      const docRef = await adminDb.collection('generalPostQueue').add(postData);
+      revalidatePath('/[locale]/admin/social-media', 'page');
+      return { success: true, queueItemId: docRef.id, post: { id: docRef.id, ...postData } };
+    }
+  } catch (err: any) {
+    console.error('Error in preGenerateSlotPostAction:', err);
+    return { success: false, error: err.message || 'Błąd generowania posta z wyprzedzeniem' };
+  }
+}
+
+/**
+ * Zapisuje dowolne edycje w zaplanowanym lub oczekującym poście w kolejce.
+ */
+export async function saveScheduledPostEditsAction(params: {
+  niche: 'general' | 'fishing' | 'baby';
+  queueItemId: string;
+  updates: {
+    title?: string;
+    content?: string;
+    firstComment?: string;
+    imageUrl?: string;
+    linkUrl?: string;
+    scheduledFor?: string;
+    status?: 'pending' | 'approved' | 'posted';
+    dealId?: string;
+    wifeAlibi?: string;
+  };
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    const { niche, queueItemId, updates } = params;
+    const collectionName = niche === 'fishing'
+      ? 'fishingPostsQueue'
+      : niche === 'baby'
+        ? 'babyPostQueue'
+        : 'generalPostQueue';
+
+    const cleanUpdates: Record<string, any> = {
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (cleanUpdates.content) {
+      cleanUpdates.content = sanitizeSocialPostText(cleanUpdates.content);
+    }
+    if (cleanUpdates.firstComment) {
+      cleanUpdates.firstComment = cleanUpdates.firstComment.trim();
+    }
+
+    await adminDb.collection(collectionName).doc(queueItemId).set(cleanUpdates, { merge: true });
+
+    revalidatePath('/[locale]/admin/social-media', 'page');
+    revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
+    revalidatePath('/[locale]/admin/baby-autopilot', 'page');
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error in saveScheduledPostEditsAction:', err);
+    return { success: false, error: err.message || 'Błąd zapisu zmian w poście' };
+  }
+}
+
+/**
+ * Zwraca listę dostępnych okazji w danej niszy do wyboru przez użytkownika.
+ */
+export async function getNicheAvailableDealsAction(params: {
+  niche: 'general' | 'fishing' | 'baby';
+  limit?: number;
+  searchQuery?: string;
+}): Promise<{ success: boolean; deals: CandidateDealSummary[]; error?: string }> {
+  try {
+    const { niche, limit = 40, searchQuery } = params;
+
+    if (niche === 'fishing') {
+      const res = await getFishingDeals(searchQuery, limit, undefined, true);
+      const deals: CandidateDealSummary[] = (res.deals || []).map(d => ({
+        id: d.id,
+        title: d.title || 'Sprzęt wędkarski',
+        price: d.price || '',
+        oldPrice: d.oldPrice,
+        discount: d.discount,
+        merchant: d.merchant,
+        imageUrl: d.imageUrl,
+        dealUrl: d.dealUrl,
+        description: d.description,
+      }));
+      return { success: true, deals };
+    } else if (niche === 'baby') {
+      const res = await getBabyDeals({ limit, searchQuery }, true);
+      const deals: CandidateDealSummary[] = (res.deals || []).map(d => ({
+        id: d.id,
+        title: d.title || 'Dla malucha i mamy',
+        price: d.price || '',
+        oldPrice: d.oldPrice,
+        discount: d.discount,
+        merchant: d.merchant,
+        imageUrl: d.imageUrl,
+        dealUrl: d.dealUrl,
+        description: d.description,
+      }));
+      return { success: true, deals };
+    } else {
+      const res = await getGeneralDeals({ limit, searchQuery }, true);
+      const deals: CandidateDealSummary[] = (res.deals || []).map(d => ({
+        id: d.id,
+        title: d.title || 'Hit Cenowy',
+        price: String(d.price || ''),
+        oldPrice: d.oldPrice ? String(d.oldPrice) : undefined,
+        discount: d.discount ? `-${d.discount}%` : undefined,
+        merchant: d.merchant,
+        imageUrl: d.imageUrl,
+        dealUrl: d.dealUrl,
+        description: d.description,
+      }));
+      return { success: true, deals };
+    }
+  } catch (err: any) {
+    console.error('Error in getNicheAvailableDealsAction:', err);
+    return { success: false, deals: [], error: err.message };
+  }
+}
+

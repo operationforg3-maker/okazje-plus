@@ -33,6 +33,7 @@ import {
 import type { BabyAutopilotConfig, BabyPostQueueItem } from '@/lib/types';
 import { GroupShareModal } from '@/components/admin/social/group-share-modal';
 import { CommentsModerationModal } from '@/components/admin/social/comments-moderation-modal';
+import { PostEditDialog } from '@/components/admin/social/post-edit-dialog';
 import {
   publishBabyPostAction,
   updateBabyQueueItemAction,
@@ -62,9 +63,6 @@ export function BabyQueueTab({
 
   // Edit dialog state
   const [editingItem, setEditingItem] = useState<BabyPostQueueItem | null>(null);
-  const [editContent, setEditContent] = useState('');
-  const [editMomTip, setEditMomTip] = useState('');
-  const [savingEdit, setSavingEdit] = useState(false);
 
   const filteredItems = queueItems.filter(item => {
     if (statusFilter === 'all') return true;
@@ -137,31 +135,6 @@ export function BabyQueueTab({
 
   const openEditModal = (item: BabyPostQueueItem) => {
     setEditingItem(item);
-    setEditContent(item.content);
-    setEditMomTip(item.momTip || '');
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingItem) return;
-    try {
-      setSavingEdit(true);
-      const res = await updateBabyQueueItemAction(editingItem.id, {
-        content: editContent,
-        momTip: editMomTip || undefined,
-      });
-
-      if (res.success) {
-        toast.success('Zapisano zmiany w poście');
-        setEditingItem(null);
-        onRefresh();
-      } else {
-        toast.error(res.error || 'Błąd zapisu edycji');
-      }
-    } catch (err: any) {
-      toast.error(err?.message || 'Błąd zapisu');
-    } finally {
-      setSavingEdit(false);
-    }
   };
 
   const getStatusBadge = (status: BabyPostQueueItem['status']) => {
@@ -437,70 +410,14 @@ export function BabyQueueTab({
         </div>
       )}
 
-      {/* Modal edycji posta */}
-      {editingItem && (
-        <Dialog open={Boolean(editingItem)} onOpenChange={open => !open && setEditingItem(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-base flex items-center gap-2">
-                <Edit3 className="w-4 h-4 text-pink-500" />
-                Edycja posta dla Malucha i Mamy
-              </DialogTitle>
-              <DialogDescription className="text-xs">
-                Zmodyfikuj treść posta lub wskazówkę przed publikacją na Facebooku.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Tytuł w kolejce:</Label>
-                <Input value={editingItem.title} disabled className="text-xs h-8 bg-muted" />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Główna treść posta:</Label>
-                <Textarea
-                  value={editContent}
-                  onChange={e => setEditContent(e.target.value)}
-                  rows={10}
-                  className="text-xs leading-relaxed"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Wskazówka od mamy (opcjonalnie):</Label>
-                <Input
-                  value={editMomTip}
-                  onChange={e => setEditMomTip(e.target.value)}
-                  className="text-xs h-8"
-                  placeholder="np. Sprawdzone, służyło nam przez 2 lata!"
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" size="sm" onClick={() => setEditingItem(null)}>
-                Anuluj
-              </Button>
-              <Button
-                size="sm"
-                className="bg-pink-600 hover:bg-pink-700 text-white"
-                onClick={handleSaveEdit}
-                disabled={savingEdit}
-              >
-                {savingEdit ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                    Zapisywanie...
-                  </>
-                ) : (
-                  'Zapisz zmiany'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* Comprehensive Post Edit Dialog */}
+      <PostEditDialog
+        open={Boolean(editingItem)}
+        onOpenChange={(open) => !open && setEditingItem(null)}
+        niche="baby"
+        item={editingItem as any}
+        onSaved={onRefresh}
+      />
 
       {/* Modal Udostępniania w Grupach i Telegramie */}
       {shareModalPost && (
