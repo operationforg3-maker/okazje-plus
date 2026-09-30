@@ -253,7 +253,7 @@ function parseDealFields(rawDeal: any) {
  * Generate 5-8 smart, high-performing hashtags for Facebook post
  * Combines brand/product keywords, store, category, and deal tags
  */
-export function generateSmartHashtags(deal: {
+function generateSmartHashtags(deal: {
   title: string;
   merchant?: string;
   category?: string;
