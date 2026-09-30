@@ -89,9 +89,32 @@ export async function saveBabyAutopilotConfigAction(
     }
 
     const currentRes = await getBabyAutopilotConfig(true);
+    let payloadFb = newConfig.fb ? { ...currentRes.config.fb, ...newConfig.fb } : currentRes.config.fb;
+
+    // Jeśli podano token i pageId, sprawdź czy to User Token i spróbuj automatycznie pobrać Page Token
+    if (payloadFb?.accessToken && payloadFb?.pageId) {
+      try {
+        const pageRes = await fetch(
+          `https://graph.facebook.com/v21.0/${payloadFb.pageId}?fields=access_token,name&access_token=${encodeURIComponent(payloadFb.accessToken)}`,
+          { cache: 'no-store' }
+        );
+        const pageData = await pageRes.json();
+        if (pageData.access_token) {
+          payloadFb = {
+            ...payloadFb,
+            accessToken: pageData.access_token,
+            pageName: pageData.name || payloadFb.pageName,
+          };
+        }
+      } catch (tokenErr) {
+        console.warn('Auto-resolution of page access token during save failed:', tokenErr);
+      }
+    }
+
     const updated: BabyAutopilotConfig = {
       ...currentRes.config,
       ...newConfig,
+      fb: payloadFb,
       updatedAt: new Date().toISOString(),
     };
 
