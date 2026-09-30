@@ -151,15 +151,17 @@ const DEFAULT_FISHING_BOTS: FishingBotPersona[] = [
 // KONFIGURACJA I ZARZĄDZANIE BOTAMI
 // ============================================================================
 
-export async function getFishingAutopilotConfigAction(): Promise<{
+export async function getFishingAutopilotConfig(skipAuth: boolean = false): Promise<{
   success: boolean;
   config: FishingAutopilotConfig;
   error?: string;
 }> {
   try {
-    const session = await getServerAuthSession();
-    if (!session || session.role !== 'admin') {
-      return { success: false, config: DEFAULT_CONFIG, error: 'Wymagane uprawnienia administratora' };
+    if (!skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return { success: false, config: DEFAULT_CONFIG, error: 'Wymagane uprawnienia administratora' };
+      }
     }
 
     const docRef = adminDb.collection('systemSettings').doc(CONFIG_DOC_ID);
@@ -189,6 +191,14 @@ export async function getFishingAutopilotConfigAction(): Promise<{
     console.error('Error fetching fishing config:', error);
     return { success: false, config: DEFAULT_CONFIG, error: 'Błąd pobierania konfiguracji' };
   }
+}
+
+export async function getFishingAutopilotConfigAction(): Promise<{
+  success: boolean;
+  config: FishingAutopilotConfig;
+  error?: string;
+}> {
+  return getFishingAutopilotConfig(false);
 }
 
 export async function saveFishingAutopilotConfigAction(
@@ -237,15 +247,17 @@ export async function saveFishingAutopilotConfigAction(
   }
 }
 
-export async function getFishingBotsAction(): Promise<{
+export async function getFishingBots(skipAuth: boolean = false): Promise<{
   success: boolean;
   bots: FishingBotPersona[];
   error?: string;
 }> {
   try {
-    const session = await getServerAuthSession();
-    if (!session || session.role !== 'admin') {
-      return { success: false, bots: [], error: 'Wymagane uprawnienia administratora' };
+    if (!skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return { success: false, bots: [], error: 'Wymagane uprawnienia administratora' };
+      }
     }
 
     const snap = await adminDb.collection('fishingBotPersonas').get();
@@ -265,6 +277,14 @@ export async function getFishingBotsAction(): Promise<{
     console.error('Error fetching fishing bots:', error);
     return { success: false, bots: DEFAULT_FISHING_BOTS, error: 'Błąd pobierania botów' };
   }
+}
+
+export async function getFishingBotsAction(): Promise<{
+  success: boolean;
+  bots: FishingBotPersona[];
+  error?: string;
+}> {
+  return getFishingBots(false);
 }
 
 export async function saveFishingBotAction(
@@ -459,22 +479,25 @@ export async function testFacebookApiAction(
 // WYSZUKIWANIE OKAZJI WĘDKARSKICH W BAZIE
 // ============================================================================
 
-export async function getFishingDealsAction(
+export async function getFishingDeals(
   searchQuery?: string,
   limitCount: number = 150,
-  partnerFilter?: string
+  partnerFilter?: string,
+  skipAuth: boolean = false
 ): Promise<{
   success: boolean;
   deals: FishingDealItem[];
   error?: string;
 }> {
   try {
-    const session = await getServerAuthSession();
-    if (!session || session.role !== 'admin') {
-      return { success: false, deals: [], error: 'Wymagane uprawnienia administratora' };
+    if (!skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return { success: false, deals: [], error: 'Wymagane uprawnienia administratora' };
+      }
     }
 
-    const configRes = await getFishingAutopilotConfigAction();
+    const configRes = await getFishingAutopilotConfig(true);
     const config = configRes.config;
     const trackingCampaign = config.tracking?.campaign || 'Fishing_2';
 
@@ -673,39 +696,56 @@ export async function getFishingDealsAction(
   }
 }
 
+export async function getFishingDealsAction(
+  searchQuery?: string,
+  limitCount: number = 150,
+  partnerFilter?: string
+): Promise<{
+  success: boolean;
+  deals: FishingDealItem[];
+  error?: string;
+}> {
+  return getFishingDeals(searchQuery, limitCount, partnerFilter, false);
+}
+
 // ============================================================================
 // GENEROWANIE POSTA PRZEZ AI BOTY
 // ============================================================================
 
-export async function generateFishingPostAction(params: {
-  botRole: FishingBotRole;
-  dealId?: string;
-  customTopic?: string;
-  targetDealData?: {
-    title: string;
-    price?: string;
-    oldPrice?: string;
-    discount?: string;
-    merchant?: string;
-    imageUrl?: string;
-    dealUrl?: string;
-  };
-  humorLevel?: 'subtle' | 'high' | 'legendary' | 'none';
-}): Promise<{
+export async function generateFishingPost(
+  params: {
+    botRole: FishingBotRole;
+    dealId?: string;
+    customTopic?: string;
+    targetDealData?: {
+      title: string;
+      price?: string;
+      oldPrice?: string;
+      discount?: string;
+      merchant?: string;
+      imageUrl?: string;
+      dealUrl?: string;
+    };
+    humorLevel?: 'subtle' | 'high' | 'legendary' | 'none';
+  },
+  skipAuth: boolean = false
+): Promise<{
   success: boolean;
   item?: Partial<FishingPostQueueItem>;
   error?: string;
 }> {
   try {
-    const session = await getServerAuthSession();
-    if (!session || session.role !== 'admin') {
-      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    if (!skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return { success: false, error: 'Wymagane uprawnienia administratora' };
+      }
     }
 
     const { botRole, dealId, customTopic, targetDealData } = params;
 
     // Pobierz informacje o bocie
-    const botsRes = await getFishingBotsAction();
+    const botsRes = await getFishingBots(true);
     const bot = botsRes.bots.find(b => b.role === botRole) || DEFAULT_FISHING_BOTS[0];
 
     const configRes = await getFishingAutopilotConfigAction();
@@ -881,17 +921,44 @@ Zwróć odpowiedź w czystym formacie tekstu gotowego do wklejenia.
   }
 }
 
+export async function generateFishingPostAction(
+  params: {
+    botRole: FishingBotRole;
+    dealId?: string;
+    customTopic?: string;
+    targetDealData?: {
+      title: string;
+      price?: string;
+      oldPrice?: string;
+      discount?: string;
+      merchant?: string;
+      imageUrl?: string;
+      dealUrl?: string;
+    };
+    humorLevel?: 'subtle' | 'high' | 'legendary' | 'none';
+  }
+): Promise<{
+  success: boolean;
+  item?: Partial<FishingPostQueueItem>;
+  error?: string;
+}> {
+  return generateFishingPost(params, false);
+}
+
 // ============================================================================
 // KOLEJKA MODERACJI I PUBLIKACJA
 // ============================================================================
 
-export async function addPostToFishingQueueAction(
-  item: Omit<FishingPostQueueItem, 'id'>
+export async function addPostToFishingQueue(
+  item: Omit<FishingPostQueueItem, 'id'>,
+  skipAuth: boolean = false
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
-    const session = await getServerAuthSession();
-    if (!session || session.role !== 'admin') {
-      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    if (!skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return { success: false, error: 'Wymagane uprawnienia administratora' };
+      }
     }
 
     const ref = await adminDb.collection('fishingPostsQueue').add({
@@ -900,12 +967,20 @@ export async function addPostToFishingQueueAction(
       updatedAt: new Date().toISOString(),
     });
 
-    revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
+    try {
+      revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
+    } catch {}
     return { success: true, id: ref.id };
   } catch (error) {
     console.error('Error adding to queue:', error);
     return { success: false, error: 'Błąd dodawania do kolejki' };
   }
+}
+
+export async function addPostToFishingQueueAction(
+  item: Omit<FishingPostQueueItem, 'id'>
+): Promise<{ success: boolean; id?: string; error?: string }> {
+  return addPostToFishingQueue(item, false);
 }
 
 export async function getFishingQueueAction(statusFilter?: string): Promise<{
@@ -979,13 +1054,14 @@ export async function deleteFishingQueueItemAction(
 // PUBLIKACJA POSTA (FACEBOOK + PORTAL)
 // ============================================================================
 
-export async function publishFishingPostAction(
+export async function publishFishingPost(
   postId: string,
   options?: {
     publishToFb?: boolean;
     publishToPortal?: boolean;
     customContent?: string;
-  }
+  },
+  skipAuth: boolean = false
 ): Promise<{
   success: boolean;
   fbPostId?: string;
@@ -994,9 +1070,11 @@ export async function publishFishingPostAction(
   error?: string;
 }> {
   try {
-    const session = await getServerAuthSession();
-    if (!session || session.role !== 'admin') {
-      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    if (!skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return { success: false, error: 'Wymagane uprawnienia administratora' };
+      }
     }
 
     const docRef = adminDb.collection('fishingPostsQueue').doc(postId);
@@ -1011,7 +1089,7 @@ export async function publishFishingPostAction(
     const doPublishFb = options?.publishToFb !== undefined ? options.publishToFb : post.targets.facebook;
     const doPublishPortal = options?.publishToPortal !== undefined ? options.publishToPortal : post.targets.portal;
 
-    const configRes = await getFishingAutopilotConfigAction();
+    const configRes = await getFishingAutopilotConfig(true);
     const config = configRes.config;
 
     let fbPostId: string | undefined;
@@ -1197,7 +1275,9 @@ export async function publishFishingPostAction(
       }, { merge: true });
     }
 
-    revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
+    try {
+      revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
+    } catch {}
 
     if (!hasSucceeded && publishError) {
       return { success: false, error: publishError };
@@ -1216,6 +1296,23 @@ export async function publishFishingPostAction(
       error: error instanceof Error ? error.message : 'Błąd publikacji posta',
     };
   }
+}
+
+export async function publishFishingPostAction(
+  postId: string,
+  options?: {
+    publishToFb?: boolean;
+    publishToPortal?: boolean;
+    customContent?: string;
+  }
+): Promise<{
+  success: boolean;
+  fbPostId?: string;
+  fbPostUrl?: string;
+  portalDealId?: string;
+  error?: string;
+}> {
+  return publishFishingPost(postId, options, false);
 }
 
 // ============================================================================
@@ -1352,11 +1449,14 @@ export async function createManualFishingDealAndPostAction(params: {
 // POBIERANIE OFERT OD PARTNERÓW (CONVERTISER, TRADETRACKER, ALIEXPRESS)
 // ============================================================================
 
-export async function harvestFishingPartnerOffersAction(options?: {
-  sources?: ('convertiser' | 'tradetracker' | 'aliexpress')[];
-  keywords?: string[];
-  limitPerSource?: number;
-}): Promise<{
+export async function harvestFishingPartnerOffers(
+  options?: {
+    sources?: ('convertiser' | 'tradetracker' | 'aliexpress')[];
+    keywords?: string[];
+    limitPerSource?: number;
+  },
+  skipAuth: boolean = false
+): Promise<{
   success: boolean;
   importedCount: number;
   resultsBySource: Record<string, number>;
@@ -1364,18 +1464,20 @@ export async function harvestFishingPartnerOffersAction(options?: {
   error?: string;
 }> {
   try {
-    const session = await getServerAuthSession();
-    if (!session || session.role !== 'admin') {
-      return { 
-        success: false, 
-        importedCount: 0, 
-        resultsBySource: {}, 
-        message: '', 
-        error: 'Wymagane uprawnienia administratora' 
-      };
+    if (!skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return { 
+          success: false, 
+          importedCount: 0, 
+          resultsBySource: {}, 
+          message: '', 
+          error: 'Wymagane uprawnienia administratora' 
+        };
+      }
     }
 
-    const configRes = await getFishingAutopilotConfigAction();
+    const configRes = await getFishingAutopilotConfig(true);
     const config = configRes.config;
 
     const sources = options?.sources || (['convertiser', 'tradetracker', 'aliexpress'] as const);
@@ -1589,89 +1691,190 @@ export async function harvestFishingPartnerOffersAction(options?: {
     // 3. ALIEXPRESS PARTNER FETCH
     if (sources.includes('aliexpress') && (config.partners?.aliexpress ?? true)) {
       try {
-        const aliKeywords = [
-          'fishing rod', 'fishing reel', 'fishing lure', 'crankbait', 'wobbler',
-          'fishing hook', 'fishing line', 'fishing tackle', 'fishing bait', 'fishing net',
-          'fishing pliers', 'carp fishing', 'fly fishing', 'ice fishing', 'swivel hook',
-          'treble hook', 'minnow lure', 'popper bait', 'hard bait', 'artificial bait',
-          'lead sinker', 'trolling lure', 'jig lure', 'spinning rod', 'spinning reel',
-          'baitcasting', 'wędka', 'kołowrotek', 'plecionka wędkarska', 'wodery'
+        const aliLiveKeywords = [
+          'fishing reel', 'spinning rod', 'fishing lure', 'wobbler crankbait',
+          'braided fishing line', 'carp fishing', 'kołowrotek wędkarski', 'wędka spinningowa'
         ];
 
-        const aliSnap = await adminDb
-          .collection('deals')
-          .where('source', '==', 'aliexpress')
-          .where('status', '==', 'approved')
-          .limit(300)
-          .get();
+        // 3a. Wywołaj wyszukiwanie przez AliExpress API jeśli klient jest skonfigurowany
+        try {
+          const { createAliExpressClient } = await import('@/integrations/aliexpress/client');
+          const aliClient = createAliExpressClient();
+          for (const kw of aliLiveKeywords) {
+            if (resultsBySource.aliexpress >= limitPerSource) break;
+            try {
+              const searchRes = await aliClient.searchProducts({
+                q: kw,
+                limit: Math.min(limitPerSource, 20),
+                sort: 'orders',
+                targetCurrency: 'PLN',
+                targetLanguage: 'PL',
+                shipToCountry: 'PL',
+              });
 
-        const batch = adminDb.batch();
-        let batchCount = 0;
+              if (searchRes.success && Array.isArray(searchRes.products)) {
+                for (const p of searchRes.products) {
+                  if (resultsBySource.aliexpress >= limitPerSource) break;
+                  const titleStr = p.title || '';
+                  const titleLower = titleStr.toLowerCase();
+                  if (STRICT_NEGATIVE.some(neg => titleLower.includes(neg))) continue;
+                  const currentPrice = (p as any).price?.current ?? (p as any).salePrice ?? 0;
+                  const priceNum = typeof currentPrice === 'number'
+                    ? currentPrice
+                    : parseFloat(String(currentPrice || '').replace(/[^0-9.,]/g, '').replace(',', '.'));
+                  if (isNaN(priceNum) || priceNum < 5) continue;
+                  const origPrice = (p as any).price?.original ?? (p as any).originalPrice;
+                  const origPriceNum = typeof origPrice === 'number'
+                    ? origPrice
+                    : (origPrice ? parseFloat(String(origPrice).replace(/[^0-9.,]/g, '').replace(',', '.')) : undefined);
+                  const rawLink = (p as any).product_url || (p as any).promotionLink || (p as any).productUrl || `https://www.aliexpress.com/item/${(p as any).item_id || (p as any).productId}.html`;
+                  const trackedLink = resolveFishingAffiliateUrl(rawLink, config.tracking?.campaign || 'Fishing_2');
+                  if (existingLinks.has(trackedLink) || existingTitles.has(titleLower)) continue;
 
-        for (const doc of aliSnap.docs) {
-          if (resultsBySource.aliexpress >= limitPerSource) break;
-          const data = doc.data();
-          const titlePl = (data.title?.pl || '').toLowerCase();
-          const titleEn = (data.title?.en || '').toLowerCase();
-          const titleStr = typeof data.title === 'string' ? data.title.toLowerCase() : '';
-          const fullTitle = `${titlePl} ${titleEn} ${titleStr}`;
-          const descStr = (typeof data.description === 'string' ? data.description : (data.description?.pl || '')).toLowerCase();
-          const combined = `${fullTitle} ${descStr}`;
+                  let subSubCat = 'kolowrotki-wedki';
+                  if (titleLower.includes('wobbler') || titleLower.includes('lure') || titleLower.includes('przynęt') || titleLower.includes('crankbait')) {
+                    subSubCat = 'przynety-zanety';
+                  } else if (titleLower.includes('line') || titleLower.includes('plecionk') || titleLower.includes('żyłk')) {
+                    subSubCat = 'zylki-plecionki';
+                  }
 
-          if (STRICT_NEGATIVE.some(neg => combined.includes(neg))) continue;
-          if (!aliKeywords.some(kw => combined.includes(kw))) continue;
+                  const imageUrl = Array.isArray((p as any).image_urls) && (p as any).image_urls.length > 0
+                    ? (p as any).image_urls[0]
+                    : ((p as any).imageUrl || '');
 
-          const tags = Array.isArray(data.tags) ? [...data.tags] : [];
-          let needsUpdate = false;
+                  const newDeal = {
+                    title: { pl: titleStr, en: titleStr },
+                    description: { pl: titleStr, en: titleStr },
+                    price: priceNum,
+                    originalPrice: origPriceNum,
+                    legacyPrice: priceNum,
+                    link: trackedLink,
+                    affiliateLink: trackedLink,
+                    image: imageUrl,
+                    imageHint: 'sprzęt wędkarski aliexpress',
+                    category: 'sport-turystyka',
+                    mainCategorySlug: 'sport-turystyka',
+                    subCategorySlug: 'wedkarstwo',
+                    subSubCategorySlug: subSubCat,
+                    merchant: 'AliExpress',
+                    merchantName: 'AliExpress',
+                    status: 'approved',
+                    temperature: 110,
+                    voteCount: 2,
+                    commentsCount: 0,
+                    source: 'aliexpress',
+                    dealType: 'sale',
+                    tags: ['wędkarstwo', 'aliexpress', 'promocje wędkarskie', 'żona nie widzi'],
+                    postedBy: 'Wędkarskie Promocje (AliExpress)',
+                    postedAt: new Date().toISOString(),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    verified: true,
+                    verifiedAt: new Date().toISOString(),
+                  };
 
-          if (!tags.includes('wędkarstwo')) { tags.push('wędkarstwo'); needsUpdate = true; }
-          if (!tags.includes('aliexpress')) { tags.push('aliexpress'); needsUpdate = true; }
-          if (!tags.includes('promocje wędkarskie')) { tags.push('promocje wędkarskie'); needsUpdate = true; }
-          if (!tags.includes('żona nie widzi')) { tags.push('żona nie widzi'); needsUpdate = true; }
-
-          if (data.subCategorySlug !== 'wedkarstwo') {
-            needsUpdate = true;
-          }
-
-          if (needsUpdate) {
-            const rawLink = data.link || data.affiliateLink || data.dealUrl || '';
-            const trackedLink = resolveFishingAffiliateUrl({
-              id: doc.id,
-              ...data,
-              source: 'aliexpress',
-            }, config.tracking?.campaign || 'Fishing_2');
-
-            batch.update(doc.ref, {
-              subCategorySlug: 'wedkarstwo',
-              mainCategorySlug: 'sport-turystyka',
-              category: 'sport-turystyka',
-              tags,
-              affiliateLink: trackedLink,
-              verified: true,
-              updatedAt: new Date().toISOString(),
-            });
-
-            batchCount++;
-            resultsBySource.aliexpress++;
-            totalImported++;
-
-            if (batchCount >= 450) {
-              await batch.commit();
-              batchCount = 0;
+                  await adminDb.collection('deals').add(newDeal);
+                  existingLinks.add(trackedLink);
+                  existingTitles.add(titleLower);
+                  resultsBySource.aliexpress++;
+                  totalImported++;
+                }
+              }
+            } catch (kwErr) {
+              console.warn('[AliExpress API] Search error for kw:', kw, kwErr);
             }
           }
+        } catch (apiErr) {
+          console.warn('[AliExpress API] Client init error in harvest:', apiErr);
         }
 
-        if (batchCount > 0) {
-          await batch.commit();
+        // 3b. Uzupełniająco: sprawdź istniejące oferty z AliExpress w Firestore i oznacz jako wędkarskie
+        if (resultsBySource.aliexpress < limitPerSource) {
+          const aliSnap = await adminDb
+            .collection('deals')
+            .where('source', '==', 'aliexpress')
+            .where('status', '==', 'approved')
+            .limit(500)
+            .get();
+
+          const batch = adminDb.batch();
+          let batchCount = 0;
+
+          const aliFishingKeywords = [
+            'fishing', 'fish rod', 'fishing rod', 'fishing reel', 'baitcasting',
+            'fishing lure', 'crankbait', 'wobbler', 'fishing hook', 'fishing line',
+            'fishing tackle', 'fishing bait', 'fishing net', 'fishing pliers',
+            'carp fishing', 'fly fishing', 'ice fishing', 'swivel hook', 'treble hook',
+            'minnow lure', 'popper bait', 'hard bait', 'artificial bait', 'lead sinker',
+            'trolling lure', 'jig lure', 'wędka', 'kołowrotek', 'plecionka'
+          ];
+
+          for (const doc of aliSnap.docs) {
+            if (resultsBySource.aliexpress >= limitPerSource) break;
+            const data = doc.data();
+            const titlePl = (data.title?.pl || '').toLowerCase();
+            const titleEn = (data.title?.en || '').toLowerCase();
+            const titleStr = typeof data.title === 'string' ? data.title.toLowerCase() : '';
+            const fullTitle = `${titlePl} ${titleEn} ${titleStr}`;
+            const descStr = (typeof data.description === 'string' ? data.description : (data.description?.pl || '')).toLowerCase();
+            const combined = `${fullTitle} ${descStr}`;
+
+            if (STRICT_NEGATIVE.some(neg => combined.includes(neg))) continue;
+            if (!aliFishingKeywords.some(kw => combined.includes(kw))) continue;
+
+            const tags = Array.isArray(data.tags) ? [...data.tags] : [];
+            let needsUpdate = false;
+
+            if (!tags.includes('wędkarstwo')) { tags.push('wędkarstwo'); needsUpdate = true; }
+            if (!tags.includes('aliexpress')) { tags.push('aliexpress'); needsUpdate = true; }
+            if (!tags.includes('promocje wędkarskie')) { tags.push('promocje wędkarskie'); needsUpdate = true; }
+            if (!tags.includes('żona nie widzi')) { tags.push('żona nie widzi'); needsUpdate = true; }
+
+            if (data.subCategorySlug !== 'wedkarstwo') {
+              needsUpdate = true;
+            }
+
+            if (needsUpdate) {
+              const trackedLink = resolveFishingAffiliateUrl({
+                id: doc.id,
+                ...data,
+                source: 'aliexpress',
+              }, config.tracking?.campaign || 'Fishing_2');
+
+              batch.update(doc.ref, {
+                subCategorySlug: 'wedkarstwo',
+                mainCategorySlug: 'sport-turystyka',
+                category: 'sport-turystyka',
+                tags,
+                affiliateLink: trackedLink,
+                verified: true,
+                updatedAt: new Date().toISOString(),
+              });
+
+              batchCount++;
+              resultsBySource.aliexpress++;
+              totalImported++;
+
+              if (batchCount >= 450) {
+                await batch.commit();
+                batchCount = 0;
+              }
+            }
+          }
+
+          if (batchCount > 0) {
+            await batch.commit();
+          }
         }
       } catch (aliErr) {
         console.error('[AliExpress] Harvesting error:', aliErr);
       }
     }
 
-    revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
-    revalidatePath('/[locale]/deals', 'page');
+    try {
+      revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
+      revalidatePath('/[locale]/deals', 'page');
+    } catch {}
 
     const message = `Pobrano/zaktualizowano łącznie ${totalImported} ofert wędkarskich (Convertiser: ${resultsBySource.convertiser}, TradeTracker: ${resultsBySource.tradetracker}, AliExpress: ${resultsBySource.aliexpress}).`;
 
@@ -1693,9 +1896,194 @@ export async function harvestFishingPartnerOffersAction(options?: {
   }
 }
 
+export async function harvestFishingPartnerOffersAction(options?: {
+  sources?: ('convertiser' | 'tradetracker' | 'aliexpress')[];
+  keywords?: string[];
+  limitPerSource?: number;
+}): Promise<{
+  success: boolean;
+  importedCount: number;
+  resultsBySource: Record<string, number>;
+  message: string;
+  error?: string;
+}> {
+  return harvestFishingPartnerOffers(options, false);
+}
+
 // ============================================================================
 // CYKL AUTOPILOTA (TRIGGER NA ŻĄDANIE LUB CRON)
 // ============================================================================
+
+export async function executeFishingAutopilotCycle(options?: {
+  isSystemCron?: boolean;
+  force?: boolean;
+}): Promise<{
+  success: boolean;
+  message: string;
+  postId?: string;
+  published?: boolean;
+  error?: string;
+}> {
+  try {
+    const configRes = await getFishingAutopilotConfig(true);
+    const config = configRes.config;
+
+    if (!config.enabled) {
+      return { success: false, message: 'Autopilot wędkarski jest wyłączony w ustawieniach.' };
+    }
+
+    // Walidacja harmonogramu dla wywołań cronowych (jeśli nie wymuszone)
+    if (options?.isSystemCron && !options?.force) {
+      const timezone = 'Europe/Warsaw';
+
+      // 1. Sprawdź limit dzienny
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayPostsSnap = await adminDb
+        .collection('fishingPostsQueue')
+        .where('status', '==', 'posted')
+        .where('publishedAt', '>=', todayStart.toISOString())
+        .limit(20)
+        .get();
+
+      const dailyLimit = config.schedule?.dailyLimit || 4;
+      if (todayPostsSnap.size >= dailyLimit) {
+        return {
+          success: false,
+          message: `Osiągnięto dzienny limit publikacji (${todayPostsSnap.size}/${dailyLimit} postów dzisiaj).`,
+        };
+      }
+
+      // 2. Sprawdź interwał godzinowy
+      const intervalHours = config.schedule?.intervalHours || 4;
+      if (config.stats?.lastPublishedAt) {
+        const diffMinutes = (Date.now() - new Date(config.stats.lastPublishedAt).getTime()) / (1000 * 60);
+        if (diffMinutes < (intervalHours * 60 - 20)) {
+          return {
+            success: false,
+            message: `Interwał publikacji (${intervalHours}h) jeszcze nie upłynął (${Math.round(diffMinutes)} min od ostatniej publikacji).`,
+          };
+        }
+      }
+    }
+
+    // A. SPRAWDŹ CZY W KOLEJCE CZEKA JUŻ ZATWIERDZONY / OCZEKUJĄCY POST
+    const pendingSnap = await adminDb
+      .collection('fishingPostsQueue')
+      .where('status', '==', 'pending')
+      .orderBy('createdAt', 'asc')
+      .limit(1)
+      .get();
+
+    if (!pendingSnap.empty && config.mode === 'autopilot') {
+      const pendingDoc = pendingSnap.docs[0];
+      const pubRes = await publishFishingPost(pendingDoc.id, undefined, true);
+      return {
+        success: pubRes.success,
+        message: pubRes.success
+          ? '🚀 Opublikowano oczekujący post z kolejki moderacji!'
+          : `Błąd publikacji oczekującego posta: ${pubRes.error}`,
+        postId: pendingDoc.id,
+        published: pubRes.success,
+        error: pubRes.error,
+      };
+    }
+
+    // B. GENEROWANIE NOWEGO POSTA
+    // 1. Pobierz najlepsze okazje wędkarskie
+    let dealsRes = await getFishingDeals(undefined, 40, undefined, true);
+    let deals = dealsRes.deals;
+
+    // 2. Jeśli brakuje ofert, automatycznie wywołaj harvest z Convertiser / TradeTracker / AliExpress
+    if (deals.length < 5) {
+      await harvestFishingPartnerOffers(undefined, true);
+      dealsRes = await getFishingDeals(undefined, 40, undefined, true);
+      deals = dealsRes.deals;
+    }
+
+    // 3. Pobierz ostatnio opublikowane (ostatnie 7 dni), aby nie dublować
+    const recentCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const recentPostsSnap = await adminDb
+      .collection('fishingPostsQueue')
+      .where('createdAt', '>=', recentCutoff)
+      .limit(100)
+      .get();
+
+    const postedDealIds = new Set(recentPostsSnap.docs.map(d => d.data().dealId).filter(Boolean));
+    const unpostedDeals = deals.filter(d => !postedDealIds.has(d.id));
+    const selectedDeal = unpostedDeals.length > 0 ? unpostedDeals[0] : (deals[0] || null);
+
+    // 4. Dobierz bota według pory dnia (Warszawa)
+    const timezone = 'Europe/Warsaw';
+    const nowWarsawHour = parseInt(
+      new Intl.DateTimeFormat('en-US', { timeZone: timezone, hour: 'numeric', hour12: false }).format(new Date()),
+      10
+    );
+
+    let selectedRole: FishingBotRole = 'wife_secret';
+    if (nowWarsawHour >= 6 && nowWarsawHour < 10) {
+      selectedRole = 'angler_chatter';
+    } else if (nowWarsawHour >= 10 && nowWarsawHour < 17) {
+      selectedRole = 'deal_hunter';
+    } else if (nowWarsawHour >= 17 && nowWarsawHour < 21) {
+      selectedRole = 'gear_expert';
+    } else {
+      selectedRole = 'wife_secret';
+    }
+
+    // 5. Wygeneruj post przez AI
+    const genRes = await generateFishingPost({
+      botRole: selectedRole,
+      dealId: selectedDeal?.id,
+      targetDealData: selectedDeal ? {
+        title: selectedDeal.title,
+        price: selectedDeal.price,
+        oldPrice: selectedDeal.oldPrice,
+        discount: selectedDeal.discount,
+        merchant: selectedDeal.merchant,
+        imageUrl: selectedDeal.imageUrl,
+        dealUrl: selectedDeal.dealUrl,
+      } : undefined,
+    }, true);
+
+    if (!genRes.success || !genRes.item) {
+      return { success: false, message: 'Błąd generowania posta przez AI.', error: genRes.error };
+    }
+
+    // 6. Dodaj do kolejki
+    const queueAddRes = await addPostToFishingQueue(genRes.item as any, true);
+    const postId = queueAddRes.id!;
+
+    // 7. W trybie autopilot opublikuj natychmiast
+    let published = false;
+    let pubError: string | undefined;
+
+    if (config.mode === 'autopilot') {
+      const pubRes = await publishFishingPost(postId, undefined, true);
+      published = pubRes.success;
+      pubError = pubRes.error;
+    }
+
+    return {
+      success: config.mode === 'autopilot' ? published : true,
+      message: published 
+        ? '🚀 Wygenerowano i automatycznie opublikowano post na Facebooku!' 
+        : (config.mode === 'autopilot' 
+            ? `Błąd publikacji na Facebooku: ${pubError}` 
+            : '✅ Wygenerowano post wędkarski i dodano do kolejki moderacji.'),
+      postId,
+      published,
+      error: pubError,
+    };
+  } catch (error) {
+    console.error('Error in executeFishingAutopilotCycle:', error);
+    return {
+      success: false,
+      message: 'Błąd cyklu autopilota',
+      error: error instanceof Error ? error.message : 'Nieoczekiwany błąd',
+    };
+  }
+}
 
 export async function runFishingAutopilotCycleAction(): Promise<{
   success: boolean;
@@ -1710,89 +2098,9 @@ export async function runFishingAutopilotCycleAction(): Promise<{
       return { success: false, message: '', error: 'Wymagane uprawnienia administratora' };
     }
 
-    const configRes = await getFishingAutopilotConfigAction();
-    const config = configRes.config;
-
-    if (!config.enabled) {
-      return { success: false, message: 'Autopilot wędkarski jest wyłączony w ustawieniach.' };
-    }
-
-    // 1. Pobierz najlepsze okazje wędkarskie
-    let dealsRes = await getFishingDealsAction(undefined, 30);
-    let deals = dealsRes.deals;
-
-    // 2. Jeśli brakuje ofert, automatycznie wywołaj harvest z Convertiser / TradeTracker / AliExpress
-    if (deals.length < 5) {
-      await harvestFishingPartnerOffersAction();
-      dealsRes = await getFishingDealsAction(undefined, 30);
-      deals = dealsRes.deals;
-    }
-
-    // 3. Pobierz ostatnio opublikowane, aby nie powtarzać tego samego
-    const recentCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const recentPostsSnap = await adminDb
-      .collection('fishingPostsQueue')
-      .where('createdAt', '>=', recentCutoff)
-      .limit(50)
-      .get();
-
-    const postedDealIds = new Set(recentPostsSnap.docs.map(d => d.data().dealId).filter(Boolean));
-    const unpostedDeals = deals.filter(d => !postedDealIds.has(d.id));
-    const selectedDeal = unpostedDeals.length > 0 ? unpostedDeals[0] : (deals[0] || null);
-
-    // 3. Wybierz rolę bota naprzemiennie (np. rano gawędziarz, w południe łowca, wieczorem żona nie widzi)
-    const currentHour = new Date().getHours();
-    let selectedRole: FishingBotRole = 'wife_secret';
-    if (currentHour >= 5 && currentHour < 10) {
-      selectedRole = 'angler_chatter';
-    } else if (currentHour >= 10 && currentHour < 18) {
-      selectedRole = 'deal_hunter';
-    } else if (currentHour >= 18 && currentHour < 21) {
-      selectedRole = 'gear_expert';
-    } else {
-      selectedRole = 'wife_secret';
-    }
-
-    // 4. Wygeneruj post
-    const genRes = await generateFishingPostAction({
-      botRole: selectedRole,
-      dealId: selectedDeal?.id,
-      targetDealData: selectedDeal ? {
-        title: selectedDeal.title,
-        price: selectedDeal.price,
-        oldPrice: selectedDeal.oldPrice,
-        discount: selectedDeal.discount,
-        merchant: selectedDeal.merchant,
-        imageUrl: selectedDeal.imageUrl,
-        dealUrl: selectedDeal.dealUrl,
-      } : undefined,
-    });
-
-    if (!genRes.success || !genRes.item) {
-      return { success: false, message: 'Błąd generowania posta przez AI.', error: genRes.error };
-    }
-
-    // 5. Dodaj do kolejki
-    const queueAddRes = await addPostToFishingQueueAction(genRes.item as any);
-    const postId = queueAddRes.id!;
-
-    // 6. Jeśli tryb to autopilot (nie moderation), opublikuj natychmiast
-    let published = false;
-    if (config.mode === 'autopilot') {
-      const pubRes = await publishFishingPostAction(postId);
-      published = pubRes.success;
-    }
-
-    return {
-      success: true,
-      message: published 
-        ? '🚀 Wygenerowano i natychmiast opublikowano post na Facebooku!' 
-        : '✅ Wygenerowano post wędkarski i dodano do kolejki moderacji.',
-      postId,
-      published,
-    };
+    return await executeFishingAutopilotCycle({ isSystemCron: false, force: true });
   } catch (error) {
-    console.error('Error in autopilot cycle:', error);
+    console.error('Error in runFishingAutopilotCycleAction:', error);
     return {
       success: false,
       message: 'Błąd cyklu autopilota',

@@ -1,20 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth-server';
 import { adminDb } from '@/lib/firebase-admin';
-import { AIRefiner } from '@/lib/automation/refiner';
+import { startRefinerJob } from '@/lib/automation/refiner';
 import { ProductCore } from '@/lib/types';
 
 /**
  * POST /api/admin/products/approve
- * Approve a draft product and trigger AI refinement
+ * Approve draft product(s) to pending_approval and trigger asynchronous AI refinement
  * 
  * Body: { productIds: string[] }
- * 
- * Flow:
- * 1. Fetch draft product(s)
- * 2. Change status to pending_approval
- * 3. Trigger AIRefiner for enrichment
- * 4. AIRefiner will update product with refined content
  */
 export async function POST(request: NextRequest) {
   try {
@@ -37,73 +31,67 @@ export async function POST(request: NextRequest) {
       errors: [] as string[],
     };
 
-    // Process each product
-    for (const productId of productIds) {
-      try {
-        // Fetch product
-        const docSnap = await productCoresRef.doc(productId).get();
-        if (!docSnap.exists) {
-          results.failed++;
-          results.errors.push(`Product ${productId} not found`);
-          continue;
-        }
-
-        const product = docSnap.data() as ProductCore;
-
-        // Only approve draft products
-        if (product.status !== 'draft') {
-          results.failed++;
-          results.errors.push(
-            `Product ${productId} status is '${product.status}', not 'draft'`
-          );
-          continue;
-        }
-
-        // 1. Update status to pending_approval
-        await productCoresRef.doc(productId).update({
-          status: 'pending_approval',
-          updatedAt: new Date().toISOString(),
-        });
-
-        // 2. Trigger AIRefiner
+    // 1. Fetch products in parallel
+    const docs = await Promise.all(
+      productIds.map(async (id) => {
         try {
-          const refiner = new AIRefiner(
-            `manual-approve-${productId}`
-          );
-
-          // Perform enrichment
-          const enriched = await refiner.enrichSingleProduct(product);
-
-          // Update product with enriched content
-          await productCoresRef.doc(productId).update({
-            ...enriched,
-            updatedAt: new Date().toISOString(),
-          });
-
-          results.approved++;
-        } catch (refinerError) {
-          // Even if refiner fails, product is now pending_approval
-          // Admin can retry manually
-          console.error(
-            `Refiner failed for product ${productId}:`,
-            refinerError
-          );
-          results.approved++; // Still count as approved since status changed
-          results.errors.push(
-            `Product ${productId} approved but refiner failed: ${(refinerError as Error).message}`
-          );
+          const snap = await productCoresRef.doc(id).get();
+          return { id, snap, error: null };
+        } catch (e) {
+          return { id, snap: null, error: (e as Error).message };
         }
-      } catch (error) {
+      })
+    );
+
+    const validProducts: { id: string; data: ProductCore }[] = [];
+
+    for (const item of docs) {
+      if (item.error || !item.snap || !item.snap.exists) {
         results.failed++;
-        results.errors.push(
-          `Error approving ${productId}: ${(error as Error).message}`
-        );
+        results.errors.push(`Produkt ${item.id} nie został odnaleziony`);
+        continue;
       }
+
+      const data = item.snap.data() as ProductCore;
+      if (data.status !== 'draft') {
+        results.failed++;
+        results.errors.push(`Produkt ${item.id} ma status '${data.status}', a nie 'draft'`);
+        continue;
+      }
+
+      validProducts.push({ id: item.id, data });
+    }
+
+    // 2. Perform fast atomic batch update to pending_approval
+    if (validProducts.length > 0) {
+      // Chunk batches of up to 450
+      const chunkSize = 450;
+      for (let i = 0; i < validProducts.length; i += chunkSize) {
+        const chunk = validProducts.slice(i, i + chunkSize);
+        const batch = adminDb.batch();
+        const nowIso = new Date().toISOString();
+
+        for (const p of chunk) {
+          batch.update(productCoresRef.doc(p.id), {
+            status: 'pending_approval',
+            updatedAt: nowIso,
+          });
+        }
+        await batch.commit();
+      }
+
+      results.approved = validProducts.length;
+
+      // 3. Trigger AI Refiner in background so HTTP response returns immediately without 504 Gateway Timeout
+      const idsToRefine = validProducts.map((p) => p.id);
+      startRefinerJob(idsToRefine, 'full_enrichment').catch((err) => {
+        console.error('[Approve API] Background AI refinement error:', err);
+      });
     }
 
     return NextResponse.json({
       success: true,
-      message: `Approved ${results.approved}/${productIds.length} products`,
+      message: `Zatwierdzono ${results.approved}/${productIds.length} produktów`,
       results,
     });
   } catch (error: any) {

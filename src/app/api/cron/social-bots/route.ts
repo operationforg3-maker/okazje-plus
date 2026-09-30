@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import type { SocialAIBot } from '@/lib/types';
 import { executeBotRun } from '@/app/actions/social-ai-bots';
+import { executeFishingAutopilotCycle } from '@/app/actions/fishing-autopilot';
 
 export const dynamic = 'force-dynamic';
 
@@ -106,12 +107,22 @@ async function handleCron(request: NextRequest) {
       });
     }
 
+    // Trigger fishing autopilot cycle if enabled
+    let fishingResult = null;
+    try {
+      fishingResult = await executeFishingAutopilotCycle({ isSystemCron: true });
+    } catch (fishErr: any) {
+      console.warn('[Cron:SocialBots] Fishing autopilot cycle error:', fishErr);
+      fishingResult = { success: false, error: fishErr?.message };
+    }
+
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
       activeBotsCount: bots.length,
       executedCount: dueBots.length,
       results,
+      fishingAutopilot: fishingResult,
     });
   } catch (error) {
     console.error('[Cron:SocialBots] Error in cron execution:', error);

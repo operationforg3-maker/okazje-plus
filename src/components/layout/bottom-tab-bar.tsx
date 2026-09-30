@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, usePathname } from 'next/navigation';
 import { Flame, ShoppingBag, ShoppingCart, Trash2, User } from 'lucide-react';
@@ -36,10 +36,15 @@ export function BottomTabBar() {
   const tCommon = useTranslations('common');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const pathname = usePathname();
   const rawLocale = useLocale();
   const locale = (rawLocale as string) || 'pl';
   const prefix = `/${locale}`;
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const { user, loading } = useAuth();
   const { unreadCount } = useNotifications();
@@ -233,7 +238,7 @@ export function BottomTabBar() {
                   >
                     <div className="relative flex items-center justify-center">
                       <Icon className={cn('h-5 w-5', active && 'text-primary')} />
-                      {itemCount > 0 && (
+                      {isMounted && itemCount > 0 && (
                         <span className="absolute -top-1.5 -right-2 bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center scale-90 border border-background">
                           {itemCount > 9 ? '9+' : itemCount}
                         </span>
@@ -253,7 +258,7 @@ export function BottomTabBar() {
                     )}
                     aria-label={t('account')}
                   >
-                    {user ? (
+                    {isMounted && user ? (
                       <div className="relative flex items-center justify-center">
                         <Avatar className={cn(
                           "h-6 w-6 border transition-all shadow-sm",
