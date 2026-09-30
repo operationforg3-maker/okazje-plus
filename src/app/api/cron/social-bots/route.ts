@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase-admin';
 import type { SocialAIBot } from '@/lib/types';
 import { executeBotRun } from '@/app/actions/social-ai-bots';
 import { executeFishingAutopilotCycle } from '@/app/actions/fishing-autopilot';
+import { executeBabyAutopilotCycle } from '@/app/actions/baby-autopilot';
 
 export const dynamic = 'force-dynamic';
 
@@ -116,6 +117,15 @@ async function handleCron(request: NextRequest) {
       fishingResult = { success: false, error: fishErr?.message };
     }
 
+    // Trigger baby autopilot cycle if enabled
+    let babyResult = null;
+    try {
+      babyResult = await executeBabyAutopilotCycle();
+    } catch (babyErr: any) {
+      console.warn('[Cron:SocialBots] Baby autopilot cycle error:', babyErr);
+      babyResult = { success: false, error: babyErr?.message };
+    }
+
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
@@ -123,6 +133,7 @@ async function handleCron(request: NextRequest) {
       executedCount: dueBots.length,
       results,
       fishingAutopilot: fishingResult,
+      babyAutopilot: babyResult,
     });
   } catch (error) {
     console.error('[Cron:SocialBots] Error in cron execution:', error);

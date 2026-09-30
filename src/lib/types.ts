@@ -2369,6 +2369,139 @@ export interface FishingDealItem {
   tags?: string[];
 }
 
+// ============================================
+// AUTOPILOT FB & PORTAL "PEREŁKI DLA MALUCHA I MAMY"
+// ============================================
+
+export type BabyBotRole = 'bargain_mom' | 'safety_expert' | 'mom_community' | 'montessori_play';
+
+export interface BabyBotPersona {
+  id: string;
+  name: string;
+  role: BabyBotRole;
+  avatar: string;
+  badge: string;
+  description: string;
+  tone: 'enthusiastic' | 'expert' | 'friendly' | 'caring';
+  humorLevel: 'subtle' | 'high' | 'legendary' | 'none';
+  enabled: boolean;
+  autoApprove: boolean;
+  target: 'facebook' | 'portal' | 'both';
+  customInstructions?: string;
+  scheduleDescription?: string;
+  totalGenerated: number;
+  totalPublished: number;
+}
+
+export interface BabyAutopilotConfig {
+  id: string;
+  enabled: boolean;
+  mode: 'moderation' | 'autopilot';
+  fb: {
+    pageId: string;
+    pageName: string;
+    groupId?: string;
+    accessToken: string;
+    postTarget: 'page' | 'group' | 'both';
+    autoPostFirstComment: boolean;
+    includePhoto: boolean;
+  };
+  portal: {
+    autoPublish: boolean;
+    categorySlug: string;
+    defaultStatus: 'approved' | 'poczekalnia';
+    authorName: string;
+    createTags: boolean;
+  };
+  schedule: {
+    intervalHours: number;
+    dailyLimit: number;
+    scheduleTimes: string[];
+    activeDays: string[];
+    lastRunAt?: string;
+    nextRunAt?: string;
+  };
+  filters: {
+    minDiscountPercent: number;
+    minTemperature: number;
+    keywords: string[];
+    negativeKeywords: string[];
+  };
+  partners: {
+    aliexpress: boolean;
+    convertiser: boolean;
+    tradetracker: boolean;
+    convertiserToken?: string;
+    tradeTrackerCustomerId?: string;
+    tradeTrackerPassphrase?: string;
+    tradeTrackerSiteId?: string;
+    tradeTrackerFeedUrl?: string;
+  };
+  tracking?: {
+    campaign: string;
+    subId?: string;
+    utmSource?: string;
+    utmMedium?: string;
+  };
+  stats: {
+    totalGenerated: number;
+    totalPublishedFb: number;
+    totalPublishedPortal: number;
+    lastPublishedAt?: string;
+    lastError?: string;
+  };
+  updatedAt: string;
+}
+
+export interface BabyPostQueueItem {
+  id: string;
+  botId: string;
+  botRole: BabyBotRole;
+  botName: string;
+  status: 'pending' | 'approved' | 'posting' | 'posted' | 'failed' | 'rejected';
+  dealId?: string;
+  title: string;
+  content: string;
+  momTip?: string;
+  realPrice?: string;
+  discountStr?: string;
+  linkUrl: string;
+  imageUrl?: string;
+  hashtags: string[];
+  firstComment?: string;
+  targets: {
+    facebook: boolean;
+    portal: boolean;
+  };
+  fbPostId?: string;
+  fbPostUrl?: string;
+  portalDealId?: string;
+  errorMessage?: string;
+  scheduledFor?: string;
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BabyDealItem {
+  id: string;
+  title: string;
+  price: string;
+  oldPrice?: string;
+  discount?: string;
+  merchant?: string;
+  imageUrl?: string;
+  temperature: number;
+  dealUrl: string;
+  portalUrl?: string;
+  rawLink?: string;
+  source: string;
+  category?: string;
+  description?: string;
+  specs?: string;
+  tags?: string[];
+}
+
 
 // ============================================
 // M6: PRODUCT-CENTRIC ARCHITECTURE (NEW)

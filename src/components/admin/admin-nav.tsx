@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Sparkles,
   Fish,
+  Baby,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -98,6 +99,13 @@ const navStructure: (NavItem | NavGroup)[] = [
         icon: Fish, 
         badge: 'Żona nie widzi', 
         badgeVariant: 'default' 
+      },
+      { 
+        title: 'Maluch & Mama (FB)', 
+        href: '/admin/baby-autopilot', 
+        icon: Baby, 
+        badge: 'Perełki', 
+        badgeVariant: 'secondary' 
       },
     ],
   },
