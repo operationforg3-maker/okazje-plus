@@ -26,9 +26,13 @@ import {
   Filter,
   Eye,
   Globe,
-  Layers
+  Layers,
+  Share2,
+  MessageSquare,
 } from 'lucide-react';
-import type { FishingPostQueueItem } from '@/lib/types';
+import type { FishingAutopilotConfig, FishingPostQueueItem } from '@/lib/types';
+import { GroupShareModal } from '@/components/admin/social/group-share-modal';
+import { CommentsModerationModal } from '@/components/admin/social/comments-moderation-modal';
 import {
   publishFishingPostAction,
   updateFishingQueueItemAction,
@@ -39,15 +43,19 @@ interface FishingQueueTabProps {
   queueItems: FishingPostQueueItem[];
   loading: boolean;
   onRefresh: () => void;
+  config?: FishingAutopilotConfig;
 }
 
 export function FishingQueueTab({
   queueItems,
   loading,
   onRefresh,
+  config,
 }: FishingQueueTabProps) {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [shareModalPost, setShareModalPost] = useState<FishingPostQueueItem | null>(null);
+  const [commentsModalPost, setCommentsModalPost] = useState<FishingPostQueueItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Edit dialog state
@@ -343,6 +351,28 @@ export function FishingQueueTab({
                       <Edit3 className="w-3.5 h-3.5 mr-1" />
                       Edytuj
                     </Button>
+                    {item.status === 'posted' && (
+                      <>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setShareModalPost(item)}
+                          className="text-xs h-8 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 font-medium"
+                        >
+                          <Share2 className="w-3.5 h-3.5 mr-1" />
+                          Udostępnij w grupach
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setCommentsModalPost(item)}
+                          className="text-xs h-8 bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 font-medium"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 mr-1" />
+                          Komentarze & AI
+                        </Button>
+                      </>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
@@ -445,6 +475,29 @@ export function FishingQueueTab({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal Udostępniania w Grupach i Telegramie */}
+      {shareModalPost && (
+        <GroupShareModal
+          isOpen={Boolean(shareModalPost)}
+          onClose={() => setShareModalPost(null)}
+          niche="fishing"
+          post={shareModalPost}
+          targetGroups={config?.fb?.targetGroups}
+          hasLinkedGroup={Boolean(config?.fb?.linkedGroupId || config?.fb?.groupId)}
+          hasTelegram={Boolean(config?.fb?.telegram?.enabled && config?.fb?.telegram?.botToken)}
+        />
+      )}
+
+      {/* Modal Komentarzy i AI Auto-Reply */}
+      {commentsModalPost && (
+        <CommentsModerationModal
+          isOpen={Boolean(commentsModalPost)}
+          onClose={() => setCommentsModalPost(null)}
+          niche="fishing"
+          post={commentsModalPost}
+        />
+      )}
     </div>
   );
 }

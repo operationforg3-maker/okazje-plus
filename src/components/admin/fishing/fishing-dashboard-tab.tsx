@@ -29,7 +29,8 @@ import {
   ShoppingBag,
   Tag,
   Clock,
-  Layers
+  Layers,
+  Swords,
 } from 'lucide-react';
 import type { 
   FishingAutopilotConfig, 
@@ -44,6 +45,7 @@ import {
   publishFishingPostAction,
   testFacebookApiAction,
 } from '@/app/actions/fishing-autopilot';
+import { generateGrowthPostAction } from '@/app/actions/social-growth';
 
 interface FishingDashboardTabProps {
   config: FishingAutopilotConfig;
@@ -58,8 +60,10 @@ export function FishingDashboardTab({
   deals,
   onRefreshQueue,
 }: FishingDashboardTabProps) {
+  const [postType, setPostType] = useState<'deal' | 'versus' | 'lifestyle'>('deal');
   const [selectedRole, setSelectedRole] = useState<FishingBotRole>('wife_secret');
   const [selectedDealId, setSelectedDealId] = useState<string>('');
+  const [selectedDealId2, setSelectedDealId2] = useState<string>('');
   const [customTopic, setCustomTopic] = useState<string>('');
   const [humorLevel, setHumorLevel] = useState<'subtle' | 'high' | 'legendary' | 'none'>('legendary');
 
@@ -122,32 +126,70 @@ export function FishingDashboardTab({
       setGenerating(true);
       setPublishResult(null);
 
-      const chosenDeal = deals.find(d => d.id === selectedDealId);
+      if (postType === 'versus') {
+        if (!selectedDealId || !selectedDealId2) {
+          toast.error('Wybierz dwa produkty wędkarskie do pojedynku!');
+          setGenerating(false);
+          return;
+        }
+        const res = await generateGrowthPostAction('fishing', {
+          postType: 'versus',
+          dealId1: selectedDealId,
+          dealId2: selectedDealId2,
+          botRole: selectedRole,
+        });
 
-      const res = await generateFishingPostAction({
-        botRole: selectedRole,
-        dealId: selectedDealId || undefined,
-        customTopic: customTopic || undefined,
-        targetDealData: chosenDeal ? {
-          title: chosenDeal.title,
-          price: chosenDeal.price,
-          oldPrice: chosenDeal.oldPrice,
-          discount: chosenDeal.discount,
-          merchant: chosenDeal.merchant,
-          imageUrl: chosenDeal.imageUrl,
-          dealUrl: chosenDeal.dealUrl,
-          description: chosenDeal.description,
-        } : undefined,
-        humorLevel,
-      });
+        if (res.success && res.generatedItem) {
+          setGeneratedPost(res.generatedItem);
+          setEditableContent(res.generatedItem.content || '');
+          setEditableWifeAlibi('');
+          toast.success('Pojedynek sprzętu wędkarskiego (A vs B) gotowy!');
+        } else {
+          toast.error(res.error || 'Błąd generowania pojedynku');
+        }
+      } else if (postType === 'lifestyle') {
+        const res = await generateGrowthPostAction('fishing', {
+          postType: 'lifestyle',
+          lifestyleTopic: customTopic || undefined,
+          botRole: selectedRole,
+        });
 
-      if (res.success && res.item) {
-        setGeneratedPost(res.item);
-        setEditableContent(res.item.content || '');
-        setEditableWifeAlibi(res.item.wifeAlibi || '');
-        toast.success('Post wygenerowany przez AI! Możesz go przejrzeć lub edytować.');
+        if (res.success && res.generatedItem) {
+          setGeneratedPost(res.generatedItem);
+          setEditableContent(res.generatedItem.content || '');
+          setEditableWifeAlibi('');
+          toast.success('Wędkarski post humorystyczny gotowy!');
+        } else {
+          toast.error(res.error || 'Błąd generowania posta');
+        }
       } else {
-        toast.error(res.error || 'Nie udało się wygenerować posta');
+        const chosenDeal = deals.find(d => d.id === selectedDealId);
+
+        const res = await generateFishingPostAction({
+          botRole: selectedRole,
+          dealId: selectedDealId || undefined,
+          customTopic: customTopic || undefined,
+          targetDealData: chosenDeal ? {
+            title: chosenDeal.title,
+            price: chosenDeal.price,
+            oldPrice: chosenDeal.oldPrice,
+            discount: chosenDeal.discount,
+            merchant: chosenDeal.merchant,
+            imageUrl: chosenDeal.imageUrl,
+            dealUrl: chosenDeal.dealUrl,
+            description: chosenDeal.description,
+          } : undefined,
+          humorLevel,
+        });
+
+        if (res.success && res.item) {
+          setGeneratedPost(res.item);
+          setEditableContent(res.item.content || '');
+          setEditableWifeAlibi(res.item.wifeAlibi || '');
+          toast.success('Post wygenerowany przez AI! Możesz go przejrzeć lub edytować.');
+        } else {
+          toast.error(res.error || 'Nie udało się wygenerować posta');
+        }
       }
     } catch (err: any) {
       toast.error(err.message || 'Błąd generowania');
@@ -311,6 +353,49 @@ export function FishingDashboardTab({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Wybór Formatu Posta */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Format Publikacji</Label>
+                <div className="grid grid-cols-3 gap-1.5 p-1 bg-muted/60 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setPostType('deal')}
+                    className={`py-1.5 px-2 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                      postType === 'deal'
+                        ? 'bg-background shadow-xs text-primary font-bold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <span>🎣</span>
+                    <span>Sprzęt</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPostType('versus')}
+                    className={`py-1.5 px-2 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                      postType === 'versus'
+                        ? 'bg-background shadow-xs text-primary font-bold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Swords className="w-3.5 h-3.5" />
+                    <span>Pojedynek</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPostType('lifestyle')}
+                    className={`py-1.5 px-2 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                      postType === 'lifestyle'
+                        ? 'bg-background shadow-xs text-primary font-bold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>Humor/Porada</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Bot Persona Selector */}
               <div>
                 <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -345,41 +430,99 @@ export function FishingDashboardTab({
                 </div>
               </div>
 
-              {/* Select Deal from Database */}
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
-                  <span>Wybierz Okazję z Bazy Okazje Plus</span>
-                  <span className="text-[11px] text-muted-foreground lowercase">
-                    {deals.length} znalezionych ofert
-                  </span>
-                </Label>
-                <Select value={selectedDealId} onValueChange={setSelectedDealId}>
-                  <SelectTrigger className="mt-1.5 text-xs">
-                    <SelectValue placeholder="Wybierz ofertę wędkarską (lub zostaw puste dla postu ogólnego)..." />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    <SelectItem value="none">-- Bez powiązanego produktu (post dyskusyjny) --</SelectItem>
-                    {deals.map(deal => (
-                      <SelectItem key={deal.id} value={deal.id} className="text-xs">
-                        {deal.title} — {deal.price} {deal.discount ? `(${deal.discount})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Tryb Pojedynku (A vs B) */}
+              {postType === 'versus' ? (
+                <div className="space-y-3 p-3 bg-muted/30 border border-primary/20 rounded-lg">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-blue-600 flex items-center gap-1">
+                      <span>🔵 Zawodnik A (Reakcja 👍)</span>
+                    </Label>
+                    <Select value={selectedDealId} onValueChange={setSelectedDealId}>
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="Wybierz sprzęt A..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-56">
+                        {deals.map(deal => (
+                          <SelectItem key={deal.id} value={deal.id} className="text-xs">
+                            {deal.title} — {deal.price}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              {/* Custom Topic / Instruction */}
-              <div>
-                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Własny Temat / Nazwa Sprzętu / Wskazówka
-                </Label>
-                <Input
-                  className="mt-1.5 text-xs"
-                  placeholder="np. Kołowrotek Shimano Sedona 2500, Pytanie: żyłka czy plecionka na jesień..."
-                  value={customTopic}
-                  onChange={(e) => setCustomTopic(e.target.value)}
-                />
-              </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-rose-600 flex items-center gap-1">
+                      <span>🔴 Zawodnik B (Reakcja ❤️)</span>
+                    </Label>
+                    <Select value={selectedDealId2} onValueChange={setSelectedDealId2}>
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="Wybierz sprzęt B..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-56">
+                        {deals.map(deal => (
+                          <SelectItem key={deal.id} value={deal.id} className="text-xs">
+                            {deal.title} — {deal.price}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ) : postType === 'lifestyle' ? (
+                <div>
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Temat Wędkarski / Ankieta / Pytanie do Społeczności
+                  </Label>
+                  <Input
+                    className="mt-1.5 text-xs"
+                    placeholder="np. Kto planuje nockę w ten weekend? Jakie przynęty na jesiennego sandacza? Żona pyta ile wydałem na wędki..."
+                    value={customTopic}
+                    onChange={(e) => setCustomTopic(e.target.value)}
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    AI przygotuje humorystyczny post angażujący społeczność z otwartym pytaniem.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Select Deal from Database */}
+                  <div>
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+                      <span>Wybierz Okazję z Bazy Okazje Plus</span>
+                      <span className="text-[11px] text-muted-foreground lowercase">
+                        {deals.length} znalezionych ofert
+                      </span>
+                    </Label>
+                    <Select value={selectedDealId} onValueChange={setSelectedDealId}>
+                      <SelectTrigger className="mt-1.5 text-xs">
+                        <SelectValue placeholder="Wybierz ofertę wędkarską (lub zostaw puste dla postu ogólnego)..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-72">
+                        <SelectItem value="none">-- Bez powiązanego produktu (post dyskusyjny) --</SelectItem>
+                        {deals.map(deal => (
+                          <SelectItem key={deal.id} value={deal.id} className="text-xs">
+                            {deal.title} — {deal.price} {deal.discount ? `(${deal.discount})` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Custom Topic / Instruction */}
+                  <div>
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Własny Temat / Nazwa Sprzętu / Wskazówka
+                    </Label>
+                    <Input
+                      className="mt-1.5 text-xs"
+                      placeholder="np. Kołowrotek Shimano Sedona 2500, Pytanie: żyłka czy plecionka na jesień..."
+                      value={customTopic}
+                      onChange={(e) => setCustomTopic(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
 
               {/* Humor Level (for Wife Secret bot) */}
               {selectedRole === 'wife_secret' && (

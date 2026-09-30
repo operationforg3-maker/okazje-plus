@@ -26,6 +26,7 @@ import {
   Tag,
   Clock,
   Layers,
+  Swords,
 } from 'lucide-react';
 import type {
   GeneralAutopilotConfig,
@@ -40,6 +41,7 @@ import {
   publishGeneralPostAction,
   validateFacebookGeneralCredentialsAction,
 } from '@/app/actions/general-autopilot';
+import { generateGrowthPostAction } from '@/app/actions/social-growth';
 
 interface GeneralDashboardTabProps {
   config: GeneralAutopilotConfig;
@@ -55,8 +57,10 @@ export function GeneralDashboardTab({
   deals,
   onRefreshQueue,
 }: GeneralDashboardTabProps) {
+  const [postType, setPostType] = useState<'deal' | 'versus' | 'lifestyle'>('deal');
   const [selectedRole, setSelectedRole] = useState<GeneralBotRole>('bargain_hunter');
   const [selectedDealId, setSelectedDealId] = useState<string>('');
+  const [selectedDealId2, setSelectedDealId2] = useState<string>('');
   const [customTopic, setCustomTopic] = useState<string>('');
   const [humorLevel, setHumorLevel] = useState<'subtle' | 'high' | 'legendary' | 'none'>('high');
 
@@ -117,20 +121,56 @@ export function GeneralDashboardTab({
       setGenerating(true);
       setPublishResult(null);
 
-      const res = await generateGeneralPostAction({
-        botRole: selectedRole,
-        dealId: selectedDealId || undefined,
-        customTopic: customTopic || undefined,
-        humorLevel,
-        target: 'both',
-      });
+      if (postType === 'versus') {
+        if (!selectedDealId || !selectedDealId2) {
+          toast.error('Wybierz dwie oferty z bazy do pojedynku!');
+          setGenerating(false);
+          return;
+        }
+        const res = await generateGrowthPostAction('general', {
+          postType: 'versus',
+          dealId1: selectedDealId,
+          dealId2: selectedDealId2,
+          botRole: selectedRole,
+        });
 
-      if (res.success && res.post) {
-        setGeneratedPost(res.post);
-        setEditableContent(res.post.content || '');
-        toast.success('Wygenerowano angażujący post AI dla Okazje Plus!');
+        if (res.success && res.generatedItem) {
+          setGeneratedPost(res.generatedItem);
+          setEditableContent(res.generatedItem.content || '');
+          toast.success('Pojedynek ofert (A vs B) wygenerowany pomyślnie!');
+        } else {
+          toast.error(res.error || 'Błąd generowania pojedynku');
+        }
+      } else if (postType === 'lifestyle') {
+        const res = await generateGrowthPostAction('general', {
+          postType: 'lifestyle',
+          lifestyleTopic: customTopic || undefined,
+          botRole: selectedRole,
+        });
+
+        if (res.success && res.generatedItem) {
+          setGeneratedPost(res.generatedItem);
+          setEditableContent(res.generatedItem.content || '');
+          toast.success('Post społecznościowy wygenerowany pomyślnie!');
+        } else {
+          toast.error(res.error || 'Błąd generowania posta');
+        }
       } else {
-        toast.error(res.error || 'Błąd generowania posta');
+        const res = await generateGeneralPostAction({
+          botRole: selectedRole,
+          dealId: selectedDealId || undefined,
+          customTopic: customTopic || undefined,
+          humorLevel,
+          target: 'both',
+        });
+
+        if (res.success && res.post) {
+          setGeneratedPost(res.post);
+          setEditableContent(res.post.content || '');
+          toast.success('Wygenerowano angażujący post AI dla Okazje Plus!');
+        } else {
+          toast.error(res.error || 'Błąd generowania posta');
+        }
       }
     } catch (err: any) {
       toast.error(err.message || 'Wystąpił błąd podczas generowania');
@@ -290,6 +330,49 @@ export function GeneralDashboardTab({
             </CardHeader>
 
             <CardContent className="space-y-4 pt-1">
+              {/* Wybór Formatu Posta */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Format Publikacji</Label>
+                <div className="grid grid-cols-3 gap-1.5 p-1 bg-muted/60 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setPostType('deal')}
+                    className={`py-1.5 px-2 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                      postType === 'deal'
+                        ? 'bg-background shadow-xs text-primary font-bold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <span>🎯</span>
+                    <span>Okazja</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPostType('versus')}
+                    className={`py-1.5 px-2 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                      postType === 'versus'
+                        ? 'bg-background shadow-xs text-primary font-bold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Swords className="w-3.5 h-3.5" />
+                    <span>Pojedynek</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPostType('lifestyle')}
+                    className={`py-1.5 px-2 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                      postType === 'lifestyle'
+                        ? 'bg-background shadow-xs text-primary font-bold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>Społeczność</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Bot Persona Selector */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold flex items-center justify-between">
@@ -328,51 +411,113 @@ export function GeneralDashboardTab({
                 )}
               </div>
 
-              {/* Deal Picker */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold flex items-center justify-between">
-                  <span>Wybierz Okazję z Bazy ({deals.length})</span>
-                  {selectedDealId && (
-                    <button
-                      onClick={() => setSelectedDealId('')}
-                      className="text-[11px] text-primary hover:underline"
-                    >
-                      Wyczyść
-                    </button>
-                  )}
-                </Label>
-                <Select
-                  value={selectedDealId}
-                  onValueChange={setSelectedDealId}
-                >
-                  <SelectTrigger className="w-full text-xs">
-                    <SelectValue placeholder="-- Wybierz okazję z bazy --" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[280px]">
-                    {deals.map(d => (
-                      <SelectItem key={d.id} value={d.id} className="text-xs">
-                        <div className="flex items-center justify-between gap-2 max-w-[340px]">
-                          <span className="truncate">{d.title}</span>
-                          <span className="font-bold shrink-0 text-primary">{d.price}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Pola dla Trybu Pojedynku (A vs B) */}
+              {postType === 'versus' ? (
+                <div className="space-y-3 p-3 bg-muted/30 border border-primary/20 rounded-lg">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-blue-600 flex items-center gap-1">
+                      <span>🔵 Zawodnik A (Reakcja 👍)</span>
+                    </Label>
+                    <Select value={selectedDealId} onValueChange={setSelectedDealId}>
+                      <SelectTrigger className="w-full text-xs">
+                        <SelectValue placeholder="-- Wybierz produkt A --" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[220px]">
+                        {deals.map(d => (
+                          <SelectItem key={d.id} value={d.id} className="text-xs">
+                            <div className="flex items-center justify-between gap-2 max-w-[320px]">
+                              <span className="truncate">{d.title}</span>
+                              <span className="font-bold shrink-0 text-primary">{d.price}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              {/* Or Custom Topic */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">
-                  Lub wpisz własny produkt / temat z ręki
-                </Label>
-                <Input
-                  placeholder="np. Ekspres DeLonghi Magnifica S za 1199 zł w Media Expert..."
-                  value={customTopic}
-                  onChange={e => setCustomTopic(e.target.value)}
-                  className="text-xs"
-                />
-              </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-rose-600 flex items-center gap-1">
+                      <span>🔴 Zawodnik B (Reakcja ❤️)</span>
+                    </Label>
+                    <Select value={selectedDealId2} onValueChange={setSelectedDealId2}>
+                      <SelectTrigger className="w-full text-xs">
+                        <SelectValue placeholder="-- Wybierz produkt B --" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[220px]">
+                        {deals.map(d => (
+                          <SelectItem key={d.id} value={d.id} className="text-xs">
+                            <div className="flex items-center justify-between gap-2 max-w-[320px]">
+                              <span className="truncate">{d.title}</span>
+                              <span className="font-bold shrink-0 text-primary">{d.price}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ) : postType === 'lifestyle' ? (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Temat / Pytanie Społecznościowe</Label>
+                  <Input
+                    placeholder="np. Weekendowe plany zakupowe, Wasz najlepszy zakup z rabatem 70%..."
+                    value={customTopic}
+                    onChange={e => setCustomTopic(e.target.value)}
+                    className="text-xs"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    AI wygeneruje post budujący relację ze społecznością zakończony otwartym pytaniem.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Deal Picker */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold flex items-center justify-between">
+                      <span>Wybierz Okazję z Bazy ({deals.length})</span>
+                      {selectedDealId && (
+                        <button
+                          onClick={() => setSelectedDealId('')}
+                          className="text-[11px] text-primary hover:underline"
+                        >
+                          Wyczyść
+                        </button>
+                      )}
+                    </Label>
+                    <Select
+                      value={selectedDealId}
+                      onValueChange={setSelectedDealId}
+                    >
+                      <SelectTrigger className="w-full text-xs">
+                        <SelectValue placeholder="-- Wybierz okazję z bazy --" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[280px]">
+                        {deals.map(d => (
+                          <SelectItem key={d.id} value={d.id} className="text-xs">
+                            <div className="flex items-center justify-between gap-2 max-w-[340px]">
+                              <span className="truncate">{d.title}</span>
+                              <span className="font-bold shrink-0 text-primary">{d.price}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Or Custom Topic */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">
+                      Lub wpisz własny produkt / temat z ręki
+                    </Label>
+                    <Input
+                      placeholder="np. Ekspres DeLonghi Magnifica S za 1199 zł w Media Expert..."
+                      value={customTopic}
+                      onChange={e => setCustomTopic(e.target.value)}
+                      className="text-xs"
+                    />
+                  </div>
+                </>
+              )}
 
               {/* Humor Level */}
               <div className="space-y-1.5">

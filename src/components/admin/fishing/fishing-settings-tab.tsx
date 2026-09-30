@@ -24,7 +24,10 @@ import {
   Loader2,
   ExternalLink,
   Eye,
-  EyeOff
+  EyeOff,
+  Users,
+  Sparkles,
+  Send,
 } from 'lucide-react';
 import type { FishingAutopilotConfig } from '@/lib/types';
 import {
@@ -32,6 +35,7 @@ import {
   testFacebookApiAction,
   runFishingAutopilotCycleAction,
 } from '@/app/actions/fishing-autopilot';
+import { testTelegramNotificationAction } from '@/app/actions/social-growth';
 
 interface FishingSettingsTabProps {
   config: FishingAutopilotConfig;
@@ -46,7 +50,32 @@ export function FishingSettingsTab({
   const [showToken, setShowToken] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testingFb, setTestingFb] = useState(false);
+  const [testingTelegram, setTestingTelegram] = useState(false);
   const [runningCycle, setRunningCycle] = useState(false);
+
+  const handleTestTelegram = async () => {
+    if (!formData.fb.telegram?.botToken || !formData.fb.telegram?.chatId) {
+      toast.error('Wprowadź Bot Token i Chat ID');
+      return;
+    }
+    setTestingTelegram(true);
+    try {
+      const res = await testTelegramNotificationAction(
+        'fishing',
+        formData.fb.telegram.botToken,
+        formData.fb.telegram.chatId
+      );
+      if (res.success) {
+        toast.success(res.message || 'Wysłano test na Telegram!');
+      } else {
+        toast.error(res.error || 'Błąd wysyłki');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setTestingTelegram(false);
+    }
+  };
 
   // Helper updates
   const updateFb = (field: keyof FishingAutopilotConfig['fb'], value: any) => {
@@ -307,6 +336,186 @@ export function FishingSettingsTab({
                 />
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* AI Zaangażowanie & Komentarze */}
+        <Card className="border-purple-500/30">
+          <CardHeader className="pb-3 border-b bg-purple-500/5">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-600" />
+              AI Boty: Komentarze & Zwiększanie Zasięgów
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Automatyczny starter dyskusji (pytania o wodę, sprzęt) oraz asystent AI odpowiadający wędkarzom.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs font-semibold block cursor-pointer">
+                  Automatyczny Starter Dyskusji
+                </Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Bot wrzuca pod postem pytanie wędkarskie, zmuszając algorytm FB do windowania posta.
+                </p>
+              </div>
+              <Switch
+                checked={Boolean(formData.fb.autoEngagementComment)}
+                onCheckedChange={(checked) => updateFb('autoEngagementComment', checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs font-semibold block cursor-pointer">
+                  Asystent Auto-Reply AI
+                </Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Pomaga odpowiadać na pytania o plecionki, wysyłkę i dostępność 1 kliknięciem.
+                </p>
+              </div>
+              <Switch
+                checked={Boolean(formData.fb.autoReplyEnabled)}
+                onCheckedChange={(checked) => updateFb('autoReplyEnabled', checked)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Grupy Facebooka & Crossposting */}
+        <Card className="border-blue-500/30">
+          <CardHeader className="pb-3 border-b bg-blue-500/5">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-600" />
+              Grupy Wędkarskie & Crossposting
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Połączona grupa wędkarska zarządzana przez Fanpage.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">ID Grupy Powiązanej (Linked Group ID)</Label>
+              <Input
+                placeholder="np. 123456789012345"
+                value={formData.fb.linkedGroupId || ''}
+                onChange={(e) => updateFb('linkedGroupId', e.target.value)}
+                className="text-xs font-mono"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs font-semibold block cursor-pointer">
+                  Auto-crossposting do grupy
+                </Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Automatycznie publikuj kopię na grupie podczas publikacji na Stronie.
+                </p>
+              </div>
+              <Switch
+                checked={Boolean(formData.fb.autoShareToLinkedGroup)}
+                onCheckedChange={(checked) => updateFb('autoShareToLinkedGroup', checked)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Powiadomienia Push Telegram */}
+        <Card className="border-sky-500/30">
+          <CardHeader className="pb-3 border-b bg-sky-500/5">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Send className="w-5 h-5 text-sky-600" />
+              Powiadomienia Push Telegram (100% Zasięgu)
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Natychmiastowe alerty o perełkach wędkarskich na kanał Telegram.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-xs font-semibold block cursor-pointer">
+                  Włącz kanał Telegram
+                </Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Push bezpośrednio na telefon subskrybentów.
+                </p>
+              </div>
+              <Switch
+                checked={Boolean(formData.fb.telegram?.enabled)}
+                onCheckedChange={(checked) =>
+                  setFormData(prev => ({
+                    ...prev,
+                    fb: {
+                      ...prev.fb,
+                      telegram: {
+                        enabled: checked,
+                        botToken: prev.fb.telegram?.botToken || '',
+                        chatId: prev.fb.telegram?.chatId || '',
+                      },
+                    },
+                  }))
+                }
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Telegram Bot Token</Label>
+              <Input
+                placeholder="Token od @BotFather"
+                value={formData.fb.telegram?.botToken || ''}
+                onChange={(e) =>
+                  setFormData(prev => ({
+                    ...prev,
+                    fb: {
+                      ...prev.fb,
+                      telegram: {
+                        enabled: Boolean(prev.fb.telegram?.enabled),
+                        chatId: prev.fb.telegram?.chatId || '',
+                        botToken: e.target.value,
+                      },
+                    },
+                  }))
+                }
+                className="text-xs font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Chat ID / Nazwa Kanału</Label>
+              <Input
+                placeholder="np. @wedkarskie_promki"
+                value={formData.fb.telegram?.chatId || ''}
+                onChange={(e) =>
+                  setFormData(prev => ({
+                    ...prev,
+                    fb: {
+                      ...prev.fb,
+                      telegram: {
+                        enabled: Boolean(prev.fb.telegram?.enabled),
+                        botToken: prev.fb.telegram?.botToken || '',
+                        chatId: e.target.value,
+                      },
+                    },
+                  }))
+                }
+                className="text-xs"
+              />
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleTestTelegram}
+              disabled={testingTelegram || !formData.fb.telegram?.botToken || !formData.fb.telegram?.chatId}
+              className="text-xs h-7 gap-1.5 mt-1"
+            >
+              {testingTelegram ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3 text-sky-500" />}
+              Wyślij Test na Telegram
+            </Button>
           </CardContent>
         </Card>
 

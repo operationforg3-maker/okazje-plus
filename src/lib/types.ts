@@ -2268,6 +2268,16 @@ export interface FishingAutopilotConfig {
     pageId: string;
     pageName: string;
     groupId?: string;
+    linkedGroupId?: string;
+    autoShareToLinkedGroup?: boolean;
+    autoEngagementComment?: boolean;
+    autoReplyEnabled?: boolean;
+    targetGroups?: Array<{ id: string; name: string; url: string; category?: string }>;
+    telegram?: {
+      enabled: boolean;
+      botToken?: string;
+      chatId?: string;
+    };
     accessToken: string;
     postTarget: 'page' | 'group' | 'both';
     autoPostFirstComment: boolean;
@@ -2327,6 +2337,12 @@ export interface FishingPostQueueItem {
   botName: string;
   status: 'pending' | 'approved' | 'posting' | 'posted' | 'failed' | 'rejected';
   dealId?: string;
+  postType?: 'deal' | 'versus' | 'lifestyle';
+  versusDealId2?: string;
+  versusDealTitle2?: string;
+  versusDealUrl2?: string;
+  engagementCommentText?: string;
+  engagementCommentPosted?: boolean;
   title: string;
   content: string;
   wifeAlibi?: string;
@@ -2401,6 +2417,16 @@ export interface BabyAutopilotConfig {
     pageId: string;
     pageName: string;
     groupId?: string;
+    linkedGroupId?: string;
+    autoShareToLinkedGroup?: boolean;
+    autoEngagementComment?: boolean;
+    autoReplyEnabled?: boolean;
+    targetGroups?: Array<{ id: string; name: string; url: string; category?: string }>;
+    telegram?: {
+      enabled: boolean;
+      botToken?: string;
+      chatId?: string;
+    };
     accessToken: string;
     postTarget: 'page' | 'group' | 'both';
     autoPostFirstComment: boolean;
@@ -2460,6 +2486,12 @@ export interface BabyPostQueueItem {
   botName: string;
   status: 'pending' | 'approved' | 'posting' | 'posted' | 'failed' | 'rejected';
   dealId?: string;
+  postType?: 'deal' | 'versus' | 'lifestyle';
+  versusDealId2?: string;
+  versusDealTitle2?: string;
+  versusDealUrl2?: string;
+  engagementCommentText?: string;
+  engagementCommentPosted?: boolean;
   title: string;
   content: string;
   momTip?: string;
@@ -2534,6 +2566,16 @@ export interface GeneralAutopilotConfig {
     pageId: string;
     pageName: string;
     groupId?: string;
+    linkedGroupId?: string;
+    autoShareToLinkedGroup?: boolean;
+    autoEngagementComment?: boolean;
+    autoReplyEnabled?: boolean;
+    targetGroups?: Array<{ id: string; name: string; url: string; category?: string }>;
+    telegram?: {
+      enabled: boolean;
+      botToken?: string;
+      chatId?: string;
+    };
     accessToken: string;
     postTarget: 'page' | 'group' | 'both';
     autoPostFirstComment: boolean;
@@ -2593,6 +2635,12 @@ export interface GeneralPostQueueItem {
   botName: string;
   status: 'pending' | 'approved' | 'posting' | 'posted' | 'failed' | 'rejected';
   dealId?: string;
+  postType?: 'deal' | 'versus' | 'lifestyle';
+  versusDealId2?: string;
+  versusDealTitle2?: string;
+  versusDealUrl2?: string;
+  engagementCommentText?: string;
+  engagementCommentPosted?: boolean;
   title: string;
   content: string;
   proTip?: string;

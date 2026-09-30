@@ -199,6 +199,7 @@ export function FishingAutopilotPanel() {
             queueItems={queueItems}
             loading={loading}
             onRefresh={loadData}
+            config={config}
           />
         </TabsContent>
 

@@ -19,8 +19,12 @@ import {
   AlertTriangle,
   Layers,
   Sparkles,
+  Share2,
+  MessageSquare,
 } from 'lucide-react';
-import type { GeneralPostQueueItem } from '@/lib/types';
+import type { GeneralAutopilotConfig, GeneralPostQueueItem } from '@/lib/types';
+import { GroupShareModal } from '@/components/admin/social/group-share-modal';
+import { CommentsModerationModal } from '@/components/admin/social/comments-moderation-modal';
 import {
   approveGeneralPostAction,
   rejectGeneralPostAction,
@@ -33,17 +37,21 @@ interface GeneralQueueTabProps {
   queueItems: GeneralPostQueueItem[];
   loading: boolean;
   onRefresh: () => void;
+  config?: GeneralAutopilotConfig;
 }
 
 export function GeneralQueueTab({
   queueItems,
   loading,
   onRefresh,
+  config,
 }: GeneralQueueTabProps) {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'posted' | 'failed'>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [shareModalPost, setShareModalPost] = useState<GeneralPostQueueItem | null>(null);
+  const [commentsModalPost, setCommentsModalPost] = useState<GeneralPostQueueItem | null>(null);
 
   const filteredItems = queueItems.filter(item => {
     if (filter === 'all') return true;
@@ -278,6 +286,28 @@ export function GeneralQueueTab({
                       </a>
                     </Button>
                   )}
+                  {item.status === 'posted' && (
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setShareModalPost(item)}
+                        className="text-xs h-7 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 font-medium"
+                      >
+                        <Share2 className="w-3 h-3 mr-1" />
+                        Udostępnij w grupach
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setCommentsModalPost(item)}
+                        className="text-xs h-7 bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 font-medium"
+                      >
+                        <MessageSquare className="w-3 h-3 mr-1" />
+                        Komentarze & AI
+                      </Button>
+                    </>
+                  )}
                   {editingId !== item.id && (
                     <Button variant="ghost" size="sm" onClick={() => startEditing(item)} className="text-xs h-7">
                       <Edit3 className="w-3 h-3 mr-1" />
@@ -340,6 +370,29 @@ export function GeneralQueueTab({
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Modal Udostępniania w Grupach i Telegramie */}
+      {shareModalPost && (
+        <GroupShareModal
+          isOpen={Boolean(shareModalPost)}
+          onClose={() => setShareModalPost(null)}
+          niche="general"
+          post={shareModalPost}
+          targetGroups={config?.fb?.targetGroups}
+          hasLinkedGroup={Boolean(config?.fb?.linkedGroupId || config?.fb?.groupId)}
+          hasTelegram={Boolean(config?.fb?.telegram?.enabled && config?.fb?.telegram?.botToken)}
+        />
+      )}
+
+      {/* Modal Komentarzy i AI Auto-Reply */}
+      {commentsModalPost && (
+        <CommentsModerationModal
+          isOpen={Boolean(commentsModalPost)}
+          onClose={() => setCommentsModalPost(null)}
+          niche="general"
+          post={commentsModalPost}
+        />
       )}
     </div>
   );

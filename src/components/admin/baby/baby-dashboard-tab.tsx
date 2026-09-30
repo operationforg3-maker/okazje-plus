@@ -30,6 +30,7 @@ import {
   Tag,
   Clock,
   Layers,
+  Swords,
 } from 'lucide-react';
 import type {
   BabyAutopilotConfig,
@@ -44,6 +45,7 @@ import {
   publishBabyPostAction,
   validateFacebookBabyCredentialsAction,
 } from '@/app/actions/baby-autopilot';
+import { generateGrowthPostAction } from '@/app/actions/social-growth';
 
 interface BabyDashboardTabProps {
   config: BabyAutopilotConfig;
@@ -59,8 +61,10 @@ export function BabyDashboardTab({
   deals,
   onRefreshQueue,
 }: BabyDashboardTabProps) {
+  const [postType, setPostType] = useState<'deal' | 'versus' | 'lifestyle'>('deal');
   const [selectedRole, setSelectedRole] = useState<BabyBotRole>('bargain_mom');
   const [selectedDealId, setSelectedDealId] = useState<string>('');
+  const [selectedDealId2, setSelectedDealId2] = useState<string>('');
   const [customTopic, setCustomTopic] = useState<string>('');
   const [humorLevel, setHumorLevel] = useState<'subtle' | 'high' | 'legendary' | 'none'>('high');
 
@@ -123,36 +127,74 @@ export function BabyDashboardTab({
       setGenerating(true);
       setPublishResult(null);
 
-      const chosenDeal = deals.find(d => d.id === selectedDealId);
+      if (postType === 'versus') {
+        if (!selectedDealId || !selectedDealId2) {
+          toast.error('Wybierz dwa produkty dla dzieci/mam do pojedynku!');
+          setGenerating(false);
+          return;
+        }
+        const res = await generateGrowthPostAction('baby', {
+          postType: 'versus',
+          dealId1: selectedDealId,
+          dealId2: selectedDealId2,
+          botRole: selectedRole,
+        });
 
-      const res = await generateBabyPostAction({
-        botRole: selectedRole,
-        dealId: selectedDealId || undefined,
-        customTopic: customTopic || undefined,
-        targetDealData: chosenDeal
-          ? {
-              title: chosenDeal.title,
-              description: chosenDeal.description,
-              specs: chosenDeal.specs,
-              tags: chosenDeal.tags,
-              price: chosenDeal.price,
-              oldPrice: chosenDeal.oldPrice,
-              discount: chosenDeal.discount,
-              merchant: chosenDeal.merchant,
-              imageUrl: chosenDeal.imageUrl,
-              dealUrl: chosenDeal.dealUrl,
-            }
-          : undefined,
-        humorLevel,
-      });
+        if (res.success && res.generatedItem) {
+          setGeneratedPost(res.generatedItem);
+          setEditableContent(res.generatedItem.content || '');
+          setEditableMomTip('');
+          toast.success('Pojedynek produktów dla dzieci/mam (A vs B) gotowy!');
+        } else {
+          toast.error(res.error || 'Błąd generowania pojedynku');
+        }
+      } else if (postType === 'lifestyle') {
+        const res = await generateGrowthPostAction('baby', {
+          postType: 'lifestyle',
+          lifestyleTopic: customTopic || undefined,
+          botRole: selectedRole,
+        });
 
-      if (res.success && res.item) {
-        setGeneratedPost(res.item);
-        setEditableContent(res.item.content || '');
-        setEditableMomTip(res.item.momTip || '');
-        toast.success('Post AI wygenerowany! Możesz go przejrzeć lub edytować.');
+        if (res.success && res.generatedItem) {
+          setGeneratedPost(res.generatedItem);
+          setEditableContent(res.generatedItem.content || '');
+          setEditableMomTip('');
+          toast.success('Post parentingowy dla mam gotowy!');
+        } else {
+          toast.error(res.error || 'Błąd generowania posta');
+        }
       } else {
-        toast.error(res.error || 'Nie udało się wygenerować posta');
+        const chosenDeal = deals.find(d => d.id === selectedDealId);
+
+        const res = await generateBabyPostAction({
+          botRole: selectedRole,
+          dealId: selectedDealId || undefined,
+          customTopic: customTopic || undefined,
+          targetDealData: chosenDeal
+            ? {
+                title: chosenDeal.title,
+                description: chosenDeal.description,
+                specs: chosenDeal.specs,
+                tags: chosenDeal.tags,
+                price: chosenDeal.price,
+                oldPrice: chosenDeal.oldPrice,
+                discount: chosenDeal.discount,
+                merchant: chosenDeal.merchant,
+                imageUrl: chosenDeal.imageUrl,
+                dealUrl: chosenDeal.dealUrl,
+              }
+            : undefined,
+          humorLevel,
+        });
+
+        if (res.success && res.item) {
+          setGeneratedPost(res.item);
+          setEditableContent(res.item.content || '');
+          setEditableMomTip(res.item.momTip || '');
+          toast.success('Post AI wygenerowany! Możesz go przejrzeć lub edytować.');
+        } else {
+          toast.error(res.error || 'Nie udało się wygenerować posta');
+        }
       }
     } catch (err: any) {
       toast.error(err?.message || 'Błąd generatora AI');
@@ -400,6 +442,49 @@ export function BabyDashboardTab({
             </CardHeader>
 
             <CardContent className="space-y-4">
+              {/* Wybór Formatu Posta */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Format Publikacji</Label>
+                <div className="grid grid-cols-3 gap-1.5 p-1 bg-muted/60 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setPostType('deal')}
+                    className={`py-1.5 px-2 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                      postType === 'deal'
+                        ? 'bg-background shadow-xs text-primary font-bold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <span>👶</span>
+                    <span>Okazja</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPostType('versus')}
+                    className={`py-1.5 px-2 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                      postType === 'versus'
+                        ? 'bg-background shadow-xs text-primary font-bold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <Swords className="w-3.5 h-3.5" />
+                    <span>Pojedynek</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPostType('lifestyle')}
+                    className={`py-1.5 px-2 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                      postType === 'lifestyle'
+                        ? 'bg-background shadow-xs text-primary font-bold'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>Społeczność</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Wybór bota */}
               <div className="space-y-2">
                 <Label className="text-xs font-semibold">Wybierz Bota / Personę AI:</Label>
@@ -439,55 +524,111 @@ export function BabyDashboardTab({
                 </div>
               )}
 
-              {/* Wybór okazji z bazy */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold">Wybierz okazję z bazy (lub zostaw puste):</Label>
-                <Select value={selectedDealId} onValueChange={setSelectedDealId}>
-                  <SelectTrigger className="text-xs h-9">
-                    <SelectValue placeholder="Wybierz okazję z bazy produktów..." />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    <SelectItem value="none">-- Brak (generuj na temat ogólny) --</SelectItem>
-                    {deals.map(deal => (
-                      <SelectItem key={deal.id} value={deal.id}>
-                        {deal.title.slice(0, 55)}... ({deal.price} | {deal.merchant})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Tryb Pojedynku (A vs B) */}
+              {postType === 'versus' ? (
+                <div className="space-y-3 p-3 bg-muted/30 border border-primary/20 rounded-lg">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-blue-600 flex items-center gap-1">
+                      <span>🔵 Zawodnik A (Reakcja 👍)</span>
+                    </Label>
+                    <Select value={selectedDealId} onValueChange={setSelectedDealId}>
+                      <SelectTrigger className="text-xs h-9">
+                        <SelectValue placeholder="Wybierz produkt A..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-56">
+                        {deals.map(deal => (
+                          <SelectItem key={deal.id} value={deal.id}>
+                            {deal.title.slice(0, 50)}... ({deal.price})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              {/* Podgląd wybranej okazji */}
-              {chosenDeal && (
-                <div className="p-3 border rounded-lg bg-background/50 flex gap-3 items-center">
-                  {chosenDeal.imageUrl && (
-                    <img
-                      src={chosenDeal.imageUrl}
-                      alt={chosenDeal.title}
-                      className="w-14 h-14 object-cover rounded border flex-shrink-0"
-                    />
-                  )}
-                  <div className="min-w-0 flex-1 text-xs">
-                    <p className="font-bold truncate">{chosenDeal.title}</p>
-                    <p className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                      {chosenDeal.price} {chosenDeal.oldPrice && <span className="line-through text-muted-foreground text-[11px] ml-1">{chosenDeal.oldPrice}</span>}
-                      {chosenDeal.discount && <span className="ml-1.5 text-xs bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 px-1 py-0.5 rounded">{chosenDeal.discount}</span>}
-                    </p>
-                    <p className="text-muted-foreground text-[10px]">Sklep: {chosenDeal.merchant}</p>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-rose-600 flex items-center gap-1">
+                      <span>🔴 Zawodnik B (Reakcja ❤️)</span>
+                    </Label>
+                    <Select value={selectedDealId2} onValueChange={setSelectedDealId2}>
+                      <SelectTrigger className="text-xs h-9">
+                        <SelectValue placeholder="Wybierz produkt B..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-56">
+                        {deals.map(deal => (
+                          <SelectItem key={deal.id} value={deal.id}>
+                            {deal.title.slice(0, 50)}... ({deal.price})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              )}
+              ) : postType === 'lifestyle' ? (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Temat / Pytanie Parentingowe do Mam</Label>
+                  <Input
+                    placeholder="np. Kiedy Wasze maluchy zaczęły przesypiać noce? Triki na ząbkowanie, picie ciepłej kawy..."
+                    value={customTopic}
+                    onChange={e => setCustomTopic(e.target.value)}
+                    className="text-xs h-9"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    AI wygeneruje ciepły, humorystyczny post budujący zaangażowanie społeczności mam.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Wybór okazji z bazy */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold">Wybierz okazję z bazy (lub zostaw puste):</Label>
+                    <Select value={selectedDealId} onValueChange={setSelectedDealId}>
+                      <SelectTrigger className="text-xs h-9">
+                        <SelectValue placeholder="Wybierz okazję z bazy produktów..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-72">
+                        <SelectItem value="none">-- Brak (generuj na temat ogólny) --</SelectItem>
+                        {deals.map(deal => (
+                          <SelectItem key={deal.id} value={deal.id}>
+                            {deal.title.slice(0, 55)}... ({deal.price} | {deal.merchant})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              {/* Temat własny */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Własny temat / produkt (opcjonalnie):</Label>
-                <Input
-                  placeholder="np. Wózek Kinderkraft Nubi 2 lub Promocja na pieluszki Pampers Premium Care..."
-                  value={customTopic}
-                  onChange={e => setCustomTopic(e.target.value)}
-                  className="text-xs h-9"
-                />
-              </div>
+                  {/* Podgląd wybranej okazji */}
+                  {chosenDeal && (
+                    <div className="p-3 border rounded-lg bg-background/50 flex gap-3 items-center">
+                      {chosenDeal.imageUrl && (
+                        <img
+                          src={chosenDeal.imageUrl}
+                          alt={chosenDeal.title}
+                          className="w-14 h-14 object-cover rounded border flex-shrink-0"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1 text-xs">
+                        <p className="font-bold truncate">{chosenDeal.title}</p>
+                        <p className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                          {chosenDeal.price} {chosenDeal.oldPrice && <span className="line-through text-muted-foreground text-[11px] ml-1">{chosenDeal.oldPrice}</span>}
+                          {chosenDeal.discount && <span className="ml-1.5 text-xs bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 px-1 py-0.5 rounded">{chosenDeal.discount}</span>}
+                        </p>
+                        <p className="text-muted-foreground text-[10px]">Sklep: {chosenDeal.merchant}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Temat własny */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Własny temat / produkt (opcjonalnie):</Label>
+                    <Input
+                      placeholder="np. Wózek Kinderkraft Nubi 2 lub Promocja na pieluszki Pampers Premium Care..."
+                      value={customTopic}
+                      onChange={e => setCustomTopic(e.target.value)}
+                      className="text-xs h-9"
+                    />
+                  </div>
+                </>
+              )}
 
               {/* Poziom humoru / tonu */}
               <div className="space-y-1.5">

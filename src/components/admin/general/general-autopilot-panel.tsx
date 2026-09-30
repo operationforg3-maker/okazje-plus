@@ -201,6 +201,7 @@ export function GeneralAutopilotPanel() {
             queueItems={queueItems}
             loading={loading}
             onRefresh={loadData}
+            config={config}
           />
         </TabsContent>
 
