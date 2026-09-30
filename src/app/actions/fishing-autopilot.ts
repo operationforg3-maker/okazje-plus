@@ -955,6 +955,7 @@ DANE SPRZĘTU I OKAZJI:
 - Opis i szczegóły produktu: ${dealInfo?.description || 'Brak dodatkowego opisu'}
 ${dealInfo?.specs ? `- Parametry techniczne:\n${dealInfo.specs}` : ''}
 - Dodatkowy kontekst/temat: ${customTopic || 'brak'}
+${customTopic ? `\nSPECJALNE INSTRUKCJE / PROMPT OD UŻYTKOWNIKA (UWZGLĘDNIJ BEZWZGLĘDNIE W TREŚCI):\n"${customTopic}"\n(Ściśle dostosuj styl, długość, ton i akcenty posta do powyższych instrukcji!)\n` : ''}
 - Sugerowane hashtagi: ${dynamicHashtags.join(' ')}
 
 STRUKTURA I WYMOGI POSTA (BARDZO WAŻNE):

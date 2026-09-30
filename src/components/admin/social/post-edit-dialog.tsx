@@ -24,6 +24,7 @@ import {
   type CandidateDealSummary,
 } from '@/app/actions/calendar-schedule';
 import { sanitizeSocialPostText } from '@/lib/social-growth-types';
+import { cn } from '@/lib/utils';
 import {
   Loader2,
   Sparkles,
@@ -39,6 +40,9 @@ import {
   Wand2,
   RefreshCw,
   Tag,
+  ChevronDown,
+  ChevronUp,
+  X,
 } from 'lucide-react';
 
 export interface EditablePostItem {
@@ -82,6 +86,10 @@ export function PostEditDialog({
   const [regeneratingText, setRegeneratingText] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [currentDealId, setCurrentDealId] = useState<string | undefined>(item?.dealId);
+
+  // AI Prompt customizer state
+  const [showAiPrompt, setShowAiPrompt] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
 
   // Deal selector state
   const [showDealPicker, setShowDealPicker] = useState(false);
@@ -154,19 +162,55 @@ export function PostEditDialog({
     }
   };
 
-  const handleRegenerateContent = async () => {
+  const getPromptPresets = () => {
+    switch (niche) {
+      case 'baby':
+        return [
+          'Krótko i zwięźle (do 80 słów)',
+          'Zadaj pytanie rodzicom i zachęć do komentarzy',
+          'Podkreśl atesty i bezpieczeństwo dla malucha',
+          'Porównaj z cenami w sieciówkach i podkreśl oszczędność',
+          'Ciepła porada i ton życzliwej mamy z grupy',
+        ];
+      case 'fishing':
+        return [
+          'Krótko i po męsku znad wody',
+          'Mocne alibi dla żony i niska cena',
+          'Zapytaj o opinie i zachęć do wrzucania fotek ryb',
+          'Skup się na parametrach technicznych i płynności',
+          'Humorystyczny tekst o uciekającej rybie życia',
+        ];
+      default:
+        return [
+          'Krótko, dynamicznie z mocnym wezwaniem do działania',
+          'Podkreśl limitowany czas promocji i duży rabat',
+          'Zadaj pytanie i zachęć do oznaczania znajomych',
+          'Napisz ze sporą dawką humoru i autoironii',
+          'Skup się na specyfikacji i opłacalności zakupu',
+        ];
+    }
+  };
+
+  const handleRegenerateContent = async (overridePrompt?: string) => {
     const activeDealId = currentDealId || item?.dealId;
     if (!activeDealId) {
       toast.error('Wybierz najpierw okazję z bazy, aby AI mogło napisać dla niej treść!');
       return;
     }
 
+    const promptToSend = typeof overridePrompt === 'string' ? overridePrompt : aiPrompt;
+
     try {
       setRegeneratingText(true);
-      toast.info('AI generuje nową treść posta dla wybranej okazji...');
+      toast.info(
+        promptToSend.trim()
+          ? 'AI generuje treść posta z Twoimi wskazówkami...'
+          : 'AI generuje nową treść posta dla wybranej okazji...'
+      );
       const res = await regeneratePostContentAction({
         niche,
         dealId: activeDealId,
+        customTopic: promptToSend.trim() || undefined,
       });
 
       if (res.success && res.content) {
@@ -176,7 +220,11 @@ export function PostEditDialog({
         if (res.imageUrl) setImageUrl(res.imageUrl);
         if (res.linkUrl) setLinkUrl(res.linkUrl);
         if (res.wifeAlibi) setWifeAlibi(res.wifeAlibi);
-        toast.success('Treść posta wygenerowana pomyślnie przez AI!');
+        toast.success(
+          promptToSend.trim()
+            ? 'Treść posta wygenerowana z uwzględnieniem Twojego prompta!'
+            : 'Treść posta wygenerowana pomyślnie przez AI!'
+        );
       } else {
         toast.error(res.error || 'Błąd generowania treści');
       }
@@ -376,21 +424,42 @@ export function PostEditDialog({
 
           {/* Treść posta */}
           <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-1">
               <Label htmlFor="post-content" className="text-xs font-semibold">
                 Treść posta na Facebooka
               </Label>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-[11px] text-muted-foreground font-mono mr-1">
                   {wordCount} słów • {charCount} znaków
                 </span>
                 <Button
                   type="button"
+                  variant={showAiPrompt ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={() => setShowAiPrompt(!showAiPrompt)}
+                  className={cn(
+                    "text-xs h-6 px-2 gap-1 border-primary/30 text-primary hover:bg-primary/10",
+                    aiPrompt.trim() && "bg-primary/10 font-semibold text-primary"
+                  )}
+                  title="Dostosuj instrukcje lub wpisz własny prompt dla AI"
+                >
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  <span>Prompt dla AI</span>
+                  {aiPrompt.trim() ? (
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  ) : showAiPrompt ? (
+                    <ChevronUp className="w-3 h-3 ml-0.5" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3 ml-0.5" />
+                  )}
+                </Button>
+                <Button
+                  type="button"
                   variant="outline"
                   size="sm"
-                  onClick={handleRegenerateContent}
+                  onClick={() => handleRegenerateContent()}
                   disabled={regeneratingText || saving}
-                  className="text-xs h-6 px-2 text-primary border-primary/30 hover:bg-primary/5"
+                  className="text-xs h-6 px-2 text-primary border-primary/30 hover:bg-primary/5 font-medium"
                   title="Przepisz treść posta i komentarza dla wybranej okazji za pomocą AI"
                 >
                   {regeneratingText ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Wand2 className="w-3 h-3 mr-1" />}
@@ -409,6 +478,77 @@ export function PostEditDialog({
                 </Button>
               </div>
             </div>
+
+            {/* AI Prompt Customizer Box */}
+            {showAiPrompt && (
+              <div className="p-3 rounded-lg border bg-primary/5 border-primary/20 space-y-2.5 transition-all">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-primary flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    Własny prompt / instrukcje dla AI:
+                  </span>
+                  {aiPrompt.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => setAiPrompt('')}
+                      className="text-[10px] text-muted-foreground hover:text-destructive flex items-center gap-0.5 cursor-pointer"
+                    >
+                      <X className="w-3 h-3" /> Wyczyść prompt
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    value={aiPrompt}
+                    onChange={e => setAiPrompt(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleRegenerateContent();
+                      }
+                    }}
+                    placeholder="Wpisz wytyczne (np. napisz zwięźle, skup się na trwałości materiału, dodaj pytanie do rodziców)..."
+                    className="text-xs bg-background h-8"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => handleRegenerateContent()}
+                    disabled={regeneratingText || saving}
+                    className="h-8 text-xs px-3 gap-1.5 bg-primary text-primary-foreground font-semibold shrink-0"
+                  >
+                    {regeneratingText ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                    Wygeneruj
+                  </Button>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] text-muted-foreground block font-medium">
+                    Szybkie motywy i style prompta (kliknij, aby dodać):
+                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {getPromptPresets().map(preset => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => {
+                          if (aiPrompt) {
+                            setAiPrompt(prev => `${prev.trim()}, ${preset.toLowerCase()}`);
+                          } else {
+                            setAiPrompt(preset);
+                          }
+                        }}
+                        className="text-[10px] px-2 py-0.5 rounded-full border border-border/80 bg-background hover:bg-primary/10 hover:border-primary/40 text-muted-foreground hover:text-foreground transition-all cursor-pointer"
+                      >
+                        + {preset}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <Textarea
               id="post-content"
               value={content}
