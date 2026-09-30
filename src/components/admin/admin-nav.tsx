@@ -85,6 +85,38 @@ const navStructure: (NavItem | NavGroup)[] = [
     ],
   },
   {
+    title: 'Social Media & Autopilot',
+    icon: Share2,
+    items: [
+      {
+        title: 'Centrum Social Media (Hub)',
+        href: '/admin/social-media',
+        icon: Share2,
+        badge: 'All-in-One',
+        badgeVariant: 'default',
+      },
+      {
+        title: 'Ogólne Okazje Plus',
+        href: '/admin/social-media?niche=general',
+        icon: Sparkles,
+      },
+      {
+        title: 'Wędkarskie ("Żona nie widzi")',
+        href: '/admin/social-media?niche=fishing',
+        icon: Fish,
+        badge: 'Żona nie widzi',
+        badgeVariant: 'secondary',
+      },
+      {
+        title: 'Maluch & Mama ("Perełki")',
+        href: '/admin/social-media?niche=baby',
+        icon: Baby,
+        badge: 'Perełki',
+        badgeVariant: 'outline',
+      },
+    ],
+  },
+  {
     title: 'Analityka',
     icon: FileBarChart,
     items: [
@@ -92,21 +124,6 @@ const navStructure: (NavItem | NavGroup)[] = [
       { title: 'Statystyki', href: '/admin/stats', icon: FileBarChart },
       { title: 'Zakupy AliExpress', href: '/admin/aliexpress-purchases', icon: ShoppingCart },
       { title: 'Baza danych', href: '/admin/database', icon: Database },
-      { title: 'Social media', href: '/admin/social-media', icon: Share2 },
-      { 
-        title: 'Wędkarskie Promocje (FB)', 
-        href: '/admin/fishing-autopilot', 
-        icon: Fish, 
-        badge: 'Żona nie widzi', 
-        badgeVariant: 'default' 
-      },
-      { 
-        title: 'Maluch & Mama (FB)', 
-        href: '/admin/baby-autopilot', 
-        icon: Baby, 
-        badge: 'Perełki', 
-        badgeVariant: 'secondary' 
-      },
     ],
   },
   {
@@ -153,11 +170,12 @@ export function AdminNav() {
   };
 
   const isActive = (href: string) => {
-    const target = resolveHref(href);
-    if (href === '/admin') {
+    const [path] = href.split('?');
+    const target = resolveHref(path);
+    if (path === '/admin') {
       return pathname === target;
     }
-    return pathname.startsWith(target);
+    return pathname === target || (path !== '/admin' && pathname.startsWith(target));
   };
 
   const filteredNavStructure = useMemo(() => {

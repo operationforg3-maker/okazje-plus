@@ -108,6 +108,16 @@ async function handleCron(request: NextRequest) {
       });
     }
 
+    // Trigger general autopilot cycle if enabled
+    let generalResult = null;
+    try {
+      const { executeGeneralAutopilotCycle } = await import('@/app/actions/general-autopilot');
+      generalResult = await executeGeneralAutopilotCycle();
+    } catch (genErr: any) {
+      console.warn('[Cron:SocialBots] General autopilot cycle error:', genErr);
+      generalResult = { success: false, error: genErr?.message };
+    }
+
     // Trigger fishing autopilot cycle if enabled
     let fishingResult = null;
     try {
@@ -132,6 +142,7 @@ async function handleCron(request: NextRequest) {
       activeBotsCount: bots.length,
       executedCount: dueBots.length,
       results,
+      generalAutopilot: generalResult,
       fishingAutopilot: fishingResult,
       babyAutopilot: babyResult,
     });
