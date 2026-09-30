@@ -41,6 +41,8 @@ import {
   getSocialAIBotsAction,
   saveSocialAIBotAction,
   toggleSocialAIBotAction,
+  toggleSocialAIBotAutoApproveAction,
+  setAllSocialAIBotsAutoPostingAction,
   runSocialAIBotAction,
   getPromotableDealsAction,
   type PromotableDeal
@@ -118,6 +120,44 @@ export function SocialAIBotsPanel() {
     }
   };
 
+  const handleToggleAutoApprove = async (botId: string, currentAutoApprove: boolean) => {
+    const nextAutoApprove = !currentAutoApprove;
+    setBots(prev => prev.map(b => b.id === botId ? { ...b, autoApprove: nextAutoApprove } : b));
+
+    const res = await toggleSocialAIBotAutoApproveAction(botId, nextAutoApprove);
+    if (res.success) {
+      toast.success(
+        nextAutoApprove
+          ? '🚀 Automatyczne postowanie WŁĄCZONE: bot publikuje od razu na Facebooku!'
+          : '📋 Tryb kolejki: posty bota wymagają ręcznego zatwierdzenia'
+      );
+    } else {
+      toast.error(res.error || 'Nie udało się zmienić trybu auto-postowania');
+      setBots(prev => prev.map(b => b.id === botId ? { ...b, autoApprove: currentAutoApprove } : b));
+    }
+  };
+
+  const handleSetAllAutoPosting = async (enable: boolean) => {
+    try {
+      setLoading(true);
+      const res = await setAllSocialAIBotsAutoPostingAction(enable);
+      if (res.success) {
+        setBots(prev => prev.map(b => ({ ...b, autoApprove: enable })));
+        toast.success(
+          enable
+            ? '🚀 Automatyczne postowanie włączone dla wszystkich botów!'
+            : '⏸️ Automatyczne postowanie wyłączone (tryb kolejki do zatwierdzenia)'
+        );
+      } else {
+        toast.error(res.error || 'Błąd zmiany auto-postowania');
+      }
+    } catch {
+      toast.error('Błąd połączenia z serwerem');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveBot = async () => {
     if (!selectedBot) return;
     try {
@@ -165,6 +205,7 @@ export function SocialAIBotsPanel() {
       setSelectedDealId(deal.id);
       setTopicHint('');
       setRunResult(null);
+      setImmediatePublish(targetBot.autoApprove);
       setIsRunDialogOpen(true);
     }
   };
@@ -473,6 +514,55 @@ export function SocialAIBotsPanel() {
         </Button>
       </div>
 
+      {/* Baner Główny: Automatyczne Postowanie na FB */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/30 via-background to-blue-950/20 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-sm font-bold flex items-center gap-2">
+              Autopilot Social Media & Posty AI
+              {bots.some(b => b.enabled && b.autoApprove) ? (
+                <Badge className="bg-emerald-500 text-white text-[11px]">
+                  Aktywne ({bots.filter(b => b.enabled && b.autoApprove).length} botów)
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-amber-400 border-amber-400/40 text-[11px]">
+                  Wstrzymane (wymaga akceptacji)
+                </Badge>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              Po włączeniu automatycznego postowania boty autonomously dobierają okazje, piszą bogate, angażujące posty i publikują je na Facebooku.
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs gap-1.5 border-emerald-500/40 hover:bg-emerald-500/10 text-emerald-400"
+            onClick={() => handleSetAllAutoPosting(true)}
+            disabled={loading}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Włącz auto-postowanie dla wszystkich
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+            onClick={() => handleSetAllAutoPosting(false)}
+            disabled={loading}
+          >
+            <X className="h-3.5 w-3.5" />
+            Wyłącz (tryb kolejki)
+          </Button>
+        </div>
+      </div>
+
       {/* 3. Grid Kart Botów */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {bots.map((bot) => (
@@ -539,20 +629,43 @@ export function SocialAIBotsPanel() {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50 text-center">
+              {/* Przełącznik automatycznego postowania bezpośrednio na karcie */}
+              <div className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                bot.autoApprove 
+                  ? 'border-emerald-500/40 bg-emerald-950/20' 
+                  : 'border-border/60 bg-muted/30'
+              }`}>
+                <div className="flex items-center gap-2.5">
+                  <div className={`h-2.5 w-2.5 rounded-full ${bot.autoApprove ? 'bg-emerald-400 animate-pulse' : 'bg-muted-foreground/60'}`} />
+                  <div>
+                    <div className="text-xs font-semibold flex items-center gap-1.5">
+                      Auto-postowanie na FB
+                      {bot.autoApprove ? (
+                        <Badge className="h-4 px-1 text-[10px] bg-emerald-500 text-white font-medium">LIVE</Badge>
+                      ) : (
+                        <Badge variant="outline" className="h-4 px-1 text-[10px] text-muted-foreground">Kolejka</Badge>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
+                      {bot.autoApprove ? 'Publikuje od razu na Facebooku' : 'Zapisuje posty do kolejki'}
+                    </div>
+                  </div>
+                </div>
+                <Switch
+                  checked={bot.autoApprove}
+                  disabled={!bot.enabled}
+                  onCheckedChange={() => handleToggleAutoApprove(bot.id, bot.autoApprove)}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/50 text-center">
                 <div className="p-2 rounded-lg bg-muted/30">
                   <div className="text-xs text-muted-foreground">Wygenerowano</div>
                   <div className="text-base font-bold text-foreground">{bot.totalGenerated || 0}</div>
                 </div>
                 <div className="p-2 rounded-lg bg-muted/30">
-                  <div className="text-xs text-muted-foreground">Opublikowano</div>
+                  <div className="text-xs text-muted-foreground">Opublikowano na FB</div>
                   <div className="text-base font-bold text-emerald-400">{bot.totalPublished || 0}</div>
-                </div>
-                <div className="p-2 rounded-lg bg-muted/30">
-                  <div className="text-xs text-muted-foreground">Auto-akceptacja</div>
-                  <div className="text-base font-bold text-foreground">
-                    {bot.autoApprove ? 'Włączona' : 'Kolejka'}
-                  </div>
                 </div>
               </div>
             </CardContent>

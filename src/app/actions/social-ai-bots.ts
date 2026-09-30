@@ -153,6 +153,59 @@ export async function toggleSocialAIBotAction(botId: string, enabled: boolean): 
   }
 }
 
+export async function toggleSocialAIBotAutoApproveAction(botId: string, autoApprove: boolean): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    await adminDb.collection('socialAIBots').doc(botId).update({
+      autoApprove,
+      updatedAt: new Date().toISOString(),
+    });
+
+    revalidatePath('/[locale]/admin/social-media', 'page');
+    return { success: true };
+  } catch (error) {
+    console.error('Error toggling bot auto-approve:', error);
+    return { success: false, error: 'Nie udało się zmienić trybu auto-akceptacji' };
+  }
+}
+
+export async function setAllSocialAIBotsAutoPostingAction(autoApprove: boolean): Promise<{ success: boolean; count: number; error?: string }> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, count: 0, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    const snapshot = await adminDb.collection('socialAIBots').get();
+    if (snapshot.empty) {
+      return { success: true, count: 0 };
+    }
+
+    const batch = adminDb.batch();
+    const now = new Date().toISOString();
+    let count = 0;
+
+    snapshot.docs.forEach(doc => {
+      batch.update(doc.ref, {
+        autoApprove,
+        updatedAt: now,
+      });
+      count++;
+    });
+
+    await batch.commit();
+    revalidatePath('/[locale]/admin/social-media', 'page');
+    return { success: true, count };
+  } catch (error) {
+    console.error('Error setting all bots auto-posting:', error);
+    return { success: false, count: 0, error: 'Błąd masowej zmiany auto-postowania' };
+  }
+}
+
 export interface PromotableDeal {
   id: string;
   title: string;
@@ -170,10 +223,13 @@ export interface PromotableDeal {
 function parseDealFields(rawDeal: any) {
   const rawTitle = rawDeal.title;
   let title = 'Gorąca Okazja';
+  let fullTitle = '';
   if (typeof rawTitle === 'string') {
     title = rawTitle;
+    fullTitle = rawTitle;
   } else if (typeof rawTitle === 'object' && rawTitle !== null) {
     title = rawTitle.pl || rawTitle.en || rawTitle.de || rawTitle.es || Object.values(rawTitle)[0] || 'Gorąca Okazja';
+    fullTitle = rawTitle.en || rawTitle.pl || Object.values(rawTitle)[0] || title;
   }
 
   let currentPriceVal: number | undefined = undefined;
@@ -236,9 +292,35 @@ function parseDealFields(rawDeal: any) {
   const tags = rawDeal.tags || rawDeal.searchTags;
   const temperature = typeof rawDeal.temperature === 'number' ? rawDeal.temperature : (Number(rawDeal.temperature) || 0);
 
+  // Extract clean description text
+  let rawDesc = '';
+  if (typeof rawDeal.description === 'string') {
+    rawDesc = rawDeal.description;
+  } else if (typeof rawDeal.description === 'object' && rawDeal.description !== null) {
+    rawDesc = rawDeal.description.pl || rawDeal.description.en || Object.values(rawDeal.description)[0] || '';
+  }
+  const cleanDescription = rawDesc
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  // Extract specs
+  let specsStr = '';
+  const rawSpecs = rawDeal.specifications || rawDeal.specs || rawDeal.metadata?.specifications;
+  if (typeof rawSpecs === 'object' && rawSpecs !== null) {
+    specsStr = Object.entries(rawSpecs)
+      .slice(0, 6)
+      .map(([k, v]) => `• ${k}: ${v}`)
+      .join('\n');
+  }
+
   return {
     id: rawDeal.id,
     title,
+    fullTitle: fullTitle || title,
     priceStr,
     oldPriceStr,
     discountStr,
@@ -248,6 +330,8 @@ function parseDealFields(rawDeal: any) {
     temperature,
     imageUrl,
     linkUrl,
+    description: cleanDescription,
+    specs: specsStr,
   };
 }
 
@@ -423,6 +507,224 @@ export async function getPromotableDealsAction(
   }
 }
 
+/**
+ * Fallback curated copy generator when Genkit AI is unavailable
+ */
+function buildCuratedFallbackPost(
+  bot: SocialAIBot,
+  deal: {
+    title: string;
+    fullTitle?: string;
+    priceStr: string;
+    oldPriceStr: string;
+    discountStr: string;
+    merchant: string;
+    temperature: number;
+    linkUrl: string;
+    description?: string;
+    specs?: string;
+  },
+  hashtags: string[],
+  topicHint?: string
+): string {
+  const hashtagsLine = hashtags.join(' ');
+  const store = deal.merchant ? deal.merchant.replace(' w ', '') : 'Okazje Plus';
+
+  if (bot.role === 'hunter') {
+    return (
+      `🔥 [HIT DNIA] ${deal.title} w niesamowitej cenie!\n\n` +
+      `Łowcy Okazje Plus wytropili kolejną perełkę, obok której nie da się przejść obojętnie!\n\n` +
+      (deal.description ? `📖 O CO CHODZI:\n${deal.description.slice(0, 300)}...\n\n` : '') +
+      (deal.specs ? `🛠️ KLUCZOWE PARAMETRY:\n${deal.specs}\n\n` : '') +
+      `💰 ZESTAWIENIE CENOWE & OSZCZĘDNOŚĆ:\n` +
+      `• 💸 Cena w promocji: ${deal.priceStr}${deal.oldPriceStr}${deal.discountStr ? ` (${deal.discountStr})` : ''}\n` +
+      `• 🏬 Sklep: ${store}\n` +
+      `• 🌡️ Ocena społeczności: ${deal.temperature}° (Gorąca oferta)\n\n` +
+      `⏳ Taka cena może szybko ulec zmianie lub wyprzedać się stan magazynowy!\n\n` +
+      (topicHint ? `💡 Wskazówka: ${topicHint}\n\n` : '') +
+      `💬 Kto z Was polował na taki sprzęt? Dajcie znać w komentarzu!\n\n` +
+      `👉 Bezpośredni link do okazji i kod rabatowy znajdziecie w 1. KOMENTARZU ⬇️ oraz tutaj:\n${deal.linkUrl}\n\n` +
+      hashtagsLine
+    );
+  } else if (bot.role === 'expert') {
+    return (
+      `🛡️ [TEST & OPINIA EKSPERTA OKAZJE PLUS]\n` +
+      `Produkt: ${deal.title}\n\n` +
+      `W laboratorium Okazje Plus bierzemy pod lupę kolejną gorącą ofertę rynkową:\n\n` +
+      (deal.specs ? `🔬 SPECYFIKACJA TECHNICZNA:\n${deal.specs}\n\n` : '') +
+      `⚖️ ANALIZA OPŁACALNOŚCI & DYREKTYWA OMNIBUS:\n` +
+      `✅ Weryfikacja 90-dniowej historii cen: realna obniżka, bez sztucznego pompowania ceny wyjściowej\n` +
+      `✅ Bezpieczny sprzedawca (${store}) i sprawdzony łańcuch dostaw\n` +
+      `✅ Bardzo dobry stosunek parametrów do ceny zakupu\n\n` +
+      `💰 Cena w promocji: ${deal.priceStr}${deal.oldPriceStr}${deal.discountStr}\n` +
+      `📊 Ocena opłacalności: 9/10\n\n` +
+      (topicHint ? `💬 Uwagi eksperta: ${topicHint}\n\n` : '') +
+      `💬 Jakie są Wasze doświadczenia z tym modelem? Warto kupić czy polecacie alternatywę?\n\n` +
+      `👉 Bezpośredni link do zweryfikowanej oferty w 1. KOMENTARZU ⬇️ oraz tutaj:\n${deal.linkUrl}\n\n` +
+      hashtagsLine
+    );
+  } else if (bot.role === 'community') {
+    return (
+      `👋 Cześć Łowcy Okazji!\n\n` +
+      `Mamy dziś temat do dyskusji w naszej grupie:\n\n` +
+      `💬 ${topicHint || `Co sądzicie o tej ofercie: ${deal.title}?`}\n\n` +
+      `Cena spadła właśnie do ${deal.priceStr}${deal.oldPriceStr}${deal.discountStr}${deal.merchant}.\n\n` +
+      `Kto z Was już z tego korzysta lub planuje zakup? Piszcie śmiało w komentarzach – wrzucajcie Wasze opinie i zdjęcia!\n\n` +
+      `👉 Szczegóły oferty możecie podejrzeć w 1. komentarzu ⬇️ oraz na portalu:\n${deal.linkUrl}\n\n` +
+      hashtagsLine
+    );
+  } else {
+    return (
+      `🤖 [PORADA ZAKUPOWA OKAZJE PLUS]\n\n` +
+      `👉 Produkt: ${deal.title}\n` +
+      `💰 Cena promocyjna: ${deal.priceStr}${deal.oldPriceStr}${deal.discountStr}${deal.merchant}\n\n` +
+      `${topicHint || 'Pamiętajcie, aby przed zakupem sprawdzić dostępne kupony rabatowe sklepu oraz opcję darmowej dostawy. W serwisie Okazje Plus monitorujemy historię cen na bieżąco!'}\n\n` +
+      `👉 Bezpośredni link do okazji znajdziecie w 1. komentarzu ⬇️ oraz tutaj:\n${deal.linkUrl}\n\n` +
+      hashtagsLine
+    );
+  }
+}
+
+/**
+ * Generate high-converting, engaging post copy using Gemini AI with fallback
+ */
+async function generateEngagingSocialPost(
+  bot: SocialAIBot,
+  deal: {
+    id: string;
+    title: string;
+    fullTitle?: string;
+    priceStr: string;
+    oldPriceStr: string;
+    discountStr: string;
+    merchant: string;
+    category?: string;
+    tags?: string[];
+    temperature: number;
+    linkUrl: string;
+    description?: string;
+    specs?: string;
+  },
+  topicHint?: string
+): Promise<{ text: string; hashtags: string[] }> {
+  const dynamicHashtags = generateSmartHashtags({
+    title: deal.title,
+    merchant: deal.merchant,
+    category: deal.category,
+    tags: deal.tags,
+  });
+  const hashtagsLine = dynamicHashtags.join(' ');
+
+  let postText = '';
+  let aiGenerated = false;
+
+  try {
+    const { ai } = await import('@/ai/genkit');
+
+    let personaPrompt = '';
+    if (bot.role === 'hunter') {
+      personaPrompt = `Twoja rola: Łowca Perełek Cenowych (🔥).
+Twój styl: dynamiczny, entuzjastyczny, skoncentrowany na niesamowitych zniżkach, wyprzedażach i realnych oszczędnościach.
+Specjalne instrukcje: ${bot.customInstructions || 'Kładź nacisk na kwotę oszczędności, procent rabatu oraz ograniczony czas trwania oferty.'}
+
+ZADANIE: Napisz porywający, soczysty i angażujący post na Facebooka o poniższej okazji:
+- 🎯 Chwytliwy, emocjonalny nagłówek z emoji (np. 🔥 [HIT DNIA] lub 🚨 [ALERT CENOWY]) z nazwą produktu i ceną
+- 💡 Wyjaśnij, jaki realny problem ten produkt rozwiązuje w życiu codziennym (dlaczego warto go mieć)
+- 🛠️ Wypunktuj 3-4 najważniejsze parametry techniczne z emoji
+- 💰 Przejrzyste zestawienie cenowe (cena promocyjna, rabat, sklep, ocena społeczności)
+- ⏳ Poczucie okazji / analiza opłacalności
+- 💬 Zadaj angażujące pytanie społeczności, zachęcając do komentowania
+- 👉 CTA: "Link do bezpośredniej oferty i kod rabatowy czeka w PIERWSZYM KOMENTARZU ⬇️ oraz pod adresem:\n${deal.linkUrl}"
+- #️⃣ Dołącz hashtagi na końcu: ${hashtagsLine}`;
+    } else if (bot.role === 'expert') {
+      personaPrompt = `Twoja rola: Tester & Inżynier Jakości (🛡️).
+Twój styl: merytoryczny, rzetelny, profesjonalny recenzent z laboratorium Okazje Plus. Zero lania wody.
+Specjalne instrukcje: ${bot.customInstructions || 'Opisuj konkretne zalety, wady i ocenę opłacalności w skali 1-10.'}
+
+ZADANIE: Napisz merytoryczną, pogłębioną recenzję / opinię ekspercką o poniższej okazji:
+- 🛡️ Profesjonalny nagłówek (np. 🛡️ [TEST & OPINIA EKSPERTA OKAZJE PLUS] ...)
+- 🔬 Analiza parametrów technicznych i jakości wykonania
+- ⚖️ Kluczowe zalety i na co uważać przed zakupem
+- 💸 Ocena ceny i weryfikacja (brak fałszywych obniżek, realna wartość)
+- 📊 Ocena opłacalności w skali 1-10
+- 💬 Pytanie do społeczności o ich doświadczenia z tym rodzajem sprzętu
+- 👉 CTA: "Bezpośredni link do sprawdzonej oferty znajdziecie w 1. komentarzu ⬇️ oraz tutaj:\n${deal.linkUrl}"
+- #️⃣ Dołącz hashtagi na końcu: ${hashtagsLine}`;
+    } else if (bot.role === 'community') {
+      personaPrompt = `Twoja rola: Animator Społeczności Grupy (💬).
+Twój styl: przyjazny, otwarty, integrujący społeczność, zachęcający do szczerej dyskusji zakupowej.
+Specjalne instrukcje: ${bot.customInstructions || 'Zadawaj otwarte pytania, które zachęcają członków do komentowania i dzielenia się swoimi znaleziskami.'}
+
+ZADANIE: Rozkręć gorącą dyskusję w grupie wokół poniższego tematu/produktu:
+- 👋 Ciepłe, energiczne przywitanie łowców
+- ❓ Chwytliwe, prowokujące do myślenia pytanie zakupowe powiązane z tym sprzętem
+- 💡 Krótki kontekst okazji (dlaczego ten produkt teraz wywołał poruszenie)
+- 🎁 Zachęta do wrzucania opinii, zdjęć lub własnych typów w komentarzach
+- 👉 CTA: "Szczegóły oferty możecie sprawdzić w 1. komentarzu ⬇️ lub na portalu:\n${deal.linkUrl}"
+- #️⃣ Dołącz hashtagi na końcu: ${hashtagsLine}`;
+    } else {
+      personaPrompt = `Twoja rola: Asystent Zakupowy & Smart FAQ (🤖).
+Twój styl: zwięzły, konkretny, pomocny i uprzejmy.
+Specjalne instrukcje: ${bot.customInstructions || 'Odpowiadaj krótko, precyzyjnie i uprzejmie.'}
+
+ZADANIE: Napisz praktyczny miniporadnik / wskazówkę zakupową:
+- 🤖 Wyjaśnij jak skorzystać z tej promocji, jak zdobyć kupon lub na co zwrócić uwagę przy dostawie
+- 💰 Zestawienie cenowe i parametry
+- 👉 CTA: "Link do oferty czeka w 1. komentarzu ⬇️ oraz tutaj:\n${deal.linkUrl}"
+- #️⃣ Dołącz hashtagi: ${hashtagsLine}`;
+    }
+
+    const fullPrompt = `Jesteś profesjonalnym copywriterem social media dla największej społeczności łowców okazji w Polsce – Okazje Plus (okazjeplus.pl).
+${personaPrompt}
+
+DANE PRODUKTU/OKAZJI:
+- Tytuł: ${deal.title}
+${deal.fullTitle && deal.fullTitle !== deal.title ? `- Pełna specyfikacja z tytułu: ${deal.fullTitle}` : ''}
+- Cena w promocji: ${deal.priceStr}
+${deal.oldPriceStr ? `- Cena regularna: ${deal.oldPriceStr}` : ''}
+${deal.discountStr ? `- Rabat: ${deal.discountStr}` : ''}
+- Sklep: ${deal.merchant || 'Okazje Plus'}
+- Kategoria: ${deal.category || 'ogólna'}
+- Ocena społeczności: ${deal.temperature}°
+${deal.specs ? `- Parametry techniczne:\n${deal.specs}` : ''}
+${deal.description ? `- Opis produktu:\n${deal.description.slice(0, 800)}` : ''}
+${topicHint ? `- Dodatkowa uwaga/wskazówka od użytkownika: ${topicHint}` : ''}
+
+ZASADY:
+- Pisz po polsku, żywym, naturalnym i angażującym językiem.
+- Używaj akapitów, czytelnych punktorów i estetycznych emoji.
+- Nie urywaj tekstu. Zwróć kompletny post gotowy do publikacji na Facebooku.
+- Umieść podane hashtagi na samym końcu.`;
+
+    const aiResponse = await ai.generate({
+      prompt: fullPrompt,
+      config: {
+        temperature: bot.role === 'hunter' || bot.role === 'community' ? 0.75 : 0.4,
+        maxOutputTokens: 3000,
+      },
+    });
+
+    if (aiResponse && aiResponse.text && aiResponse.text.trim().length > 80) {
+      postText = aiResponse.text.trim();
+      aiGenerated = true;
+    }
+  } catch (err) {
+    console.warn('[generateEngagingSocialPost] AI generation error, using rich curated template:', err);
+  }
+
+  // Ensure hashtags are included
+  if (postText && !postText.includes('#')) {
+    postText = `${postText.trim()}\n\n${hashtagsLine}`;
+  }
+
+  // Fallback if AI was unavailable
+  if (!aiGenerated || !postText) {
+    postText = buildCuratedFallbackPost(bot, deal, dynamicHashtags, topicHint);
+  }
+
+  return { text: postText, hashtags: dynamicHashtags };
+}
+
 export async function executeBotRun(
   bot: SocialAIBot,
   immediatePublish: boolean = false,
@@ -447,177 +749,87 @@ export async function executeBotRun(
     let imageUrl: string | undefined = undefined;
     let itemId = `bot-${bot.role}-${now.getTime()}`;
     let itemTitle = '';
+    let matchedHashtags: string[] = ['#okazjeplus', '#promocje'];
 
-    if (bot.role === 'hunter') {
-      let topDeal: any = null;
+    // 14-day recency cutoff to avoid duplicating posts
+    const recentCutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+    const recentPostsSnap = await adminDb
+      .collection('socialPosts')
+      .where('createdAt', '>=', recentCutoff)
+      .limit(100)
+      .get();
+    const recentDealIds = new Set(recentPostsSnap.docs.map(d => d.data().itemId).filter(Boolean));
 
-      // Check if user specifically requested a deal
-      if (targetDealId) {
-        const dealDoc = await adminDb.collection('deals').doc(targetDealId).get();
-        if (dealDoc.exists) {
-          topDeal = { id: dealDoc.id, ...dealDoc.data() };
-        }
+    let selectedDeal: any = null;
+
+    // Check if user specifically requested a deal
+    if (targetDealId) {
+      const dealDoc = await adminDb.collection('deals').doc(targetDealId).get();
+      if (dealDoc.exists) {
+        selectedDeal = { id: dealDoc.id, ...dealDoc.data() };
       }
+    }
 
-      // If not, pick automatically avoiding deals posted in the last 14 days
-      if (!topDeal) {
-        const recentCutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-        const recentPostsSnap = await adminDb
-          .collection('socialPosts')
-          .where('createdAt', '>=', recentCutoff)
-          .limit(100)
-          .get();
-        const recentDealIds = new Set(recentPostsSnap.docs.map(d => d.data().itemId).filter(Boolean));
+    // Automatically select the best hot deal if none specified
+    if (!selectedDeal) {
+      const dealsSnap = await adminDb
+        .collection('deals')
+        .where('status', '==', 'approved')
+        .orderBy('temperature', 'desc')
+        .limit(60)
+        .get();
 
-        const dealsSnap = await adminDb
-          .collection('deals')
-          .where('status', '==', 'approved')
-          .limit(30)
-          .get();
+      if (!dealsSnap.empty) {
+        const allApproved = dealsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
-        if (!dealsSnap.empty) {
-          const allApproved = dealsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-          allApproved.sort((a, b) => (b.temperature || 0) - (a.temperature || 0));
-
-          // Filter out deals that were already posted recently
+        if (bot.role === 'expert') {
+          // For expert bot, prioritize high-value gadgets, automotive, electronics, home
+          const techCategories = ['elektronika', 'motoryzacja', 'dom-ogrod', 'sport-turystyka'];
+          const techDeals = allApproved.filter(d => {
+            const cat = (d.mainCategorySlug || d.category || '').toLowerCase();
+            return techCategories.some(tc => cat.includes(tc));
+          });
+          const pool = techDeals.length > 0 ? techDeals : allApproved;
+          const unposted = pool.filter(d => !recentDealIds.has(d.id));
+          selectedDeal = unposted.length > 0
+            ? unposted[0]
+            : pool[Math.floor(Math.random() * Math.min(pool.length, 5))];
+        } else {
+          // For hunter / community / responder
           const unpostedDeals = allApproved.filter(d => !recentDealIds.has(d.id));
-          topDeal = unpostedDeals.length > 0
+          selectedDeal = unpostedDeals.length > 0
             ? unpostedDeals[0]
             : allApproved[Math.floor(Math.random() * Math.min(allApproved.length, 5))];
         }
       }
-
-      if (topDeal) {
-        const parsed = parseDealFields(topDeal);
-        itemId = parsed.id;
-        itemTitle = parsed.title;
-        linkUrl = parsed.linkUrl;
-        imageUrl = parsed.imageUrl;
-
-        const dynamicHashtags = generateSmartHashtags({
-          title: itemTitle,
-          merchant: parsed.merchant,
-          category: parsed.category,
-          tags: parsed.tags,
-        });
-        const hashtagsLine = dynamicHashtags.join(' ');
-        const customUserNote = topicHint ? `\n💡 Wskazówka: ${topicHint}\n` : '';
-
-        // Dynamic, diverse copywriting angles:
-        const styles = [
-          // Style 1: Gorąca Okazja / Klasyk Łowcy
-          `🔥 GORĄCA OKAZJA: ${itemTitle}!\n\n` +
-          `💰 Cena: ${parsed.priceStr}${parsed.oldPriceStr}${parsed.discountStr}${parsed.merchant}\n` +
-          `🌡️ Ocena społeczności: ${parsed.temperature}°\n` +
-          customUserNote +
-          `\nŁowcy Okazje Plus zweryfikowali tę ofertę – cena jest warta uwagi!\n\n` +
-          `👉 Bezpośredni link do okazji i kod rabatowy znajdziesz w pierwszym komentarzu ⬇️ oraz tutaj:\n${linkUrl}\n\n` +
-          hashtagsLine,
-
-          // Style 2: Błąd cenowy / Mocna zniżka
-          `⚡ MOCNA OBNIŻKA CENY: ${itemTitle}!\n\n` +
-          `🛒 Sklep: ${parsed.merchant ? parsed.merchant.replace(' w ', '') : 'Okazje Plus'}\n` +
-          `📉 Nowa cena: ${parsed.priceStr}${parsed.oldPriceStr}${parsed.discountStr ? ` (oszczędzasz ${parsed.discountStr})` : ''}\n` +
-          `🌡️ Temperatura okazji: ${parsed.temperature}°\n` +
-          customUserNote +
-          `\nTaka oferta może szybko zniknąć lub wyprzedać się zapas magazynowy.\n\n` +
-          `👉 Bezpośredni link do zakupu czeka w pierwszym komentarzu ⬇️ oraz tutaj:\n${linkUrl}\n\n` +
-          hashtagsLine,
-
-          // Style 3: Perełka dla Łowców / Rekomendacja
-          `💎 ZNALEZISKO DNIA: ${itemTitle}!\n\n` +
-          `💰 Dziś do upolowania za jedyne ${parsed.priceStr}${parsed.oldPriceStr}${parsed.discountStr}${parsed.merchant}.\n\n` +
-          `Nasi użytkownicy i moderatorzy ocenili ten deal na ${parsed.temperature}°. Realna oszczędność potwierdzona historią cen!\n` +
-          customUserNote +
-          `\n👉 Sprawdź szczegóły i kod rabatowy w 1. komentarzu ⬇️ oraz na stronie:\n${linkUrl}\n\n` +
-          hashtagsLine,
-
-          // Style 4: Alert Cenowy / Błyskawiczny
-          `🚨 ALERT CENOWY OKAZJE PLUS 🚨\n\n` +
-          `👉 Produkt: ${itemTitle}\n` +
-          `💸 Aktualna cena: ${parsed.priceStr}${parsed.oldPriceStr}${parsed.discountStr}\n` +
-          `🌡️ Ocena: ${parsed.temperature}°\n` +
-          customUserNote +
-          `\nSprawdź ofertę zanim cena wróci do normy!\n\n` +
-          `🔗 Bezpośredni link czeka w pierwszym komentarzu ⬇️ oraz pod adresem:\n${linkUrl}\n\n` +
-          hashtagsLine
-        ];
-
-        const chosenIndex = Math.floor(Math.random() * styles.length);
-        postText = styles[chosenIndex];
-      } else {
-        itemTitle = 'Przegląd Najlepszych Okazji Dnia';
-        postText = `🔥 CODZIENNY RAPORT OKAZJI Okazje Plus (${timestampStr})!\n\n` +
-          `Nasz algorytm i moderatorzy przejrzeli dziś setki ofert. Na portalu czekają na Was zweryfikowane perełki cenowe bez fałszywych rabatów.\n\n` +
-          `👉 Sprawdź aktualne okazje:\nhttps://okazjeplus.pl\n\n` +
-          `#okazje #promocje #okazjeplus #zakupyonline`;
-      }
-    } else if (bot.role === 'expert') {
-      let expertDeal: any = null;
-      if (targetDealId) {
-        const dealDoc = await adminDb.collection('deals').doc(targetDealId).get();
-        if (dealDoc.exists) {
-          expertDeal = { id: dealDoc.id, ...dealDoc.data() };
-        }
-      }
-
-      if (expertDeal) {
-        const parsed = parseDealFields(expertDeal);
-        itemId = parsed.id;
-        itemTitle = `Ocena oferty: ${parsed.title}`;
-        linkUrl = parsed.linkUrl;
-        imageUrl = parsed.imageUrl;
-
-        const expertTags = generateSmartHashtags({
-          title: parsed.title,
-          merchant: parsed.merchant,
-          category: parsed.category,
-          tags: parsed.tags,
-        });
-
-        postText = `🛡️ OCENA EKSPERTA OKAZJE PLUS: ${parsed.title}\n\n` +
-          `💰 Cena w promocji: ${parsed.priceStr}${parsed.oldPriceStr}${parsed.discountStr}${parsed.merchant}\n` +
-          `🌡️ Ocena społeczności: ${parsed.temperature}°\n\n` +
-          `Weryfikacja parametrów i historii cen:\n` +
-          `✅ Badanie 90-dniowej historii (dyrektywa Omnibus) – realna obniżka\n` +
-          `✅ Brak ukrytych kosztów i wysoka ocena sprzedawcy\n` +
-          `✅ Dobry stosunek ceny do oferowanych możliwości\n\n` +
-          (topicHint ? `💬 Uwagi eksperta: ${topicHint}\n\n` : '') +
-          `👉 Bezpośredni link do okazji i kod rabatowy znajdziesz w 1. komentarzu ⬇️ oraz tutaj:\n${linkUrl}\n\n` +
-          expertTags.join(' ');
-      } else {
-        itemTitle = topicHint || 'Jak kupować mądrze i nie dać się nabrać na „sztuczne promocje”';
-        postText = `🛡️ PORADNIK EKSPERTA OKAZJE PLUS: ${itemTitle}\n\n` +
-          `Czy wiesz, że ponad 30% promocji w sieci to tylko zawyżone ceny wyjściowe?\n\n` +
-          `W laboratorium i redakcji Okazje Plus każda rekomendacja przechodzi przez:\n` +
-          `✅ Badanie 90-dniowej historii cen (Omnibus i własne dane)\n` +
-          `✅ Weryfikację wiarygodności sprzedawcy\n` +
-          `✅ Ocenę fizycznej jakości wykonania sprzętu\n\n` +
-          `Kupuj mądrze ze sprawdzoną społecznością:\nhttps://okazjeplus.pl\n\n` +
-          `#testyproduktow #jakosc #ekspert #okazjeplus #swiadomykonsument`;
-      }
-    } else if (bot.role === 'community') {
-      itemTitle = topicHint || 'Pytanie do społeczności: Wasz najlepszy zakup miesiąca?';
-      postText = `👋 Cześć Łowcy Okazji!\n\n` +
-        `Mamy pytanie do naszej społeczności:\n` +
-        `💬 ${topicHint || 'Jaka jest najlepsza okazja cenowa, którą udało Wam się upolować w tym miesiącu?'}\n\n` +
-        `Podzielcie się w komentarzu linkiem lub nazwą produktu i napiszcie, ile udało się zaoszczędzić! Najciekawsze znaleziska wyróżnimy na stronie głównej.\n\n` +
-        `Pamiętajcie, że codzienne perełki czekają też na:\nhttps://okazjeplus.pl\n\n` +
-        `#spolecznosc #lowcyokazji #okazjeplus #dyskusja`;
-    } else {
-      // responder / general
-      itemTitle = topicHint || 'FAQ: Jak działają alerty cenowe w Okazje Plus?';
-      postText = `🤖 Szybka wskazówka od Okazje Plus:\n\n` +
-        `${topicHint || 'Szukasz konkretnego sprzętu w super cenie? Ustaw alert cenowy w serwisie Okazje Plus, a poinformujemy Cię w pierwszej sekundzie, gdy sklep obniży cenę.'}\n\n` +
-        `Sprawdź więcej na:\nhttps://okazjeplus.pl\n\n` +
-        `#faq #porady #okazjeplus #pomoc`;
     }
 
-    // Extract hashtags from the post text
-    const matchedHashtags = (postText.match(/#[a-z0-9ąćęłńóśźż]+/gi) || ['#okazjeplus']);
+    if (selectedDeal) {
+      const parsed = parseDealFields(selectedDeal);
+      itemId = parsed.id;
+      itemTitle = parsed.title;
+      linkUrl = parsed.linkUrl;
+      imageUrl = parsed.imageUrl;
+
+      const generated = await generateEngagingSocialPost(bot, parsed, topicHint);
+      postText = generated.text;
+      matchedHashtags = generated.hashtags;
+    } else {
+      // General community / report fallback if database has no approved deals
+      itemTitle = topicHint || 'Codzienny Raport Najlepszych Okazji';
+      postText = `🔥 CODZIENNY RAPORT OKAZJI Okazje Plus (${timestampStr})!\n\n` +
+        `Nasz algorytm i moderatorzy przejrzeli dziś setki ofert. Na portalu czekają na Was zweryfikowane perełki cenowe bez fałszywych rabatów.\n\n` +
+        (topicHint ? `💡 Temat dnia: ${topicHint}\n\n` : '') +
+        `👉 Sprawdź aktualne okazje:\nhttps://okazjeplus.pl\n\n` +
+        `#okazje #promocje #okazjeplus #zakupyonline`;
+      matchedHashtags = ['#okazje', '#promocje', '#okazjeplus'];
+    }
 
     // 2. Prepare post payload
-    const initialStatus = immediatePublish || bot.autoApprove ? 'approved' : 'pending';
+    // If bot has autoApprove enabled or immediatePublish is true, approve and publish directly!
+    const shouldPublish = Boolean(immediatePublish || bot.autoApprove);
+    const initialStatus = shouldPublish ? 'approved' : 'pending';
+
     const postPayload: Omit<SocialPost, 'id'> = {
       platform: 'facebook',
       status: initialStatus,
@@ -625,7 +837,7 @@ export async function executeBotRun(
       itemId,
       itemData: {
         title: itemTitle,
-        description: postText.slice(0, 200),
+        description: postText.slice(0, 250),
         url: linkUrl,
         image: imageUrl,
       },
@@ -652,8 +864,8 @@ export async function executeBotRun(
     let published = false;
     let platformPostId: string | undefined = undefined;
 
-    // 3. Publish to Facebook if requested
-    if (immediatePublish) {
+    // 3. Publish to Facebook if requested or if bot has autoApprove
+    if (shouldPublish) {
       const configSnap = await adminDb.collection('socialConfig').doc('facebook').get();
       if (configSnap.exists) {
         const config = configSnap.data() as SocialConfig;
@@ -670,7 +882,21 @@ export async function executeBotRun(
               attempts: 1,
               updatedAt: new Date().toISOString(),
             });
+          } else {
+            console.error('[executeBotRun] Publishing to Facebook failed:', pubResult.error);
+            await postRef.update({
+              status: 'failed',
+              lastError: typeof pubResult.error === 'string' ? pubResult.error : (pubResult.error?.message || 'Błąd publikacji na Facebooku'),
+              updatedAt: new Date().toISOString(),
+            });
           }
+        } else {
+          console.warn('[executeBotRun] Facebook config not configured or disabled');
+          await postRef.update({
+            status: 'failed',
+            lastError: 'Brak aktywnej konfiguracji Facebooka (sprawdź token i pageId)',
+            updatedAt: new Date().toISOString(),
+          });
         }
       }
     }
