@@ -14,6 +14,12 @@ import { getGeneralAutopilotConfig, getGeneralDeals, generateGeneralPostAction }
 import { getFishingAutopilotConfig, getFishingDeals, generateFishingPost } from '@/app/actions/fishing-autopilot';
 import { getBabyAutopilotConfig, getBabyDeals, generateBabyPost } from '@/app/actions/baby-autopilot';
 import { sanitizeSocialPostText } from '@/lib/social-growth-types';
+import {
+  diversifyDealsList,
+  detectDealCategory,
+  pickDiverseRecommendation,
+  getCategoryLabel,
+} from '@/lib/deal-diversity';
 
 export interface CandidateDealSummary {
   id: string;
@@ -25,6 +31,8 @@ export interface CandidateDealSummary {
   imageUrl?: string;
   dealUrl: string;
   description?: string;
+  category?: string;
+  categoryLabel?: string;
 }
 
 export interface CalendarTimelineItem {
@@ -130,41 +138,56 @@ export async function getUnifiedCalendarDataAction(options?: {
     const fishConfig = fishConfigRes.config;
     const babyConfig = babyConfigRes.config;
 
-    const genAvailableDeals: CandidateDealSummary[] = (genDealsRes.deals || []).map(d => ({
-      id: d.id,
-      title: d.title || 'Hit Cenowy',
-      price: String(d.price || ''),
-      oldPrice: d.oldPrice ? String(d.oldPrice) : undefined,
-      discount: d.discount ? `-${d.discount}%` : undefined,
-      merchant: d.merchant,
-      imageUrl: d.imageUrl,
-      dealUrl: d.dealUrl,
-      description: d.description,
-    }));
+    const genAvailableDeals: CandidateDealSummary[] = diversifyDealsList((genDealsRes.deals || []).map(d => {
+      const cat = detectDealCategory(d.title || '', d.description, 'general');
+      return {
+        id: d.id,
+        title: d.title || 'Hit Cenowy',
+        price: String(d.price || ''),
+        oldPrice: d.oldPrice ? String(d.oldPrice) : undefined,
+        discount: d.discount ? `-${d.discount}%` : undefined,
+        merchant: d.merchant,
+        imageUrl: d.imageUrl,
+        dealUrl: d.dealUrl,
+        description: d.description,
+        category: cat,
+        categoryLabel: getCategoryLabel(cat),
+      };
+    }), { niche: 'general' });
 
-    const fishAvailableDeals: CandidateDealSummary[] = (fishDealsRes.deals || []).map(d => ({
-      id: d.id,
-      title: d.title || 'Sprzęt Wędkarski',
-      price: d.price || '',
-      oldPrice: d.oldPrice,
-      discount: d.discount,
-      merchant: d.merchant,
-      imageUrl: d.imageUrl,
-      dealUrl: d.dealUrl,
-      description: d.description,
-    }));
+    const fishAvailableDeals: CandidateDealSummary[] = diversifyDealsList((fishDealsRes.deals || []).map(d => {
+      const cat = detectDealCategory(d.title || '', d.description, 'fishing');
+      return {
+        id: d.id,
+        title: d.title || 'Sprzęt Wędkarski',
+        price: d.price || '',
+        oldPrice: d.oldPrice,
+        discount: d.discount,
+        merchant: d.merchant,
+        imageUrl: d.imageUrl,
+        dealUrl: d.dealUrl,
+        description: d.description,
+        category: cat,
+        categoryLabel: getCategoryLabel(cat),
+      };
+    }), { niche: 'fishing' });
 
-    const babyAvailableDeals: CandidateDealSummary[] = (babyDealsRes.deals || []).map(d => ({
-      id: d.id,
-      title: d.title || 'Akcesoria dla Malucha i Mamy',
-      price: d.price || '',
-      oldPrice: d.oldPrice,
-      discount: d.discount,
-      merchant: d.merchant,
-      imageUrl: d.imageUrl,
-      dealUrl: d.dealUrl,
-      description: d.description,
-    }));
+    const babyAvailableDeals: CandidateDealSummary[] = diversifyDealsList((babyDealsRes.deals || []).map(d => {
+      const cat = detectDealCategory(d.title || '', d.description, 'baby');
+      return {
+        id: d.id,
+        title: d.title || 'Akcesoria dla Malucha i Mamy',
+        price: d.price || '',
+        oldPrice: d.oldPrice,
+        discount: d.discount,
+        merchant: d.merchant,
+        imageUrl: d.imageUrl,
+        dealUrl: d.dealUrl,
+        description: d.description,
+        category: cat,
+        categoryLabel: getCategoryLabel(cat),
+      };
+    }), { niche: 'baby' });
 
     // 2. Fetch Queued Items from all 3 collections (fixing fishingPostsQueue with 's')
     const [genQueueSnap, fishQueueSnap, babyQueueSnap] = await Promise.all([
@@ -583,50 +606,248 @@ export async function getNicheAvailableDealsAction(params: {
 
     if (niche === 'fishing') {
       const res = await getFishingDeals(searchQuery, limit, undefined, true);
-      const deals: CandidateDealSummary[] = (res.deals || []).map(d => ({
-        id: d.id,
-        title: d.title || 'Sprzęt wędkarski',
-        price: d.price || '',
-        oldPrice: d.oldPrice,
-        discount: d.discount,
-        merchant: d.merchant,
-        imageUrl: d.imageUrl,
-        dealUrl: d.dealUrl,
-        description: d.description,
-      }));
-      return { success: true, deals };
+      const rawDeals: CandidateDealSummary[] = (res.deals || []).map(d => {
+        const cat = detectDealCategory(d.title || '', d.description, 'fishing');
+        return {
+          id: d.id,
+          title: d.title || 'Sprzęt wędkarski',
+          price: d.price || '',
+          oldPrice: d.oldPrice,
+          discount: d.discount,
+          merchant: d.merchant,
+          imageUrl: d.imageUrl,
+          dealUrl: d.dealUrl,
+          description: d.description,
+          category: cat,
+          categoryLabel: getCategoryLabel(cat),
+        };
+      });
+      return { success: true, deals: diversifyDealsList(rawDeals, { niche: 'fishing' }) };
     } else if (niche === 'baby') {
       const res = await getBabyDeals({ limit, searchQuery }, true);
-      const deals: CandidateDealSummary[] = (res.deals || []).map(d => ({
-        id: d.id,
-        title: d.title || 'Dla malucha i mamy',
-        price: d.price || '',
-        oldPrice: d.oldPrice,
-        discount: d.discount,
-        merchant: d.merchant,
-        imageUrl: d.imageUrl,
-        dealUrl: d.dealUrl,
-        description: d.description,
-      }));
-      return { success: true, deals };
+      const rawDeals: CandidateDealSummary[] = (res.deals || []).map(d => {
+        const cat = detectDealCategory(d.title || '', d.description, 'baby');
+        return {
+          id: d.id,
+          title: d.title || 'Dla malucha i mamy',
+          price: d.price || '',
+          oldPrice: d.oldPrice,
+          discount: d.discount,
+          merchant: d.merchant,
+          imageUrl: d.imageUrl,
+          dealUrl: d.dealUrl,
+          description: d.description,
+          category: cat,
+          categoryLabel: getCategoryLabel(cat),
+        };
+      });
+      return { success: true, deals: diversifyDealsList(rawDeals, { niche: 'baby' }) };
     } else {
       const res = await getGeneralDeals({ limit, searchQuery }, true);
-      const deals: CandidateDealSummary[] = (res.deals || []).map(d => ({
-        id: d.id,
-        title: d.title || 'Hit Cenowy',
-        price: String(d.price || ''),
-        oldPrice: d.oldPrice ? String(d.oldPrice) : undefined,
-        discount: d.discount ? `-${d.discount}%` : undefined,
-        merchant: d.merchant,
-        imageUrl: d.imageUrl,
-        dealUrl: d.dealUrl,
-        description: d.description,
-      }));
-      return { success: true, deals };
+      const rawDeals: CandidateDealSummary[] = (res.deals || []).map(d => {
+        const cat = detectDealCategory(d.title || '', d.description, 'general');
+        return {
+          id: d.id,
+          title: d.title || 'Hit Cenowy',
+          price: String(d.price || ''),
+          oldPrice: d.oldPrice ? String(d.oldPrice) : undefined,
+          discount: d.discount ? `-${d.discount}%` : undefined,
+          merchant: d.merchant,
+          imageUrl: d.imageUrl,
+          dealUrl: d.dealUrl,
+          description: d.description,
+          category: cat,
+          categoryLabel: getCategoryLabel(cat),
+        };
+      });
+      return { success: true, deals: diversifyDealsList(rawDeals, { niche: 'general' }) };
     }
   } catch (err: any) {
     console.error('Error in getNicheAvailableDealsAction:', err);
     return { success: false, deals: [], error: err.message };
   }
 }
+
+/**
+ * Usuwa post z kolejki publikacji kalendarza.
+ */
+export async function deleteCalendarPostAction(params: {
+  niche: 'general' | 'fishing' | 'baby';
+  queueItemId: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    const { niche, queueItemId } = params;
+    const collectionName = niche === 'fishing'
+      ? 'fishingPostsQueue'
+      : niche === 'baby'
+        ? 'babyPostQueue'
+        : 'generalPostQueue';
+
+    await adminDb.collection(collectionName).doc(queueItemId).delete();
+
+    revalidatePath('/[locale]/admin/social-media', 'page');
+    revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
+    revalidatePath('/[locale]/admin/baby-autopilot', 'page');
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error deleting calendar post:', err);
+    return { success: false, error: err.message || 'Błąd usuwania posta' };
+  }
+}
+
+/**
+ * Inteligentny dobór okazji przez AI z innej kategorii niż ostatnio publikowane (Anti-Clustering).
+ */
+export async function getDiverseAiDealRecommendationAction(params: {
+  niche: 'general' | 'fishing' | 'baby';
+  excludeDealIds?: string[];
+}): Promise<{
+  success: boolean;
+  deal?: CandidateDealSummary;
+  categoryLabel?: string;
+  reason?: string;
+  error?: string;
+}> {
+  try {
+    const { niche, excludeDealIds = [] } = params;
+
+    const collectionName = niche === 'fishing'
+      ? 'fishingPostsQueue'
+      : niche === 'baby'
+        ? 'babyPostQueue'
+        : 'generalPostQueue';
+
+    const recentSnap = await adminDb
+      .collection(collectionName)
+      .orderBy('createdAt', 'desc')
+      .limit(6)
+      .get();
+
+    const recentCategories = recentSnap.docs.map(doc => {
+      const data = doc.data();
+      return detectDealCategory(data.title || '', data.content || '', niche);
+    }).filter(Boolean);
+
+    const dealsRes = await getNicheAvailableDealsAction({ niche, limit: 50 });
+    if (!dealsRes.success || dealsRes.deals.length === 0) {
+      return { success: false, error: 'Brak dostępnych okazji w bazie dla tego profilu' };
+    }
+
+    const rec = pickDiverseRecommendation(dealsRes.deals, {
+      niche,
+      recentCategories,
+      excludeDealIds,
+    });
+
+    if (!rec.deal) {
+      return { success: false, error: 'Nie udało się dobrać zróżnicowanej oferty' };
+    }
+
+    return {
+      success: true,
+      deal: rec.deal,
+      categoryLabel: rec.categoryLabel,
+      reason: rec.reason,
+    };
+  } catch (err: any) {
+    console.error('Error getting diverse AI deal recommendation:', err);
+    return { success: false, error: err.message || 'Błąd rekomendacji AI' };
+  }
+}
+
+/**
+ * Regeneruje treść posta dla nowo wybranej okazji bezpośrednio z poziomu edytora.
+ */
+export async function regeneratePostContentAction(params: {
+  niche: 'general' | 'fishing' | 'baby';
+  dealId: string;
+  botRole?: string;
+  customTopic?: string;
+  humorLevel?: 'subtle' | 'high' | 'legendary' | 'none';
+}): Promise<{
+  success: boolean;
+  content?: string;
+  title?: string;
+  firstComment?: string;
+  imageUrl?: string;
+  linkUrl?: string;
+  wifeAlibi?: string;
+  error?: string;
+}> {
+  try {
+    const { niche, dealId, botRole, customTopic, humorLevel } = params;
+
+    if (niche === 'fishing') {
+      const genRes = await generateFishingPost({
+        botRole: (botRole as any) || 'deal_hunter',
+        dealId,
+        customTopic,
+        humorLevel,
+      }, true);
+
+      if (!genRes.success || !genRes.item) {
+        return { success: false, error: genRes.error || 'Błąd generowania posta wędkarskiego' };
+      }
+
+      return {
+        success: true,
+        content: sanitizeSocialPostText(genRes.item.content || ''),
+        title: genRes.item.title || '',
+        firstComment: genRes.item.firstComment || '',
+        imageUrl: genRes.item.imageUrl,
+        linkUrl: genRes.item.linkUrl || (genRes.item as any).dealUrl,
+        wifeAlibi: genRes.item.wifeAlibi,
+      };
+    } else if (niche === 'baby') {
+      const genRes = await generateBabyPost({
+        botRole: (botRole as any) || 'bargain_mom',
+        dealId,
+        customTopic,
+        humorLevel,
+      }, true);
+
+      if (!genRes.success || !genRes.item) {
+        return { success: false, error: genRes.error || 'Błąd generowania posta dla malucha' };
+      }
+
+      return {
+        success: true,
+        content: sanitizeSocialPostText(genRes.item.content || ''),
+        title: genRes.item.title || '',
+        firstComment: genRes.item.firstComment || '',
+        imageUrl: genRes.item.imageUrl,
+        linkUrl: genRes.item.linkUrl || (genRes.item as any).dealUrl,
+      };
+    } else {
+      const genRes = await generateGeneralPostAction({
+        botRole: (botRole as any) || 'bargain_hunter',
+        dealId,
+        customTopic,
+        humorLevel,
+      });
+
+      if (!genRes.success || !genRes.post) {
+        return { success: false, error: genRes.error || 'Błąd generowania posta' };
+      }
+
+      return {
+        success: true,
+        content: sanitizeSocialPostText(genRes.post.content || ''),
+        title: genRes.post.title || '',
+        firstComment: genRes.post.firstComment || '',
+        imageUrl: genRes.post.imageUrl,
+        linkUrl: genRes.post.linkUrl || (genRes.post as any).dealUrl,
+      };
+    }
+  } catch (err: any) {
+    console.error('Error in regeneratePostContentAction:', err);
+    return { success: false, error: err.message || 'Błąd generowania treści' };
+  }
+}
+
 

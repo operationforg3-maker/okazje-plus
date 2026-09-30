@@ -29,6 +29,7 @@ import {
   buildGeneralHashtags,
   formatGeneralPricePLN,
 } from '@/lib/general-utils';
+import { diversifyDealsList } from '@/lib/deal-diversity';
 
 // ============================================================================
 // POBIERANIE I ZAPIS KONFIGURACJI
@@ -299,7 +300,7 @@ export async function getGeneralDeals(
 
     return {
       success: true,
-      deals: deals.slice(0, maxLimit),
+      deals: diversifyDealsList(deals, { niche: 'general' }).slice(0, maxLimit),
       totalFound: deals.length,
     };
   } catch (err: any) {

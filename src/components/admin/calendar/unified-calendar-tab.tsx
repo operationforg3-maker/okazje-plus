@@ -25,12 +25,16 @@ import {
   Edit,
   Loader2,
   Tag,
+  Trash2,
+  Dices,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CalendarTimelineItem, UnifiedCalendarData } from '@/app/actions/calendar-schedule';
 import {
   getUnifiedCalendarDataAction,
   preGenerateSlotPostAction,
+  deleteCalendarPostAction,
+  getDiverseAiDealRecommendationAction,
 } from '@/app/actions/calendar-schedule';
 import { PostEditDialog, type EditablePostItem } from '@/components/admin/social/post-edit-dialog';
 import { sanitizeSocialPostText } from '@/lib/social-growth-types';
@@ -136,6 +140,86 @@ export function UnifiedCalendarTab() {
       status: item.status === 'pending' ? 'pending' : 'approved',
       dealId: item.dealId,
     });
+  };
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeletePost = async (item: CalendarTimelineItem) => {
+    const qId = item.queueItemId || item.id;
+    if (qId.startsWith('slot-')) {
+      toast.info('To jest slot dynamiczny z harmonogramu godzin — nie ma fizycznego posta w bazie do usunięcia.');
+      return;
+    }
+
+    if (!window.confirm(`Czy na pewno chcesz usunąć ten post z kolejki publikacji?\n\n"${item.title}"`)) {
+      return;
+    }
+
+    try {
+      setDeletingId(qId);
+      const res = await deleteCalendarPostAction({
+        niche: item.niche,
+        queueItemId: qId,
+      });
+
+      if (res.success) {
+        toast.success('Post został pomyślnie usunięty z kolejki!');
+        if (selectedItem?.id === item.id) {
+          setSelectedItem(null);
+        }
+        await loadCalendarData();
+      } else {
+        toast.error(res.error || 'Błąd usuwania posta');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Błąd usuwania');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleSlotAiPickDeal = async (item: CalendarTimelineItem) => {
+    try {
+      setPreGeneratingId(item.id);
+      toast.info('AI dobiera urozmaiconą okazję z innej kategorii produktów...');
+      const recRes = await getDiverseAiDealRecommendationAction({ niche: item.niche });
+      if (!recRes.success || !recRes.deal) {
+        toast.error(recRes.error || 'Nie znaleziono rekomendacji AI');
+        return;
+      }
+
+      toast.info(`Wybrano: "${recRes.deal.title}". Generuję post...`);
+      const genRes = await preGenerateSlotPostAction({
+        niche: item.niche,
+        scheduledTime: item.scheduledTime,
+        dealId: recRes.deal.id,
+      });
+
+      if (genRes.success && genRes.post) {
+        toast.success('Post wygenerowany! Otwieram edytor...');
+        await loadCalendarData();
+        setSelectedItem(null);
+        setEditingNiche(item.niche);
+        setEditingPostItem({
+          id: genRes.queueItemId || genRes.post.id,
+          title: genRes.post.title || '',
+          content: sanitizeSocialPostText(genRes.post.content || ''),
+          firstComment: genRes.post.firstComment || '',
+          imageUrl: genRes.post.imageUrl || recRes.deal.imageUrl || '',
+          linkUrl: genRes.post.linkUrl || recRes.deal.dealUrl || '',
+          scheduledFor: genRes.post.scheduledFor || item.scheduledTime,
+          status: genRes.post.status || 'approved',
+          dealId: genRes.post.dealId || recRes.deal.id,
+          wifeAlibi: genRes.post.wifeAlibi,
+        });
+      } else {
+        toast.error(genRes.error || 'Nie udało się wygenerować posta');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Błąd rekomendacji');
+    } finally {
+      setPreGeneratingId(null);
+    }
   };
 
   // Month navigation helpers
@@ -483,38 +567,77 @@ export function UnifiedCalendarTab() {
                             )}
                           </span>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             {item.status === 'scheduled_slot' ? (
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handlePreGenerate(item);
-                                }}
-                                disabled={preGeneratingId === item.id}
-                                className="h-7 text-xs px-2.5 gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-                              >
-                                {preGeneratingId === item.id ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : (
-                                  <Sparkles className="w-3 h-3 text-amber-300" />
-                                )}
-                                Wygeneruj post wcześniej
-                              </Button>
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSlotAiPickDeal(item);
+                                  }}
+                                  disabled={preGeneratingId === item.id}
+                                  className="h-7 text-xs px-2 gap-1 text-primary border-primary/30 hover:bg-primary/5 font-medium"
+                                  title="AI dobiera inną, urozmaiconą okazję z innej kategorii dla tego slotu"
+                                >
+                                  {preGeneratingId === item.id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Dices className="w-3 h-3 text-primary" />
+                                  )}
+                                  <span>Inna okazja (AI)</span>
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePreGenerate(item);
+                                  }}
+                                  disabled={preGeneratingId === item.id}
+                                  className="h-7 text-xs px-2.5 gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                                >
+                                  {preGeneratingId === item.id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Sparkles className="w-3 h-3 text-amber-300" />
+                                  )}
+                                  Wygeneruj wcześniej
+                                </Button>
+                              </>
                             ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditPost(item);
-                                }}
-                                className="h-7 text-xs px-2.5 gap-1.5"
-                              >
-                                <Edit className="w-3 h-3" />
-                                Edytuj post
-                              </Button>
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditPost(item);
+                                  }}
+                                  className="h-7 text-xs px-2.5 gap-1.5"
+                                >
+                                  <Edit className="w-3 h-3" />
+                                  Edytuj post
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeletePost(item);
+                                  }}
+                                  disabled={deletingId === (item.queueItemId || item.id)}
+                                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  title="Usuń post z kolejki"
+                                >
+                                  {deletingId === (item.queueItemId || item.id) ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  )}
+                                </Button>
+                              </>
                             )}
 
                             <span className="text-primary hover:underline flex items-center gap-0.5 font-semibold text-xs ml-1">
@@ -817,44 +940,81 @@ export function UnifiedCalendarTab() {
               )}
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0 flex-wrap">
-              {selectedItem.status === 'scheduled_slot' ? (
+            <DialogFooter className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">
+              {selectedItem.status !== 'scheduled_slot' ? (
                 <Button
                   size="sm"
-                  onClick={() => handlePreGenerate(selectedItem)}
-                  disabled={preGeneratingId === selectedItem.id}
-                  className="text-xs gap-1.5 bg-primary text-primary-foreground font-semibold"
+                  variant="destructive"
+                  onClick={() => handleDeletePost(selectedItem)}
+                  disabled={deletingId === (selectedItem.queueItemId || selectedItem.id)}
+                  className="text-xs gap-1.5 self-start"
                 >
-                  {preGeneratingId === selectedItem.id ? (
+                  {deletingId === (selectedItem.queueItemId || selectedItem.id) ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   )}
-                  Wygeneruj post wcześniej
+                  Usuń post z kolejki
                 </Button>
               ) : (
-                <Button
-                  size="sm"
-                  variant="default"
-                  onClick={() => handleEditPost(selectedItem)}
-                  className="text-xs gap-1.5"
-                >
-                  <Edit className="w-3.5 h-3.5" />
-                  Edytuj post
-                </Button>
+                <div />
               )}
 
-              {selectedItem.fbPostUrl && (
-                <Button variant="outline" size="sm" asChild className="text-xs">
-                  <a href={selectedItem.fbPostUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                    Zobacz na Facebooku
-                  </a>
+              <div className="flex items-center gap-2 flex-wrap self-end">
+                {selectedItem.status === 'scheduled_slot' ? (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleSlotAiPickDeal(selectedItem)}
+                      disabled={preGeneratingId === selectedItem.id}
+                      className="text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
+                    >
+                      {preGeneratingId === selectedItem.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Dices className="w-3.5 h-3.5" />
+                      )}
+                      AI: Inna okazja
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handlePreGenerate(selectedItem)}
+                      disabled={preGeneratingId === selectedItem.id}
+                      className="text-xs gap-1.5 bg-primary text-primary-foreground font-semibold"
+                    >
+                      {preGeneratingId === selectedItem.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      )}
+                      Wygeneruj post wcześniej
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => handleEditPost(selectedItem)}
+                    className="text-xs gap-1.5"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                    Edytuj post
+                  </Button>
+                )}
+
+                {selectedItem.fbPostUrl && (
+                  <Button variant="outline" size="sm" asChild className="text-xs">
+                    <a href={selectedItem.fbPostUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                      Facebook
+                    </a>
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" onClick={() => setSelectedItem(null)} className="text-xs">
+                  Zamknij
                 </Button>
-              )}
-              <Button size="sm" variant="outline" onClick={() => setSelectedItem(null)} className="text-xs">
-                Zamknij
-              </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>

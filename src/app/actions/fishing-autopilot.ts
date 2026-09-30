@@ -18,6 +18,11 @@ import {
 import { ai } from '@/ai/genkit';
 import { applyFishingTracking, resolveFishingAffiliateUrl } from '@/lib/fishing-utils';
 import { sanitizeSocialPostText } from '@/lib/social-growth-types';
+import {
+  diversifyDealsList,
+  detectDealCategory,
+  pickDiverseRecommendation,
+} from '@/lib/deal-diversity';
 
 const CONFIG_DOC_ID = 'fishing-autopilot-settings';
 
@@ -702,7 +707,7 @@ export async function getFishingDeals(
 
     return {
       success: true,
-      deals: finalDeals.slice(0, limitCount),
+      deals: diversifyDealsList(finalDeals, { niche: 'fishing' }).slice(0, limitCount),
     };
   } catch (error) {
     console.error('Error fetching fishing deals:', error);
@@ -2220,7 +2225,20 @@ export async function executeFishingAutopilotCycle(options?: {
 
     const postedDealIds = new Set(recentPostsSnap.docs.map(d => d.data().dealId).filter(Boolean));
     const unpostedDeals = deals.filter(d => !postedDealIds.has(d.id));
-    const selectedDeal = unpostedDeals.length > 0 ? unpostedDeals[0] : (deals[0] || null);
+
+    // Sprawdź kategorie ostatnich postów, aby wykluczyć powtórzenia (np. kołowrotek po kołowrotku)
+    const recentCategories = recentPostsSnap.docs.slice(0, 5).map(d => {
+      const data = d.data();
+      return detectDealCategory(data.title || '', data.content || '', 'fishing');
+    }).filter(Boolean);
+
+    const diverseRec = pickDiverseRecommendation(unpostedDeals.length > 0 ? unpostedDeals : deals, {
+      niche: 'fishing',
+      recentCategories,
+      excludeDealIds: Array.from(postedDealIds) as string[],
+    });
+
+    const selectedDeal = diverseRec.deal || unpostedDeals[0] || deals[0] || null;
 
     // 4. Dobierz bota według pory dnia (Warszawa)
     const timezone = 'Europe/Warsaw';

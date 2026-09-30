@@ -28,6 +28,11 @@ import {
   resolveBabyAffiliateUrl,
   buildBabyHashtags,
 } from '@/lib/baby-utils';
+import {
+  diversifyDealsList,
+  detectDealCategory,
+  pickDiverseRecommendation,
+} from '@/lib/deal-diversity';
 
 // ============================================================================
 // POBIERANIE I ZAPIS KONFIGURACJI
@@ -332,10 +337,11 @@ export async function getBabyDeals(
         tags: Array.isArray(d.tags) ? d.tags : [],
       });
 
-      if (matches.length >= maxLimit) break;
+      if (matches.length >= Math.max(150, maxLimit * 3)) break;
     }
 
-    return { success: true, deals: matches, totalFound: matches.length };
+    const diversified = diversifyDealsList(matches, { niche: 'baby' }).slice(0, maxLimit);
+    return { success: true, deals: diversified, totalFound: matches.length };
   } catch (err: any) {
     console.error('Error getting baby deals:', err);
     return { success: false, deals: [], totalFound: 0, error: err.message };
@@ -1863,9 +1869,20 @@ export async function executeBabyAutopilotCycle(): Promise<{
       const dealsRes = await getBabyDeals({ limit: 15, minDiscount: config.filters.minDiscountPercent }, true);
 
       if (dealsRes.deals.length > 0) {
-        // Wybierz deal, który nie był jeszcze publikowany
-        const existingDealIds = new Set(queueRes.items.map(q => q.dealId).filter(Boolean));
-        const freshDeal = dealsRes.deals.find(d => !existingDealIds.has(d.id)) || dealsRes.deals[0];
+        // Sprawdź kategorie ostatnich 5 postów, aby wykluczyć powtórzenia (np. smoczek po smoczku)
+        const recentCategories = queueRes.items.slice(0, 5).map(i =>
+          detectDealCategory(i.title || '', i.content || '', 'baby')
+        );
+        const existingDealIds = queueRes.items.map(q => q.dealId).filter(Boolean) as string[];
+
+        const diverseRec = pickDiverseRecommendation(dealsRes.deals, {
+          niche: 'baby',
+          recentCategories,
+          excludeDealIds: existingDealIds,
+        });
+
+        const freshDeal = diverseRec.deal || dealsRes.deals[0];
+        logs.push(`Anti-Clustering AI: wybrano kategorię "${diverseRec.categoryLabel}" (${diverseRec.reason})`);
 
         // Wybierz losowego aktywnego bota
         const chosenBot = activeBots[Math.floor(Math.random() * activeBots.length)];

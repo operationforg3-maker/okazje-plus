@@ -18,6 +18,9 @@ import { toast } from 'sonner';
 import {
   saveScheduledPostEditsAction,
   getNicheAvailableDealsAction,
+  deleteCalendarPostAction,
+  getDiverseAiDealRecommendationAction,
+  regeneratePostContentAction,
   type CandidateDealSummary,
 } from '@/app/actions/calendar-schedule';
 import { sanitizeSocialPostText } from '@/lib/social-growth-types';
@@ -31,6 +34,11 @@ import {
   Search,
   Check,
   Calendar,
+  Trash2,
+  Dices,
+  Wand2,
+  RefreshCw,
+  Tag,
 } from 'lucide-react';
 
 export interface EditablePostItem {
@@ -70,6 +78,10 @@ export function PostEditDialog({
   const [status, setStatus] = useState<'pending' | 'approved'>('approved');
   const [wifeAlibi, setWifeAlibi] = useState('');
   const [saving, setSaving] = useState(false);
+  const [recommendingAi, setRecommendingAi] = useState(false);
+  const [regeneratingText, setRegeneratingText] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [currentDealId, setCurrentDealId] = useState<string | undefined>(item?.dealId);
 
   // Deal selector state
   const [showDealPicker, setShowDealPicker] = useState(false);
@@ -87,6 +99,7 @@ export function PostEditDialog({
       setScheduledFor(item.scheduledFor ? item.scheduledFor.slice(0, 16) : '');
       setStatus(item.status === 'pending' ? 'pending' : 'approved');
       setWifeAlibi(item.wifeAlibi || '');
+      setCurrentDealId(item.dealId);
     }
   }, [item]);
 
@@ -96,7 +109,7 @@ export function PostEditDialog({
       const res = await getNicheAvailableDealsAction({
         niche,
         searchQuery: dealSearchQuery || undefined,
-        limit: 30,
+        limit: 40,
       });
       if (res.success) {
         setDealsList(res.deals);
@@ -111,11 +124,92 @@ export function PostEditDialog({
   };
 
   const handleSelectDeal = (d: CandidateDealSummary) => {
+    setCurrentDealId(d.id);
     setTitle(d.title);
     if (d.imageUrl) setImageUrl(d.imageUrl);
     if (d.dealUrl) setLinkUrl(d.dealUrl);
     setShowDealPicker(false);
     toast.success(`Wybrano okazję: ${d.title.slice(0, 40)}...`);
+  };
+
+  const handleAiSuggestDeal = async () => {
+    try {
+      setRecommendingAi(true);
+      toast.info('AI dobiera zróżnicowaną okazję z innej kategorii...');
+      const res = await getDiverseAiDealRecommendationAction({
+        niche,
+        excludeDealIds: currentDealId ? [currentDealId] : [],
+      });
+
+      if (res.success && res.deal) {
+        handleSelectDeal(res.deal);
+        toast.success(`AI wybrało: ${res.deal.title.slice(0, 35)}... (${res.categoryLabel || 'Urozmaicona'})`);
+      } else {
+        toast.error(res.error || 'Nie udało się dobrać okazji przez AI');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Błąd rekomendacji AI');
+    } finally {
+      setRecommendingAi(false);
+    }
+  };
+
+  const handleRegenerateContent = async () => {
+    const activeDealId = currentDealId || item?.dealId;
+    if (!activeDealId) {
+      toast.error('Wybierz najpierw okazję z bazy, aby AI mogło napisać dla niej treść!');
+      return;
+    }
+
+    try {
+      setRegeneratingText(true);
+      toast.info('AI generuje nową treść posta dla wybranej okazji...');
+      const res = await regeneratePostContentAction({
+        niche,
+        dealId: activeDealId,
+      });
+
+      if (res.success && res.content) {
+        setContent(res.content);
+        if (res.title) setTitle(res.title);
+        if (res.firstComment) setFirstComment(res.firstComment);
+        if (res.imageUrl) setImageUrl(res.imageUrl);
+        if (res.linkUrl) setLinkUrl(res.linkUrl);
+        if (res.wifeAlibi) setWifeAlibi(res.wifeAlibi);
+        toast.success('Treść posta wygenerowana pomyślnie przez AI!');
+      } else {
+        toast.error(res.error || 'Błąd generowania treści');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Błąd generowania');
+    } finally {
+      setRegeneratingText(false);
+    }
+  };
+
+  const handleDeletePost = async () => {
+    if (!item) return;
+    if (!window.confirm('Czy na pewno chcesz usunąć ten post z kolejki publikacji?')) return;
+
+    try {
+      setDeleting(true);
+      const res = await deleteCalendarPostAction({
+        niche,
+        queueItemId: item.id,
+      });
+
+      if (res.success) {
+        toast.success('Post został trwale usunięty z kolejki!');
+        onSaved();
+        onOpenChange(false);
+      } else {
+        toast.error(res.error || 'Nie udało się usunąć posta');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Błąd usuwania');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleCleanMarkdown = () => {
@@ -211,7 +305,7 @@ export function PostEditDialog({
           {/* Deal Picker Accordion */}
           {showDealPicker && (
             <div className="p-3 border rounded-lg bg-muted/30 space-y-2.5">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <div className="relative flex-1">
                   <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
                   <Input
@@ -222,9 +316,22 @@ export function PostEditDialog({
                     className="text-xs pl-8 h-8"
                   />
                 </div>
-                <Button size="sm" onClick={loadDeals} disabled={loadingDeals} className="h-8 text-xs">
-                  {loadingDeals ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Szukaj'}
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <Button size="sm" onClick={loadDeals} disabled={loadingDeals} className="h-8 text-xs">
+                    {loadingDeals ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Szukaj'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleAiSuggestDeal}
+                    disabled={recommendingAi}
+                    className="h-8 text-xs border-primary/30 text-primary hover:bg-primary/5 gap-1 shrink-0"
+                    title="AI wybiera okazję z innej kategorii niż ostatnio publikowane posty"
+                  >
+                    {recommendingAi ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                    <span>AI: Urozmaicona okazja</span>
+                  </Button>
+                </div>
               </div>
 
               <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
@@ -244,7 +351,14 @@ export function PostEditDialog({
                           <img src={d.imageUrl} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
                         )}
                         <div className="truncate">
-                          <p className="font-semibold truncate">{d.title}</p>
+                          <div className="flex items-center gap-1.5 truncate">
+                            <p className="font-semibold truncate">{d.title}</p>
+                            {d.categoryLabel && (
+                              <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 shrink-0 font-normal">
+                                {d.categoryLabel}
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-[11px] text-muted-foreground">
                             {d.price} {d.merchant && `• ${d.merchant}`}
                           </p>
@@ -266,10 +380,22 @@ export function PostEditDialog({
               <Label htmlFor="post-content" className="text-xs font-semibold">
                 Treść posta na Facebooka
               </Label>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] text-muted-foreground font-mono">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-muted-foreground font-mono mr-1">
                   {wordCount} słów • {charCount} znaków
                 </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRegenerateContent}
+                  disabled={regeneratingText || saving}
+                  className="text-xs h-6 px-2 text-primary border-primary/30 hover:bg-primary/5"
+                  title="Przepisz treść posta i komentarza dla wybranej okazji za pomocą AI"
+                >
+                  {regeneratingText ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Wand2 className="w-3 h-3 mr-1" />}
+                  Przepisz przez AI
+                </Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -404,27 +530,44 @@ export function PostEditDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onOpenChange(false)}
-            disabled={saving}
-            className="text-xs"
-          >
-            Anuluj
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={handleSave}
-            disabled={saving}
-            className="text-xs gap-1.5"
-          >
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            Zapisz zmiany w poście
-          </Button>
+        <DialogFooter className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">
+          {item?.status !== 'posted' ? (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={handleDeletePost}
+              disabled={deleting || saving}
+              className="text-xs gap-1.5 self-start"
+            >
+              {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+              Usuń z kolejki
+            </Button>
+          ) : (
+            <div />
+          )}
+          <div className="flex items-center gap-2 self-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+              disabled={saving || deleting}
+              className="text-xs"
+            >
+              Anuluj
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleSave}
+              disabled={saving || deleting}
+              className="text-xs gap-1.5"
+            >
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              Zapisz zmiany w poście
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
