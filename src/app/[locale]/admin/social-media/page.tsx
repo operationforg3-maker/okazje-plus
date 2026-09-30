@@ -19,8 +19,9 @@ import { GeneralAutopilotPanel } from '@/components/admin/general/general-autopi
 import { FishingAutopilotPanel } from '@/components/admin/fishing/fishing-autopilot-panel';
 import { BabyAutopilotPanel } from '@/components/admin/baby/baby-autopilot-panel';
 import { MultiPlatformSocialTab } from '@/components/admin/multi-platform-social-tab';
+import { UnifiedCalendarTab } from '@/components/admin/calendar/unified-calendar-tab';
 
-type NicheType = 'general' | 'fishing' | 'baby' | 'legacy';
+type NicheType = 'general' | 'fishing' | 'baby' | 'calendar' | 'legacy';
 
 function SocialMediaHubContent() {
   const { user, loading: authLoading } = useAuth();
@@ -32,11 +33,13 @@ function SocialMediaHubContent() {
 
   // Sync state with URL query param on mount and param change
   useEffect(() => {
-    const nicheParam = searchParams.get('niche') || searchParams.get('type');
+    const nicheParam = searchParams.get('niche') || searchParams.get('type') || searchParams.get('view');
     if (nicheParam === 'fishing') {
       setActiveNiche('fishing');
     } else if (nicheParam === 'baby') {
       setActiveNiche('baby');
+    } else if (nicheParam === 'calendar' || nicheParam === 'harmonogram') {
+      setActiveNiche('calendar');
     } else if (nicheParam === 'legacy' || nicheParam === 'multi') {
       setActiveNiche('legacy');
     } else if (nicheParam === 'general') {
@@ -96,18 +99,18 @@ function SocialMediaHubContent() {
 
       {/* Unified Niche Selector Bar */}
       <div className="bg-muted/40 p-1.5 rounded-2xl border border-border/80 shadow-sm">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5">
           <button
             type="button"
             onClick={() => handleNicheChange('general')}
             className={cn(
-              "flex items-center gap-2.5 py-3 px-3.5 rounded-xl text-left transition-all",
+              "flex items-center gap-2.5 py-3 px-3 rounded-xl text-left transition-all",
               activeNiche === 'general'
                 ? "bg-background text-foreground shadow-sm border border-border/80 ring-1 ring-primary/20"
                 : "text-muted-foreground hover:text-foreground hover:bg-background/40"
             )}
           >
-            <span className="text-2xl p-1.5 rounded-lg bg-primary/10">🎯</span>
+            <span className="text-2xl p-1 rounded-lg bg-primary/10">🎯</span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-1">
                 <span className="font-bold text-xs sm:text-sm truncate">Ogólne Okazje</span>
@@ -116,7 +119,7 @@ function SocialMediaHubContent() {
                 </Badge>
               </div>
               <p className="text-[11px] text-muted-foreground truncate hidden sm:block">
-                Elektronika, AGD, Smartfony
+                Elektronika, AGD
               </p>
             </div>
           </button>
@@ -125,13 +128,13 @@ function SocialMediaHubContent() {
             type="button"
             onClick={() => handleNicheChange('fishing')}
             className={cn(
-              "flex items-center gap-2.5 py-3 px-3.5 rounded-xl text-left transition-all",
+              "flex items-center gap-2.5 py-3 px-3 rounded-xl text-left transition-all",
               activeNiche === 'fishing'
                 ? "bg-background text-foreground shadow-sm border border-border/80 ring-1 ring-amber-500/20"
                 : "text-muted-foreground hover:text-foreground hover:bg-background/40"
             )}
           >
-            <span className="text-2xl p-1.5 rounded-lg bg-amber-500/10">🎣</span>
+            <span className="text-2xl p-1 rounded-lg bg-amber-500/10">🎣</span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-1">
                 <span className="font-bold text-xs sm:text-sm truncate">Wędkarskie</span>
@@ -140,7 +143,7 @@ function SocialMediaHubContent() {
                 </Badge>
               </div>
               <p className="text-[11px] text-muted-foreground truncate hidden sm:block">
-                Wędki, kołowrotki, pontony
+                Wędki, kołowrotki
               </p>
             </div>
           </button>
@@ -149,13 +152,13 @@ function SocialMediaHubContent() {
             type="button"
             onClick={() => handleNicheChange('baby')}
             className={cn(
-              "flex items-center gap-2.5 py-3 px-3.5 rounded-xl text-left transition-all",
+              "flex items-center gap-2.5 py-3 px-3 rounded-xl text-left transition-all",
               activeNiche === 'baby'
                 ? "bg-background text-foreground shadow-sm border border-border/80 ring-1 ring-pink-500/20"
                 : "text-muted-foreground hover:text-foreground hover:bg-background/40"
             )}
           >
-            <span className="text-2xl p-1.5 rounded-lg bg-pink-500/10">👶</span>
+            <span className="text-2xl p-1 rounded-lg bg-pink-500/10">👶</span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-1">
                 <span className="font-bold text-xs sm:text-sm truncate">Maluch & Mama</span>
@@ -164,7 +167,31 @@ function SocialMediaHubContent() {
                 </Badge>
               </div>
               <p className="text-[11px] text-muted-foreground truncate hidden sm:block">
-                Pieluszki, wózki, zabawki
+                Pieluszki, wózki
+              </p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleNicheChange('calendar')}
+            className={cn(
+              "flex items-center gap-2.5 py-3 px-3 rounded-xl text-left transition-all",
+              activeNiche === 'calendar'
+                ? "bg-background text-foreground shadow-sm border border-border/80 ring-1 ring-blue-500/20"
+                : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+            )}
+          >
+            <span className="text-2xl p-1 rounded-lg bg-blue-500/10">📅</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="font-bold text-xs sm:text-sm truncate">Kalendarz (12h+)</span>
+                <Badge variant="outline" className="text-[10px] py-0 px-1 font-semibold shrink-0 bg-blue-500/10 text-blue-600 border-blue-500/30">
+                  Live
+                </Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground truncate hidden sm:block">
+                Oś czasu 12h-24h
               </p>
             </div>
           </button>
@@ -173,13 +200,13 @@ function SocialMediaHubContent() {
             type="button"
             onClick={() => handleNicheChange('legacy')}
             className={cn(
-              "flex items-center gap-2.5 py-3 px-3.5 rounded-xl text-left transition-all",
+              "flex items-center gap-2.5 py-3 px-3 rounded-xl text-left transition-all",
               activeNiche === 'legacy'
                 ? "bg-background text-foreground shadow-sm border border-border/80 ring-1 ring-border"
                 : "text-muted-foreground hover:text-foreground hover:bg-background/40"
             )}
           >
-            <span className="text-2xl p-1.5 rounded-lg bg-slate-500/10">🌐</span>
+            <span className="text-2xl p-1 rounded-lg bg-slate-500/10">🌐</span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-1">
                 <span className="font-bold text-xs sm:text-sm truncate">Wieloplatformowe</span>
@@ -188,7 +215,7 @@ function SocialMediaHubContent() {
                 </Badge>
               </div>
               <p className="text-[11px] text-muted-foreground truncate hidden sm:block">
-                Instagram, Twitter, Szablony
+                Instagram, Twitter
               </p>
             </div>
           </button>
@@ -200,6 +227,7 @@ function SocialMediaHubContent() {
         {activeNiche === 'general' && <GeneralAutopilotPanel />}
         {activeNiche === 'fishing' && <FishingAutopilotPanel />}
         {activeNiche === 'baby' && <BabyAutopilotPanel />}
+        {activeNiche === 'calendar' && <UnifiedCalendarTab />}
         {activeNiche === 'legacy' && <MultiPlatformSocialTab />}
       </div>
     </div>
