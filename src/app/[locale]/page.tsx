@@ -219,8 +219,32 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     })
     .slice(0, 5);
 
-  // Gorące okazje do siatki (12 elementów): bierzemy top deale z uwzględnieniem różnorodności
-  const hotDeals = (allHotDeals.length >= 12 ? allHotDeals : combinedDeals).slice(0, 12);
+  // Gorące okazje do siatki (12 elementów): bierzemy top deale z uwzględnieniem różnorodności kategorii
+  const sourceDeals = allHotDeals.length >= 12 ? allHotDeals : combinedDeals;
+  const categoryBuckets = new Map<string, any[]>();
+  for (const d of sourceDeals) {
+    const cat = (d as any).mainCategorySlug || (d as any).category || 'inne';
+    if (!categoryBuckets.has(cat)) categoryBuckets.set(cat, []);
+    categoryBuckets.get(cat)!.push(d);
+  }
+  const diversifiedHotDeals: any[] = [];
+  let hasMore = true;
+  while (diversifiedHotDeals.length < 12 && hasMore) {
+    hasMore = false;
+    for (const [_, bucket] of categoryBuckets.entries()) {
+      if (bucket.length > 0) {
+        diversifiedHotDeals.push(bucket.shift()!);
+        hasMore = true;
+        if (diversifiedHotDeals.length >= 12) break;
+      }
+    }
+  }
+  for (const [_, bucket] of categoryBuckets.entries()) {
+    while (bucket.length > 0 && diversifiedHotDeals.length < 12) {
+      diversifiedHotDeals.push(bucket.shift()!);
+    }
+  }
+  const hotDeals = diversifiedHotDeals.length > 0 ? diversifiedHotDeals : sourceDeals.slice(0, 12);
 
   const homeJsonLd = generateHomePageJsonLd(hotDeals, topProducts);
 

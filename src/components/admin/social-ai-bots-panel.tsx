@@ -61,6 +61,7 @@ export function SocialAIBotsPanel() {
   const [promotableDeals, setPromotableDeals] = useState<PromotableDeal[]>([]);
   const [loadingDeals, setLoadingDeals] = useState(false);
   const [dealSearchQuery, setDealSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
 
   const loadBots = async () => {
@@ -79,10 +80,10 @@ export function SocialAIBotsPanel() {
     }
   };
 
-  const loadPromotableDeals = async (search?: string) => {
+  const loadPromotableDeals = async (search?: string, cat?: string) => {
     try {
       setLoadingDeals(true);
-      const res = await getPromotableDealsAction(search, 24);
+      const res = await getPromotableDealsAction(search, 24, cat !== undefined ? cat : selectedCategory);
       if (res.success) {
         setPromotableDeals(res.deals);
       }
@@ -99,10 +100,10 @@ export function SocialAIBotsPanel() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      loadPromotableDeals(dealSearchQuery);
+      loadPromotableDeals(dealSearchQuery, selectedCategory);
     }, 300);
     return () => clearTimeout(timer);
-  }, [dealSearchQuery]);
+  }, [dealSearchQuery, selectedCategory]);
 
   const handleToggle = async (botId: string, currentEnabled: boolean) => {
     const nextEnabled = !currentEnabled;
@@ -308,7 +309,7 @@ export function SocialAIBotsPanel() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => loadPromotableDeals(dealSearchQuery)}
+                onClick={() => loadPromotableDeals(dealSearchQuery, selectedCategory)}
                 disabled={loadingDeals}
                 className="h-9 px-3"
                 title="Odśwież okazje"
@@ -316,6 +317,31 @@ export function SocialAIBotsPanel() {
                 <RefreshCw className={`h-3.5 w-3.5 ${loadingDeals ? 'animate-spin' : ''}`} />
               </Button>
             </div>
+          </div>
+
+          {/* Szybkie filtry kategorii */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pt-2 pb-0.5 scrollbar-none">
+            {[
+              { id: 'all', label: '🔥 Wszystkie' },
+              { id: 'elektronika', label: '💻 Elektronika' },
+              { id: 'dom-ogrod', label: '🏡 Dom i Ogród' },
+              { id: 'motoryzacja', label: '🚗 Motoryzacja' },
+              { id: 'sport-turystyka', label: '⚽ Sport & Rekreacja' },
+              { id: 'moda-uroda', label: '👗 Moda i Uroda' },
+            ].map(cat => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-all whitespace-nowrap ${
+                  selectedCategory === cat.id
+                    ? 'bg-primary text-primary-foreground border-primary font-medium shadow-sm'
+                    : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border-border/60'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
           </div>
         </CardHeader>
 
@@ -336,7 +362,7 @@ export function SocialAIBotsPanel() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {promotableDeals.slice(0, 8).map((deal) => (
+              {promotableDeals.slice(0, 12).map((deal) => (
                 <div
                   key={deal.id}
                   className="p-3 rounded-xl border border-border/70 bg-background/80 hover:border-primary/50 transition-all flex flex-col justify-between space-y-3"
@@ -363,6 +389,13 @@ export function SocialAIBotsPanel() {
                         <div className="absolute bottom-2 left-2">
                           <Badge variant="secondary" className="text-[10px] bg-black/60 text-white backdrop-blur-sm">
                             Promowana w 14 dni
+                          </Badge>
+                        </div>
+                      )}
+                      {deal.category && !deal.postedRecently && (
+                        <div className="absolute bottom-2 left-2">
+                          <Badge variant="secondary" className="text-[10px] bg-black/60 text-white backdrop-blur-sm capitalize">
+                            {deal.category}
                           </Badge>
                         </div>
                       )}

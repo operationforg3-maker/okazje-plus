@@ -2364,6 +2364,9 @@ export interface FishingDealItem {
   rawLink?: string;
   source: string;
   category?: string;
+  description?: string;
+  specs?: string;
+  tags?: string[];
 }
 
 

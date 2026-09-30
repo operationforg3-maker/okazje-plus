@@ -136,6 +136,7 @@ export function FishingDashboardTab({
           merchant: chosenDeal.merchant,
           imageUrl: chosenDeal.imageUrl,
           dealUrl: chosenDeal.dealUrl,
+          description: chosenDeal.description,
         } : undefined,
         humorLevel,
       });

@@ -163,6 +163,8 @@ export interface PromotableDeal {
   temperature: number;
   imageUrl?: string;
   postedRecently?: boolean;
+  category?: string;
+  mainCategorySlug?: string;
 }
 
 function parseDealFields(rawDeal: any) {
@@ -230,9 +232,9 @@ function parseDealFields(rawDeal: any) {
     imageUrl = `https:${imageUrl}`;
   }
 
-  const category = rawDeal.categoryName || rawDeal.category || rawDeal.mainCategory;
+  const category = rawDeal.categoryName || rawDeal.category || rawDeal.mainCategorySlug || rawDeal.mainCategory;
   const tags = rawDeal.tags || rawDeal.searchTags;
-  const temperature = Number(rawDeal.temperature) || 100;
+  const temperature = typeof rawDeal.temperature === 'number' ? rawDeal.temperature : (Number(rawDeal.temperature) || 0);
 
   return {
     id: rawDeal.id,
@@ -320,7 +322,8 @@ function generateSmartHashtags(deal: {
  */
 export async function getPromotableDealsAction(
   searchQuery?: string,
-  limitCount: number = 24
+  limitCount: number = 24,
+  categorySlug?: string
 ): Promise<{ success: boolean; deals: PromotableDeal[]; error?: string }> {
   try {
     const session = await getServerAuthSession();
@@ -340,15 +343,44 @@ export async function getPromotableDealsAction(
     // 2. Call the unified global search engine (searchDeals)
     const { searchDeals } = await import('@/lib/search-server');
     const q = searchQuery?.trim() || '*';
-    const dealsResult = await searchDeals(
+    const fetchLimit = q === '*' ? Math.max(limitCount * 3, 60) : limitCount;
+    const rawDeals = await searchDeals(
       q,
       {
         statusFilter: 'approved',
         sortBy: q === '*' ? 'temperature' : 'relevance',
+        mainCategorySlug: categorySlug && categorySlug !== 'all' ? categorySlug : undefined,
         page: 1,
-        limit: limitCount,
+        limit: fetchLimit,
       }
     );
+
+    let dealsResult = rawDeals;
+
+    // When browsing suggestions globally (q === '*' and no specific category selected),
+    // diversify across categories so the admin sees the best offers from Electronics, Home, Auto, Fashion, Sports, etc.
+    if (q === '*' && (!categorySlug || categorySlug === 'all') && dealsResult.length > 0) {
+      const categoryBuckets = new Map<string, typeof dealsResult>();
+      for (const d of dealsResult) {
+        const cat = (d as any).mainCategorySlug || (d as any).category || 'inne';
+        if (!categoryBuckets.has(cat)) categoryBuckets.set(cat, []);
+        categoryBuckets.get(cat)!.push(d);
+      }
+
+      const diversified: typeof dealsResult = [];
+      let hasMore = true;
+      while (diversified.length < limitCount && hasMore) {
+        hasMore = false;
+        for (const [_, bucket] of categoryBuckets.entries()) {
+          if (bucket.length > 0) {
+            diversified.push(bucket.shift()!);
+            hasMore = true;
+            if (diversified.length >= limitCount) break;
+          }
+        }
+      }
+      dealsResult = diversified;
+    }
 
     const promotableDeals: PromotableDeal[] = dealsResult.map(deal => {
       const parsed = parseDealFields(deal);
@@ -361,11 +393,13 @@ export async function getPromotableDealsAction(
         merchant: parsed.merchant.replace(' w ', ''),
         temperature: parsed.temperature,
         imageUrl: parsed.imageUrl,
+        category: parsed.category,
+        mainCategorySlug: (deal as any).mainCategorySlug || parsed.category,
         postedRecently: recentDealIds.has(parsed.id),
       };
     });
 
-    // When browsing suggestions (q === '*'), prioritize unposted deals
+    // When browsing suggestions (q === '*'), prioritize unposted deals while keeping hot ones high
     if (q === '*') {
       promotableDeals.sort((a, b) => {
         if (a.postedRecently !== b.postedRecently) {
@@ -377,7 +411,7 @@ export async function getPromotableDealsAction(
 
     return {
       success: true,
-      deals: promotableDeals,
+      deals: promotableDeals.slice(0, limitCount),
     };
   } catch (error) {
     console.error('Error fetching promotable deals:', error);

@@ -649,6 +649,17 @@ export async function getFishingDeals(
           source: sourceName,
         }, trackingCampaign);
 
+        const rawDesc = typeof data.description === 'string'
+          ? data.description
+          : (data.description?.pl || data.description?.en || '');
+        const cleanDesc = rawDesc
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/\s{2,}/g, ' ')
+          .trim();
+
         matches.push({
           id,
           title: titleStr || 'Sprzęt wędkarski',
@@ -657,12 +668,14 @@ export async function getFishingDeals(
           discount: discountStr,
           merchant: data.merchantName || data.merchant || 'Sklep wędkarski',
           imageUrl: data.imageUrl || data.image || '',
-          temperature: Number(data.temperature) || 100,
+          temperature: Number(data.temperature) || 20,
           dealUrl: directAffiliateUrl,
           portalUrl: `https://okazjeplus.pl/pl/deals/${id}`,
           rawLink: data.link || data.affiliateLink || '',
           source: sourceName,
           category: data.category || 'Wędkarstwo',
+          description: cleanDesc,
+          tags: tagsArray,
         });
       }
     }
@@ -709,6 +722,87 @@ export async function getFishingDealsAction(
 }
 
 // ============================================================================
+// POMOCNIK: DYNAMICZNE HASHTAGI DLA SPRZĘTU WĘDKARSKIEGO
+// ============================================================================
+
+function buildFishingHashtags(title: string, merchant?: string, botRole?: string): string[] {
+  const t = (title || '').toLowerCase();
+  const m = (merchant || '').toLowerCase();
+  const tags = new Set<string>([
+    '#WędkarskiePromocje',
+    '#ŻonaNieWidzi',
+    '#OkazjePlus',
+    '#Wędkarstwo',
+    '#SprzętWędkarski',
+  ]);
+
+  // Marki
+  if (t.includes('daiwa') || m.includes('daiwa')) tags.add('#Daiwa');
+  if (t.includes('shimano') || m.includes('shimano')) tags.add('#Shimano');
+  if (t.includes('fox rage') || t.includes('fox')) tags.add('#FoxRage');
+  if (t.includes('mikado') || m.includes('mikado')) tags.add('#Mikado');
+  if (t.includes('caperlan') || m.includes('caperlan')) tags.add('#Caperlan');
+  if (t.includes('savage gear')) tags.add('#SavageGear');
+  if (t.includes('aqua marina')) tags.add('#AquaMarina');
+  if (t.includes('intex')) tags.add('#Intex');
+  if (t.includes('humminbird') || t.includes('helix')) tags.add('#Humminbird');
+  if (t.includes('lineaeffe')) tags.add('#Lineaeffe');
+  if (t.includes('genlog')) tags.add('#Genlog');
+
+  // Metody i kategorie
+  if (t.includes('feeder') || t.includes('drgająca') || t.includes('koszyk')) {
+    tags.add('#Feeder');
+    tags.add('#MethodFeeder');
+  }
+  if (t.includes('spinning') || t.includes('spin') || t.includes('drapieżnik') || t.includes('szczupak') || t.includes('sandacz') || t.includes('okoń')) {
+    tags.add('#Spinning');
+    tags.add('#Drapieżnik');
+    tags.add('#Szczupak');
+  }
+  if (t.includes('karp') || t.includes('carp')) {
+    tags.add('#Karpiowanie');
+    tags.add('#Karp');
+  }
+  if (t.includes('kołowrotek') || t.includes('kołowrot') || t.includes('szpul')) {
+    tags.add('#Kołowrotek');
+  }
+  if (t.includes('wędk') || t.includes('wędzisk') || t.includes('kij')) {
+    tags.add('#Wędka');
+    tags.add('#Wędzisko');
+  }
+  if (t.includes('ponton') || t.includes('silnik') || t.includes('kajak') || t.includes('łódź')) {
+    tags.add('#PontonWędkarski');
+    tags.add('#Ponton');
+  }
+  if (t.includes('echosond') || t.includes('sonar') || t.includes('gps')) {
+    tags.add('#Echosonda');
+  }
+  if (t.includes('wobler') || t.includes('przynęt') || t.includes('błystk') || t.includes('jig') || t.includes('twister') || t.includes('ripper')) {
+    tags.add('#Woblery');
+    tags.add('#Przynęty');
+  }
+  if (t.includes('plecionk') || t.includes('żyłk')) {
+    tags.add('#Plecionka');
+  }
+  if (t.includes('fotel') || t.includes('namiot') || t.includes('krzesło') || t.includes('woder') || t.includes('spodniobuty')) {
+    tags.add('#BiwakWędkarski');
+  }
+
+  // Sklep
+  if (m.includes('decathlon')) tags.add('#Decathlon');
+  if (m.includes('aliexpress')) tags.add('#AliExpress');
+  if (m.includes('morele')) tags.add('#Morele');
+
+  // Specyfika bota
+  if (botRole === 'wife_secret') tags.add('#TajnaPrzesyłka');
+  if (botRole === 'deal_hunter') tags.add('#ŁowcaOkazji');
+  if (botRole === 'gear_expert') tags.add('#TestSprzętu');
+  if (botRole === 'angler_chatter') tags.add('#WędkarskiePogaduchy');
+
+  return Array.from(tags);
+}
+
+// ============================================================================
 // GENEROWANIE POSTA PRZEZ AI BOTY
 // ============================================================================
 
@@ -725,6 +819,9 @@ export async function generateFishingPost(
       merchant?: string;
       imageUrl?: string;
       dealUrl?: string;
+      description?: string;
+      specs?: string;
+      tags?: string[];
     };
     humorLevel?: 'subtle' | 'high' | 'legendary' | 'none';
   },
@@ -748,76 +845,145 @@ export async function generateFishingPost(
     const botsRes = await getFishingBots(true);
     const bot = botsRes.bots.find(b => b.role === botRole) || DEFAULT_FISHING_BOTS[0];
 
-    const configRes = await getFishingAutopilotConfigAction();
+    const configRes = await getFishingAutopilotConfig(skipAuth);
     const trackingCampaign = configRes.config.tracking?.campaign || 'Fishing_2';
 
-    // Pobierz dane deala jeśli podano dealId
-    let dealInfo = targetDealData ? { ...targetDealData } : undefined;
-    if (dealId && !dealInfo) {
+    // Pobierz pełne dane deala z bazy (lub targetDealData)
+    let dealInfo: any = targetDealData ? { ...targetDealData } : {};
+    let rawDescription = '';
+    let extractedSpecs = '';
+    let dealTags: string[] = [];
+
+    if (dealId) {
       const docSnap = await adminDb.collection('deals').doc(dealId).get();
       if (docSnap.exists) {
         const d = docSnap.data()!;
-        let title = typeof d.title === 'string' ? d.title : (d.title?.pl || d.title?.en || 'Okazja wędkarska');
+        const dTitle = typeof d.title === 'string' ? d.title : (d.title?.pl || d.title?.en || Object.values(d.title || {})[0] || '');
         let curPrice = typeof d.price === 'number' ? d.price : d.price?.amount;
         let origPrice = typeof d.originalPrice === 'number' ? d.originalPrice : d.originalPrice?.amount;
+
         const directAffiliateUrl = resolveFishingAffiliateUrl({
           id: docSnap.id,
           ...d,
         }, trackingCampaign);
 
+        const rawDesc = typeof d.description === 'string' 
+          ? d.description 
+          : (d.description?.pl || d.description?.en || '');
+        rawDescription = rawDesc
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/\s{2,}/g, ' ')
+          .trim();
+
+        if (Array.isArray(d.tags)) {
+          dealTags = d.tags.map((t: any) => String(t));
+        }
+
+        if (d.specifications || d.metadata?.specifications) {
+          const specsObj = d.specifications || d.metadata?.specifications;
+          if (typeof specsObj === 'object') {
+            extractedSpecs = Object.entries(specsObj)
+              .map(([k, v]) => `• ${k}: ${v}`)
+              .join('\n');
+          }
+        }
+
         dealInfo = {
           ...d,
-          title,
-          price: curPrice ? `${curPrice.toFixed(2)} zł` : '',
-          oldPrice: origPrice ? `${origPrice.toFixed(2)} zł` : '',
-          discount: curPrice && origPrice ? `-${Math.round(((origPrice - curPrice) / origPrice) * 100)}%` : '',
-          merchant: d.merchantName || d.merchant || 'Sklep wędkarski',
-          imageUrl: d.imageUrl || d.image || '',
-          dealUrl: directAffiliateUrl,
+          ...dealInfo,
+          title: dealInfo.title || dTitle || 'Sprzęt wędkarski',
+          price: dealInfo.price || (curPrice ? `${curPrice.toFixed(2)} zł` : ''),
+          oldPrice: dealInfo.oldPrice || (origPrice ? `${origPrice.toFixed(2)} zł` : ''),
+          discount: dealInfo.discount || (curPrice && origPrice && origPrice > curPrice ? `-${Math.round(((origPrice - curPrice) / origPrice) * 100)}%` : ''),
+          merchant: dealInfo.merchant || d.merchantName || d.merchant || 'Sklep wędkarski',
+          imageUrl: dealInfo.imageUrl || d.imageUrl || d.image || '',
+          dealUrl: dealInfo.dealUrl || directAffiliateUrl,
+          description: rawDescription || dealInfo.description || '',
+          specs: extractedSpecs || dealInfo.specs || '',
+          tags: dealTags.length > 0 ? dealTags : (dealInfo.tags || []),
         };
       }
+    } else if (targetDealData) {
+      const rawDesc = (targetDealData as any).description || '';
+      rawDescription = typeof rawDesc === 'string'
+        ? rawDesc.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim()
+        : '';
+      dealInfo = {
+        ...targetDealData,
+        description: rawDescription,
+        dealUrl: resolveFishingAffiliateUrl(targetDealData.dealUrl || '', trackingCampaign),
+      };
     }
+
+    // Dynamiczny zestaw hashtagów
+    const dynamicHashtags = buildFishingHashtags(
+      dealInfo?.title || customTopic || '',
+      dealInfo?.merchant,
+      botRole
+    );
 
     // Treść posta i alibi
     let generatedTitle = dealInfo?.title || customTopic || 'Wędkarska Perełka Sprzętowa';
     let postText = '';
     let wifeAlibi = '';
     let firstComment = '';
-    let hashtags: string[] = ['#WędkarskiePromocje', '#ŻonaNieWidzi', '#OkazjePlus', '#Wędkarstwo'];
 
-    // Spróbuj wygenerować przez AI (Genkit / Gemini)
+    // Spróbuj wygenerować przez AI (Genkit / Vertex AI Gemini 2.5)
     let aiGenerated = false;
     try {
       const promptText = `
-Jesteś AI Copywriterem dla kultowej społeczności wędkarskiej na Facebooku o nazwie "Wędkarskie Promocje Żona nie widzi" oraz portalu Okazje Plus.
+Jesteś profesjonalnym i charyzmatycznym AI Copywriterem dla kultowej społeczności wędkarskiej na Facebooku o nazwie "Wędkarskie Promocje Żona nie widzi" oraz portalu Okazje Plus.
 Twoja rola: ${bot.name} (${bot.role}).
 Instrukcje bota: ${bot.customInstructions}
 Poziom humoru: ${params.humorLevel || bot.humorLevel}.
 
-DANE OKAZJI LUB TEMATU:
-- Tytuł/Sprzęt: ${dealInfo?.title || customTopic || 'Kołowrotek spinningowy / wędzisko'}
-- Cena promocyjna: ${dealInfo?.price || '99 zł'}
-- Cena regularna: ${dealInfo?.oldPrice || '249 zł'}
-- Zniżka: ${dealInfo?.discount || '-60%'}
+DANE SPRZĘTU I OKAZJI:
+- Tytuł/Nazwa produktu: ${dealInfo?.title || customTopic || 'Sprzęt Wędkarski'}
+- Cena promocyjna: ${dealInfo?.price || 'Świetna cena'}
+- Cena regularna: ${dealInfo?.oldPrice || 'Standardowa cena rynkowa'}
+- Zniżka: ${dealInfo?.discount || 'Rabat promocyjny'}
 - Sklep: ${dealInfo?.merchant || 'Sklep Wędkarski'}
+- Opis i szczegóły produktu: ${dealInfo?.description || 'Brak dodatkowego opisu'}
+${dealInfo?.specs ? `- Parametry techniczne:\n${dealInfo.specs}` : ''}
 - Dodatkowy kontekst/temat: ${customTopic || 'brak'}
+- Sugerowane hashtagi: ${dynamicHashtags.join(' ')}
 
-WYMAGANIA DOTYCZĄCE TREŚCI:
-1. Napisz post na Facebooka dopasowany do wędkarzy.
-2. ${botRole === 'wife_secret' ? 'Stwórz oficjalną wymówkę / alibi dla żony ("Kochanie, kupiłem za 30 zł na wyprzedaży garażowej"), żart o paczkomacie o 22:00 lub chowaniu sprzętu w bagażniku.' : ''}
-3. ${botRole === 'deal_hunter' ? 'Skup się na parametrach technicznych, oszczędności w zł i dlaczego ta oferta bije na głowę polskie ceny regularne.' : ''}
-4. ${botRole === 'angler_chatter' ? 'Zadaj mocne, prowokujące i angażujące pytanie do dyskusji wędkarskiej, zachęć do komentowania i wrzucania zdjęć.' : ''}
-5. ${botRole === 'gear_expert' ? 'Wypunktuj 3 kluczowe zalety techniczne i radę ekspercką jak wykorzystać ten sprzęt nad wodą.' : ''}
-6. Dodaj chwytliwe emoji wędkarskie (🎣, 🐟, 🤫, 🔥, 💰, ⚡).
-7. Zakończ wezwaniem do sprawdzenia linku w pierwszym komentarzu oraz na portalu.
-Zwróć odpowiedź w czystym formacie tekstu gotowego do wklejenia.
+STRUKTURA I WYMOGI POSTA (BARDZO WAŻNE - ZASTOSUJ WSZYSTKIE PUNKTY):
+Napisz kompletny, mięsisty, bogaty i angażujący post na Facebooka (około 200-350 słów), używając formatowania z punktorami i emoji (🎣, 🐟, 🤫, 🔥, 💰, ⚡, 🛠️, 📦).
+Post MUSI zawierać następujące sekcje:
+
+1. 🎯 CHWYTLIWY NAGŁÓWEK Z TYTUŁEM OKAZJI:
+   W pierwszej linijce postu zamieść wyraźny nagłówek z nazwą sprzętu i sklepem (np. "🚨 [PETARDA SPRZĘTOWA] ${dealInfo?.title || customTopic} w ${dealInfo?.merchant || 'super cenie'}!").
+2. 📖 OPIS I ZASTOSOWANIE:
+   Opisz szczegółowo ten sprzęt – dlaczego jest warty uwagi, do jakich metod wędkarskich (feeder, spinning, karpiowanie, grunt, spławik itp.), na jakie łowiska i ryby się nadaje. Wykorzystaj podany opis produktu.
+3. 🛠️ KLUCZOWE PARAMETRY TECHNICZNE (wypunktowane z emoji):
+   Wyciągnij konkretne parametry (długość, c.w., łożyska, przełożenie, waga, materiał blanku, nośność, moc silnika itp.) i przedstaw je w czytelnej liście punktowanej.
+4. 💸 ZESTAWIENIE CENOWE:
+   • 💰 Cena promocyjna: ${dealInfo?.price || 'Okazyjna'}
+   ${dealInfo?.oldPrice ? `• 🏷️ Cena regularna: ${dealInfo.oldPrice}` : ''}
+   ${dealInfo?.discount ? `• 📉 Oszczędność: ${dealInfo.discount}` : ''}
+   • 🏬 Sklep: ${dealInfo?.merchant || 'Sklep Wędkarski'}
+5. 🤫 SEKCJA SPECJALNA BOTA:
+${botRole === 'wife_secret' ? '   Napisz oficjalną wymówkę / alibi dla żony ("Kochanie, wygrałem w konkursie za 20 zł" lub "Kumpel oddawał za grosze"), żart o paczkomacie nocą (21:30) i chowaniu sprzętu w bagażniku pod kołem zapasowym.' : ''}
+${botRole === 'deal_hunter' ? '   Przedstaw bezlitosną analizę opłacalności, porównanie do cen w polskich sklepach stacjonarnych i podkreśl dlaczego to okazja życia bez ściemy.' : ''}
+${botRole === 'gear_expert' ? '   Wypunktuj 3 kluczowe zalety techniczne z perspektywy testera i daj radę ekspercką jak wycisnąć z tego sprzętu 100% nad wodą.' : ''}
+${botRole === 'angler_chatter' ? '   Zadaj mocne, prowokujące pytanie do ekipy w grupie i zachęć do komentowania i wrzucania fotek swoich ryb/zestawów w komentarzach.' : ''}
+6. 🔗 CALL TO ACTION:
+   Poinformuj wyraźnie: "👉 Bezpośredni link do okazji i kod rabatowy znajdziecie w PIERWSZYM KOMENTARZU ⬇️!"
+7. #️⃣ HASHTAGI NA KOŃCU:
+   Zakończ post obowiązkowym blokiem hashtagów (umieść: ${dynamicHashtags.join(' ')}).
+
+Nie urywaj posta! Zwróć PEŁNĄ, kompletną treść gotową do publikacji na Facebooku.
 `;
 
       const aiResponse = await ai.generate({
         prompt: promptText,
         config: {
-          temperature: botRole === 'wife_secret' || botRole === 'angler_chatter' ? 0.8 : 0.4,
-          maxOutputTokens: 1200,
+          temperature: botRole === 'wife_secret' || botRole === 'angler_chatter' ? 0.75 : 0.4,
+          maxOutputTokens: 4000,
         },
       });
 
@@ -829,51 +995,85 @@ Zwróć odpowiedź w czystym formacie tekstu gotowego do wklejenia.
       console.warn('AI Genkit generation error, falling back to curated fishing templates:', aiErr);
     }
 
-    // Jeśli AI było offline, użyj bogatych, sprawdzonych szablonów
+    // Gwarancja hashtagów: jeśli model AI nie zawarł hashtagów w treści, dołącz je na końcu
+    if (postText && !postText.includes('#')) {
+      postText = `${postText.trim()}\n\n${dynamicHashtags.join(' ')}`;
+    }
+
+    // Jeśli AI było offline, użyj bogatych, sprawdzonych szablonów zawierających tytuł, parametry i hashtagi
     if (!aiGenerated || !postText) {
-      const itemTitle = dealInfo?.title || customTopic || 'Kołowrotek Shimano Stradic FL / Wędka Drapieżnik';
-      const priceStr = dealInfo?.price || '119,00 zł';
-      const oldPriceStr = dealInfo?.oldPrice ? ` (zamiast ${dealInfo.oldPrice})` : ' (zamiast 279,00 zł)';
-      const discStr = dealInfo?.discount || '-57%';
-      const storeStr = dealInfo?.merchant ? ` w ${dealInfo.merchant}` : '';
+      const itemTitle = dealInfo?.title || customTopic || 'Wędka / Kołowrotek Wędkarski';
+      const priceStr = dealInfo?.price || '99,00 zł';
+      const oldPriceStr = dealInfo?.oldPrice ? ` (zamiast ${dealInfo.oldPrice})` : '';
+      const discStr = dealInfo?.discount ? ` [Rabat ${dealInfo.discount}]` : '';
+      const storeStr = dealInfo?.merchant ? ` w sklepie ${dealInfo.merchant}` : '';
+      const descSnippet = dealInfo?.description 
+        ? `\n\n📖 OPIS SPRZĘTU:\n${dealInfo.description}` 
+        : '\n\n📖 OPIS SPRZĘTU:\nNiezawodny sprzęt wędkarski dla wymagających pasjonatów. Świetna praca blanku, wysoka odporność komponentów i doskonałe właściwości użytkowe nad wodą.';
+      const specsSnippet = dealInfo?.specs
+        ? `\n\n🛠️ PARAMETRY TECHNICZNE:\n${dealInfo.specs}`
+        : '\n\n🛠️ PARAMETRY TECHNICZNE:\n• Sprawdzona konstrukcja odporna na wysokie obciążenia\n• Płynna i precyzyjna praca mechanizmów\n• Zoptymalizowana waga i doskonałe wyważenie w ręce';
 
       if (botRole === 'wife_secret') {
-        wifeAlibi = '„Kochanie, wygrałem w konkursie wędkarskim za 20 zł!”';
-        postText = `🤫 Ciii... oficjalna wersja: to kosztowało grosze! 🎣\n\n` +
-          `Panowie, wjechała potężna przecena na sprzęt, którego żaden wędkarz nie powinien przepuścić:\n` +
-          `👉 ${itemTitle}\n\n` +
-          `💸 Prawdziwa cena dla nas: ${priceStr}${oldPriceStr} ${discStr}${storeStr}\n` +
-          `🧾 Oficjalna wersja dla żony: "Kochanie, kumpel z koła oddawał za 30 zł bo mu zawadzało w piwnicy!" 😉\n\n` +
-          `📦 Instrukcja odbioru:\n` +
-          `1. Paczkomat wybierasz najdalej od domu.\n` +
-          `2. Odbiór po 21:30 pod pretekstem "muszę iść sprawdzić czy auto zamknięte".\n` +
-          `3. Pudełko ląduje pod kołem zapasowym w bagażniku.\n\n` +
-          `Łapcie póki cena nie wróciła do normy!\n\n` +
-          `🔗 Bezpośredni link do okazji znajdziecie w 1. komentarzu ⬇️ oraz na Okazje Plus:\n${dealInfo?.dealUrl || 'https://okazjeplus.pl'}`;
+        wifeAlibi = '„Kochanie, kumpel z koła oddawał za 30 zł bo mu zawadzało w piwnicy!”';
+        postText = `🤫 [ALIBI DLA ŻONY] ${itemTitle}! 🎣\n\n` +
+          `Panowie, wjechała potężna przecena na sprzęt, którego żaden szanujący się wędkarz nie może przepuścić:\n` +
+          `👉 ${itemTitle}\n` +
+          `${descSnippet}` +
+          `${specsSnippet}\n\n` +
+          `💸 ZESTAWIENIE CENOWE:\n` +
+          `• 💰 Prawdziwa cena dla nas: ${priceStr}${oldPriceStr}${discStr}${storeStr}\n` +
+          `• 🧾 Oficjalna wersja dla żony: "Kochanie, kumpel oddał za 30 zł bo kończy z wędkarstwem!" 😉\n\n` +
+          `📦 PLAN OPERACJI PACZKOMATOWEJ:\n` +
+          `1️⃣ Paczkomat wybierasz najdalej od domu (najlepiej przy stacji paliw).\n` +
+          `2️⃣ Odbiór po 21:30 pod pretekstem "muszę iść sprawdzić czy w aucie szyba domknięta".\n` +
+          `3️⃣ Pudełko ląduje w bagażniku pod kołem zapasowym aż do weekendowego wypadu.\n\n` +
+          `Łapcie póki promocja trwa i żona nie patrzy na stan konta!\n\n` +
+          `👉 Bezpośredni link do okazji i kod rabatowy znajdziecie w 1. KOMENTARZU ⬇️!\n\n` +
+          `${dynamicHashtags.join(' ')}`;
       } else if (botRole === 'deal_hunter') {
-        postText = `🔥 GORĄCA OKAZJA WĘDKARSKA: ${itemTitle}!\n\n` +
-          `💰 Nowa cena: ${priceStr}${oldPriceStr} | Rabat: ${discStr}${storeStr}\n` +
-          `🌡️ Ocena społeczności: 120° (Mega Hit)\n\n` +
-          `Dlaczego warto rzucić okiem?\n` +
-          `✅ Świetny stosunek ceny do jakości\n` +
-          `✅ Sprawdzona konstrukcja i świetne opinie wędkarzy\n` +
-          `✅ Realna obniżka bez pompowania ceny wyjściowej\n\n` +
-          `Taki sprzęt w tej cenie wyprzedaje się błyskawicznie!\n\n` +
-          `👉 Bezpośredni link i kody rabatowe w pierwszym komentarzu ⬇️ oraz tutaj:\n${dealInfo?.dealUrl || 'https://okazjeplus.pl'}`;
+        postText = `🔥 [ŁOWCA OKAZJI] ${itemTitle}! 🎣\n\n` +
+          `Wytropiliśmy konkretną promocję sprzętową dla naszej wędkarskiej ekipy!\n` +
+          `👉 ${itemTitle}\n` +
+          `${descSnippet}` +
+          `${specsSnippet}\n\n` +
+          `💰 ZESTAWIENIE CENOWE & OSZCZĘDNOŚĆ:\n` +
+          `• 💸 Cena promocyjna: ${priceStr}\n` +
+          (dealInfo?.oldPrice ? `• 🏷️ Cena regularna: ${dealInfo.oldPrice}\n` : '') +
+          (dealInfo?.discount ? `• 📉 Realny rabat: ${dealInfo.discount}\n` : '') +
+          `• 🏬 Sklep: ${dealInfo?.merchant || 'Partner'}\n` +
+          `• 🌡️ Ocena społeczności: 130° (Mega Hit)\n\n` +
+          `Dlaczego to bezkonkurencyjna oferta?\n` +
+          `✅ Bezkonkurencyjny stosunek ceny do jakości w tym segmencie\n` +
+          `✅ Sprawdzona konstrukcja z bardzo dobrymi opiniami wędkarzy\n` +
+          `✅ Realna obniżka bez sztucznego pompowania ceny wyjściowej\n\n` +
+          `Taki sprzęt w tych pieniądzach znika błyskawicznie!\n\n` +
+          `👉 Bezpośredni link do zakupu i kody rabatowe znajdziecie w 1. KOMENTARZU ⬇️!\n\n` +
+          `${dynamicHashtags.join(' ')}`;
       } else if (botRole === 'angler_chatter') {
-        postText = `🐟 PORANNA KAWA & WĘDKARSKA DEBATA ☕🎣\n\n` +
-          `${customTopic || 'Pytanie za 100 punktów do naszej ekipy:\nJakie było Wasze najbardziej udane "zakupowe kłamstewko" przed drugą połówką, gdy do domu wjechał nowy kij albo kołowrotek?'}\n\n` +
-          `Piszcie w komentarzach najciekawsze historie! Wrzucajcie też fotki sprzętu z którego jesteście najbardziej dumni w tym sezonie 📸⬇️\n\n` +
-          `A jeśli szukacie świeżych promocji sprzętowych bez ściemy:\nhttps://okazjeplus.pl`;
+        postText = `🐟 [WĘDKARSKIE POGADUCHY] ${itemTitle} ☕🎣\n\n` +
+          `Cześć ekipa! Rzućcie okiem na dzisiejszy sprzętowy temat:\n` +
+          `👉 ${itemTitle}\n` +
+          `${descSnippet}` +
+          `${specsSnippet}\n\n` +
+          `💰 Cena promocyjna: ${priceStr}${oldPriceStr}${discStr}${storeStr}\n\n` +
+          `Pytanie za 100 punktów do naszej grupy:\n` +
+          `${customTopic || 'Kto z Was już łowił na ten sprzęt lub podobny model? Jak oceniacie pracę pod obciążeniem i spasowanie elementów? Piszcie w komentarzach swoje opinie i wrzucajcie fotki z ostatnich wypraw! 📸⬇️'}\n\n` +
+          `👉 Szczegóły oferty i bezpośredni link znajdziecie w 1. KOMENTARZU ⬇️!\n\n` +
+          `${dynamicHashtags.join(' ')}`;
       } else {
-        postText = `🧭 TEST & PORADNIK SPRZĘTOWY: ${itemTitle}\n\n` +
-          `Zanim klikniesz "Kup Teraz", sprawdź naszą szybką analizę opłacalności:\n\n` +
-          `🔍 Na co warto zwrócić uwagę:\n` +
-          `1️⃣ Płynność pracy i spasowanie elementów pod obciążeniem\n` +
-          `2️⃣ Odporność na trudne warunki atmosferyczne i piasek\n` +
-          `3️⃣ Cena promocyjna (${priceStr}) jest o ${discStr} niższa niż średnia rynkowa\n\n` +
-          `Werdykt testera: Zdecydowanie warto w tym budżecie!\n\n` +
-          `👉 Szczegółowa specyfikacja i link w pierwszym komentarzu ⬇️:\n${dealInfo?.dealUrl || 'https://okazjeplus.pl'}`;
+        postText = `🧭 [TEST & RECENZJA TESTERA] ${itemTitle}! 🔍\n\n` +
+          `Zanim klikniecie "Kup Teraz", sprawdźcie naszą szybką analizę opłacalności tego sprzętu:\n` +
+          `👉 ${itemTitle}\n` +
+          `${descSnippet}` +
+          `${specsSnippet}\n\n` +
+          `🔍 OCENA TESTERA:\n` +
+          `1️⃣ Płynność pracy i spasowanie mechanizmów pod obciążeniem – wzorowe w tej klasie.\n` +
+          `2️⃣ Odporność na trudne warunki atmosferyczne, piasek i wilgoć.\n` +
+          `3️⃣ Cena promocyjna (${priceStr}${oldPriceStr}) bije na głowę oferty w sklepach stacjonarnych.\n\n` +
+          `Werdykt końcowy: Zdecydowanie polecamy w tym budżecie!\n\n` +
+          `👉 Bezpośredni link do produktu i kod rabatowy znajdziecie w 1. KOMENTARZU ⬇️!\n\n` +
+          `${dynamicHashtags.join(' ')}`;
       }
     }
 
@@ -898,7 +1098,7 @@ Zwróć odpowiedź w czystym formacie tekstu gotowego do wklejenia.
       discountStr: dealInfo?.discount || undefined,
       linkUrl: directAffiliateLink,
       imageUrl: dealInfo?.imageUrl || undefined,
-      hashtags,
+      hashtags: dynamicHashtags,
       firstComment: firstComment || undefined,
       targets: {
         facebook: true,
@@ -928,6 +1128,9 @@ export async function generateFishingPostAction(
     customTopic?: string;
     targetDealData?: {
       title: string;
+      description?: string;
+      specs?: string;
+      tags?: string[];
       price?: string;
       oldPrice?: string;
       discount?: string;
@@ -1212,7 +1415,7 @@ export async function publishFishingPost(
           subSubCategorySlug: 'kolowrotki-wedki',
           merchant: 'Wędkarskie Promocje',
           status: config.portal.defaultStatus || 'approved',
-          temperature: 100,
+          temperature: 20,
           voteCount: 1,
           commentsCount: 0,
           source: 'manual',
@@ -1376,7 +1579,7 @@ export async function createManualFishingDealAndPostAction(params: {
       merchant: merchant || 'Sklep Wędkarski',
       merchantName: merchant || 'Sklep Wędkarski',
       status: 'approved',
-      temperature: 150,
+      temperature: 20,
       voteCount: 1,
       commentsCount: 0,
       source: 'manual',
@@ -1577,8 +1780,8 @@ export async function harvestFishingPartnerOffers(
                 merchant,
                 merchantName: merchant,
                 status: 'approved',
-                temperature: Math.floor(Math.random() * 50) + 100,
-                voteCount: 3,
+                temperature: Math.floor(Math.random() * 15) + 15,
+                voteCount: 1,
                 commentsCount: 0,
                 source: 'convertiser',
                 dealType: 'sale',
@@ -1658,7 +1861,7 @@ export async function harvestFishingPartnerOffers(
                 merchant: item.merchantName || 'TradeTracker Partner',
                 merchantName: item.merchantName || 'TradeTracker Partner',
                 status: 'approved',
-                temperature: Math.floor(Math.random() * 40) + 85,
+                temperature: Math.floor(Math.random() * 15) + 15,
                 voteCount: 1,
                 commentsCount: 0,
                 source: 'tradetracker',
@@ -1759,8 +1962,8 @@ export async function harvestFishingPartnerOffers(
                     merchant: 'AliExpress',
                     merchantName: 'AliExpress',
                     status: 'approved',
-                    temperature: 110,
-                    voteCount: 2,
+                    temperature: 20,
+                    voteCount: 1,
                     commentsCount: 0,
                     source: 'aliexpress',
                     dealType: 'sale',

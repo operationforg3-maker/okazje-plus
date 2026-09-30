@@ -756,23 +756,92 @@ async function searchDealsFirestoreFallback(
       const offset = (page - 1) * safeLimit;
       return await hydrateFallbackDealImages(docs.slice(offset, offset + safeLimit) as Deal[]);
     } else {
-      const { getDealsByFiltersData } = await import('@/lib/data/deals');
-      const fetchLimit = safeLimit * page;
-      const allDocs = await getDealsByFiltersData(
-        {
-          categoryId: mainCategorySlug,
-          subCategorySlug,
-          subSubCategorySlug,
-          priceLimitMin: minPrice,
-          priceLimitMax: maxPrice,
-          searchTerm: undefined,
-          statusFilter,
-        },
-        sortBy as any,
-        fetchLimit
-      );
+      const { adminDb } = await import('@/lib/firebase-admin');
+      const statuses = statusFilter === 'waiting_room'
+        ? ['pending', 'poczekalnia', 'pending_approval', 'approval']
+        : ['approved'];
+
+      let baseQuery: FirebaseFirestore.Query = adminDb.collection('deals')
+        .where('status', 'in', statuses);
+
+      if (mainCategorySlug) {
+        baseQuery = baseQuery.where('mainCategorySlug', '==', mainCategorySlug);
+      }
+      if (subCategorySlug) {
+        baseQuery = baseQuery.where('subCategorySlug', '==', subCategorySlug);
+      }
+      if (subSubCategorySlug) {
+        baseQuery = baseQuery.where('subSubCategorySlug', '==', subSubCategorySlug);
+      }
+
+      // Order by requested sort in Firestore
+      if (sortBy === 'hot' || sortBy === 'temperature' || sortBy === 'popularity') {
+        baseQuery = baseQuery.orderBy('temperature', 'desc');
+      } else if (sortBy === 'newest') {
+        baseQuery = baseQuery.orderBy('createdAt', 'desc');
+      } else if (sortBy === 'price_asc') {
+        baseQuery = baseQuery.orderBy('price', 'asc');
+      } else if (sortBy === 'price_desc') {
+        baseQuery = baseQuery.orderBy('price', 'desc');
+      }
+
+      const fetchLimit = Math.max(safeLimit * page * 3, 60);
+      let snap;
+      try {
+        snap = await baseQuery.limit(fetchLimit).get();
+      } catch (err: any) {
+        console.warn('[searchDeals Fallback] Ordered query failed, falling back to status query:', err?.message || err);
+        snap = await adminDb.collection('deals')
+          .where('status', 'in', statuses)
+          .limit(fetchLimit)
+          .get();
+      }
+
+      let docs: any[] = snap.docs.map((docSnap) => {
+        const data = docSnap.data();
+        delete data.embedding;
+        return { id: docSnap.id, ...data };
+      });
+
+      // Post-filtering in memory
+      if (mainCategorySlug) docs = docs.filter((d: any) => d.mainCategorySlug === mainCategorySlug);
+      if (subCategorySlug) docs = docs.filter((d: any) => d.subCategorySlug === subCategorySlug);
+      if (subSubCategorySlug) docs = docs.filter((d: any) => d.subSubCategorySlug === subSubCategorySlug);
+      if (minPrice !== undefined) {
+        docs = docs.filter((d: any) => {
+          const p = (d as any).priceV2?.amount || (typeof d.price === 'object' && d.price ? d.price.amount : Number(d.price || 0));
+          return p >= Number(minPrice);
+        });
+      }
+      if (maxPrice !== undefined) {
+        docs = docs.filter((d: any) => {
+          const p = (d as any).priceV2?.amount || (typeof d.price === 'object' && d.price ? d.price.amount : Number(d.price || 0));
+          return p <= Number(maxPrice);
+        });
+      }
+      if (minTemperature !== undefined) docs = docs.filter((d: any) => (d.temperature || 0) >= Number(minTemperature));
+
+      // Sorting
+      docs.sort((a: any, b: any) => {
+        if (sortBy === 'temperature' || sortBy === 'hot' || sortBy === 'popularity') {
+          return (b.temperature || 0) - (a.temperature || 0);
+        }
+        if (sortBy === 'price_asc') {
+          const aPrice = (a as any).priceV2?.amount || (typeof a.price === 'object' && a.price ? a.price.amount : Number(a.price || 0));
+          const bPrice = (b as any).priceV2?.amount || (typeof b.price === 'object' && b.price ? b.price.amount : Number(b.price || 0));
+          return aPrice - bPrice;
+        }
+        if (sortBy === 'price_desc') {
+          const aPrice = (a as any).priceV2?.amount || (typeof a.price === 'object' && a.price ? a.price.amount : Number(a.price || 0));
+          const bPrice = (b as any).priceV2?.amount || (typeof b.price === 'object' && b.price ? b.price.amount : Number(b.price || 0));
+          return bPrice - aPrice;
+        }
+        if (sortBy === 'newest') return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        return 0;
+      });
+
       const offset = (page - 1) * safeLimit;
-      return allDocs.slice(offset, offset + safeLimit);
+      return await hydrateFallbackDealImages(docs.slice(offset, offset + safeLimit) as Deal[]);
     }
   } catch (err) {
     console.error('Firestore fallback for searchDeals failed:', err);
