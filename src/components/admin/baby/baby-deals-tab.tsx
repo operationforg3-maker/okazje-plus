@@ -22,9 +22,13 @@ import {
   Send,
   CheckCircle2,
   Filter,
+  DownloadCloud,
 } from 'lucide-react';
 import type { BabyDealItem, BabyBotRole } from '@/lib/types';
-import { createManualBabyDealAndPostAction } from '@/app/actions/baby-autopilot';
+import { 
+  createManualBabyDealAndPostAction,
+  harvestBabyPartnerOffersAction,
+} from '@/app/actions/baby-autopilot';
 
 interface BabyDealsTabProps {
   deals: BabyDealItem[];
@@ -42,6 +46,7 @@ export function BabyDealsTab({
   const [searchQuery, setSearchQuery] = useState('');
   const [partnerFilter, setPartnerFilter] = useState('all');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [harvesting, setHarvesting] = useState(false);
 
   // Form state
   const [title, setTitle] = useState('');
@@ -54,6 +59,24 @@ export function BabyDealsTab({
   const [publishFbNow, setPublishFbNow] = useState(true);
   const [botRole, setBotRole] = useState<BabyBotRole>('bargain_mom');
   const [submitting, setSubmitting] = useState(false);
+
+  const handleHarvest = async () => {
+    try {
+      setHarvesting(true);
+      toast.info('Rozpoczynam pobieranie ofert dziecięcych z feedów Convertiser, TradeTracker i AliExpress...');
+      const res = await harvestBabyPartnerOffersAction();
+      if (res.success) {
+        toast.success(res.message || `Pobrano ${res.importedCount} nowych okazji z feedów!`);
+        onRefreshDeals();
+      } else {
+        toast.error(res.error || 'Błąd pobierania z feedów');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Błąd procesu pobierania z feeda');
+    } finally {
+      setHarvesting(false);
+    }
+  };
 
   const filteredDeals = deals.filter(d => {
     // Partner filter
@@ -147,6 +170,26 @@ export function BabyDealsTab({
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-9 text-xs border-pink-300 text-pink-700 dark:text-pink-300 hover:bg-pink-50 dark:hover:bg-pink-950/40 gap-1.5"
+            disabled={harvesting || loading}
+            onClick={handleHarvest}
+          >
+            {harvesting ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Pobieranie z feedów...
+              </>
+            ) : (
+              <>
+                <DownloadCloud className="w-3.5 h-3.5" />
+                Pobierz z feeda partnerów (Harvester)
+              </>
+            )}
+          </Button>
+
           <Button
             size="sm"
             className="h-9 text-xs bg-pink-600 hover:bg-pink-700 text-white gap-1.5"

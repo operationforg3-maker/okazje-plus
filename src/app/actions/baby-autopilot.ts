@@ -1270,6 +1270,508 @@ export async function publishTestBabyPostAction(): Promise<{
 }
 
 // ============================================================================
+// POBIERANIE OFERT Z FEEDÓW PARTNERSKICH (CONVERTISER, TRADETRACKER, ALIEXPRESS)
+// ============================================================================
+
+export async function harvestBabyPartnerOffers(
+  options?: {
+    sources?: ('convertiser' | 'tradetracker' | 'aliexpress')[];
+    keywords?: string[];
+    limitPerSource?: number;
+  },
+  skipAuth: boolean = false
+): Promise<{
+  success: boolean;
+  importedCount: number;
+  resultsBySource: Record<string, number>;
+  message: string;
+  error?: string;
+}> {
+  try {
+    if (!skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return {
+          success: false,
+          importedCount: 0,
+          resultsBySource: {},
+          message: '',
+          error: 'Wymagane uprawnienia administratora',
+        };
+      }
+    }
+
+    const configRes = await getBabyAutopilotConfig(true);
+    const config = configRes.config;
+
+    const sources = options?.sources || (['convertiser', 'tradetracker', 'aliexpress'] as const);
+    const keywords = options?.keywords || [
+      'Pampers pieluchy',
+      'wózek spacerowy',
+      'fotelik samochodowy isofix',
+      'laktator elektryczny',
+      'butelka antykolkowa',
+      'smoczek uspokajający',
+      'zabawki edukacyjne montessori',
+      'lego duplo',
+      'Kinderkraft wózek',
+      'Chicco zabawki',
+      'Cybex fotelik',
+      'Fisher Price',
+      'Canpol babies',
+      'Lovi butelka',
+      'ubranka niemowlęce body',
+      'bujaczek leżaczek',
+      'mata edukacyjna',
+    ];
+    const limitPerSource = options?.limitPerSource || 25;
+
+    const resultsBySource: Record<string, number> = {
+      convertiser: 0,
+      tradetracker: 0,
+      aliexpress: 0,
+    };
+    let totalImported = 0;
+
+    // Deduplikacja: pobierz ostatnie 500 deali
+    const existingSnap = await adminDb.collection('deals').orderBy('createdAt', 'desc').limit(500).get();
+    const existingLinks = new Set(existingSnap.docs.map(d => d.data().link).filter(Boolean));
+    const existingTitles = new Set(
+      existingSnap.docs.map(d => (d.data().title?.pl || d.data().title || '').toLowerCase().trim()).filter(Boolean)
+    );
+
+    const STRICT_BABY_NEGATIVE = [
+      'pies', 'psa', 'psów', 'psom', 'dla psów', 'suczek', 'suczki', 'dla suczek',
+      'kot', 'kota', 'kotów', 'kotom', 'dla kota', 'barry king', 'zwierząt', 'zwierzęta',
+      'dla zwierząt', 'gryzoń', 'obroża', 'smycz', 'kuweta', 'żwirek', 'drapak',
+      'przerzutka', 'rower', 'stelaż podtynkowy', 'roca', 'uchwyt samochodowy',
+      'multimetr', 'wkrętarka', 'lutownica', 'olej silnikowy', 'opona', 'cement',
+      'wędka', 'kołowrotek', 'erotyk', 'papierosy', 'alkohol', 'bateria do wkrętarki', 'felga',
+      'kurtka narciarska', 'narty', 'joy-con', 'switch', 'ssz 230v', 'eaton', 'satel', 'siemens',
+      ...(config.filters?.negativeKeywords || []).map(k => k.toLowerCase().trim()).filter(Boolean)
+    ];
+
+    // 1. CONVERTISER FEED & API
+    if (sources.includes('convertiser') && (config.partners?.convertiser ?? true)) {
+      try {
+        const { getConvertiserClient } = await import('@/lib/integrations/convertiser-client');
+        const client = getConvertiserClient();
+
+        for (const kw of keywords) {
+          if (resultsBySource.convertiser >= limitPerSource) break;
+          try {
+            const resp = await client.searchProducts(
+              { title: kw, country: 'PL' },
+              { page: 1, page_size: 20 }
+            ) as any;
+            const items = resp.data || resp.results || [];
+
+            for (const item of items) {
+              const title = (item.title || item.name || '').trim();
+              if (!title) continue;
+              const titleLower = title.toLowerCase();
+              if (STRICT_BABY_NEGATIVE.some(neg => titleLower.includes(neg))) continue;
+
+              const priceNum = typeof item.price === 'number'
+                ? item.price
+                : parseFloat(String(item.price || '').replace(/[^0-9.,]/g, '').replace(',', '.'));
+              if (isNaN(priceNum) || priceNum < 10) continue;
+
+              const rawLink = item.direct_link || item.tracking_link || item.url || `https://convertiser.com/products/${item.id}/`;
+              const affiliateLink = resolveBabyAffiliateUrl(rawLink, config.tracking?.campaign || 'Maluch_1');
+              if (existingLinks.has(affiliateLink) || existingTitles.has(titleLower)) continue;
+
+              const origPriceNum = item.old_price 
+                ? parseFloat(String(item.old_price).replace(/[^0-9.,]/g, '').replace(',', '.')) 
+                : undefined;
+              const merchant = item.offer || item.merchant || item.brand || 'Sklep dziecięcy';
+              const imageUrl = item.images?.default || item.image_link || item.images?.thumb_180 || item.image_url || '';
+
+              let subSubCategorySlug = 'akcesoria-dla-dzieci';
+              if (titleLower.includes('pampers') || titleLower.includes('pieluch') || titleLower.includes('chustecz')) {
+                subSubCategorySlug = 'higiena-i-pielegnacja';
+              } else if (titleLower.includes('wózek') || titleLower.includes('wozek') || titleLower.includes('spacerówk')) {
+                subSubCategorySlug = 'wozki-dzieciece';
+              } else if (titleLower.includes('fotelik') || titleLower.includes('isofix')) {
+                subSubCategorySlug = 'foteliki-samochodowe';
+              } else if (titleLower.includes('laktator') || titleLower.includes('butelk') || titleLower.includes('smoczek') || titleLower.includes('karmieni')) {
+                subSubCategorySlug = 'karmienie-dziecka';
+              } else if (titleLower.includes('zabawk') || titleLower.includes('klocki') || titleLower.includes('lego') || titleLower.includes('montessori')) {
+                subSubCategorySlug = 'zabawki';
+              } else if (titleLower.includes('ubrank') || titleLower.includes('body') || titleLower.includes('pajacyk')) {
+                subSubCategorySlug = 'ubranka-dzieciece';
+              }
+
+              const dealDoc = {
+                title: { pl: title },
+                description: { pl: item.description || title },
+                price: priceNum,
+                originalPrice: origPriceNum,
+                legacyPrice: priceNum,
+                link: affiliateLink,
+                affiliateLink: affiliateLink,
+                image: imageUrl,
+                imageHint: 'dla dzieci i mamy',
+                category: 'dziecko-zabawki',
+                mainCategorySlug: 'dziecko-zabawki',
+                subCategorySlug: subSubCategorySlug,
+                subSubCategorySlug,
+                merchant,
+                merchantName: merchant,
+                status: 'approved',
+                temperature: Math.floor(Math.random() * 15) + 15,
+                voteCount: 1,
+                commentsCount: 0,
+                source: 'convertiser',
+                dealType: 'sale',
+                tags: ['dla dzieci', 'mama i dziecko', 'convertiser', 'perełki dla malucha', merchant.toLowerCase()],
+                postedBy: `Perełki dla Malucha (${merchant})`,
+                postedAt: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                verified: true,
+                verifiedAt: new Date().toISOString(),
+              };
+
+              await adminDb.collection('deals').add(dealDoc);
+              existingLinks.add(affiliateLink);
+              existingTitles.add(titleLower);
+              resultsBySource.convertiser++;
+              totalImported++;
+              if (resultsBySource.convertiser >= limitPerSource) break;
+            }
+          } catch (cErr) {
+            console.warn('[Convertiser] Baby search failed for:', kw, cErr);
+          }
+        }
+      } catch (convErr) {
+        console.error('[Convertiser] Baby harvesting error:', convErr);
+      }
+    }
+
+    // 2. TRADETRACKER FEED & API
+    if (sources.includes('tradetracker') && (config.partners?.tradetracker ?? true)) {
+      try {
+        const { getTradeTrackerClient } = await import('@/lib/integrations/tradetracker-client');
+        const ttClient = getTradeTrackerClient({
+          customerId: config.partners?.tradeTrackerCustomerId,
+          passphrase: config.partners?.tradeTrackerPassphrase,
+          affiliateSiteId: config.partners?.tradeTrackerSiteId,
+          feedUrl: config.partners?.tradeTrackerFeedUrl,
+        });
+
+        const feedUrl = config.partners?.tradeTrackerFeedUrl;
+        if (feedUrl) {
+          try {
+            const feedItems = await ttClient.fetchAndParseFeed(feedUrl, 100);
+            for (const item of feedItems) {
+              if (resultsBySource.tradetracker >= limitPerSource) break;
+              if (!item.name) continue;
+              const titleLower = item.name.toLowerCase();
+              if (STRICT_BABY_NEGATIVE.some(neg => titleLower.includes(neg))) continue;
+
+              const priceNum = item.price || 0;
+              if (priceNum < 10) continue;
+
+              const rawLink = item.productURL;
+              const link = resolveBabyAffiliateUrl(rawLink, config.tracking?.campaign || 'Maluch_1');
+              if (existingLinks.has(link) || existingTitles.has(titleLower)) continue;
+
+              const dealDoc = {
+                title: { pl: item.name },
+                description: { pl: item.description || item.shortDescription || item.name },
+                price: priceNum,
+                originalPrice: item.fromPrice,
+                legacyPrice: priceNum,
+                link,
+                affiliateLink: link,
+                image: item.imageURL || '',
+                imageHint: 'dla dzieci i mamy',
+                category: 'dziecko-zabawki',
+                mainCategorySlug: 'dziecko-zabawki',
+                subCategorySlug: 'akcesoria-dla-dzieci',
+                merchant: item.merchantName || 'TradeTracker Partner',
+                merchantName: item.merchantName || 'TradeTracker Partner',
+                status: 'approved',
+                temperature: Math.floor(Math.random() * 15) + 15,
+                voteCount: 1,
+                commentsCount: 0,
+                source: 'tradetracker',
+                dealType: 'sale',
+                tags: ['dla dzieci', 'mama i dziecko', 'tradetracker', 'perełki dla malucha'],
+                postedBy: 'Perełki dla Malucha (TradeTracker)',
+                postedAt: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                verified: true,
+                verifiedAt: new Date().toISOString(),
+              };
+
+              await adminDb.collection('deals').add(dealDoc);
+              existingLinks.add(link);
+              existingTitles.add(titleLower);
+              resultsBySource.tradetracker++;
+              totalImported++;
+            }
+          } catch (feedErr) {
+            console.warn('[TradeTracker Feed] Error parsing feed:', feedErr);
+          }
+        }
+
+        // 2b. Wyszukiwanie przez API TradeTracker
+        if (resultsBySource.tradetracker < limitPerSource) {
+          for (const kw of keywords.slice(0, 5)) {
+            if (resultsBySource.tradetracker >= limitPerSource) break;
+            try {
+              const items = await ttClient.searchProducts({
+                query: kw,
+                limit: 15,
+                feedUrl: config.partners?.tradeTrackerFeedUrl,
+                mode: 'products',
+              });
+
+              for (const item of items) {
+                if (!item.name) continue;
+                const titleLower = item.name.toLowerCase();
+                if (STRICT_BABY_NEGATIVE.some(neg => titleLower.includes(neg))) continue;
+
+                const priceNum = item.price || 0;
+                if (priceNum <= 0) continue;
+
+                const rawLink = item.productURL;
+                const link = resolveBabyAffiliateUrl(rawLink, config.tracking?.campaign || 'Maluch_1');
+                if (existingLinks.has(link) || existingTitles.has(titleLower)) continue;
+
+                const dealDoc = {
+                  title: { pl: item.name },
+                  description: { pl: item.description || item.name },
+                  price: priceNum,
+                  originalPrice: item.fromPrice,
+                  legacyPrice: priceNum,
+                  link,
+                  affiliateLink: link,
+                  image: item.imageURL || '',
+                  imageHint: 'dla dzieci i mamy',
+                  category: 'dziecko-zabawki',
+                  mainCategorySlug: 'dziecko-zabawki',
+                  subCategorySlug: 'akcesoria-dla-dzieci',
+                  merchant: item.merchantName || 'TradeTracker Partner',
+                  merchantName: item.merchantName || 'TradeTracker Partner',
+                  status: 'approved',
+                  temperature: Math.floor(Math.random() * 15) + 15,
+                  voteCount: 1,
+                  commentsCount: 0,
+                  source: 'tradetracker',
+                  dealType: 'sale',
+                  tags: ['dla dzieci', 'mama i dziecko', 'tradetracker', 'perełki dla malucha'],
+                  postedBy: 'Perełki dla Malucha (TradeTracker)',
+                  postedAt: new Date().toISOString(),
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  verified: true,
+                  verifiedAt: new Date().toISOString(),
+                };
+
+                await adminDb.collection('deals').add(dealDoc);
+                existingLinks.add(link);
+                existingTitles.add(titleLower);
+                resultsBySource.tradetracker++;
+                totalImported++;
+                if (resultsBySource.tradetracker >= limitPerSource) break;
+              }
+            } catch (ttErr) {
+              console.warn('[TradeTracker] Baby search failed for:', kw, ttErr);
+            }
+          }
+        }
+      } catch (ttMainErr) {
+        console.error('[TradeTracker] Baby harvesting error:', ttMainErr);
+      }
+    }
+
+    // 3. ALIEXPRESS FEED & CATALOG
+    if (sources.includes('aliexpress') && (config.partners?.aliexpress ?? true)) {
+      try {
+        const aliKeywords = [
+          'baby romper newborn', 'baby pacifier clip', 'baby stroller',
+          'montessori wooden toys', 'diaper bag backpack', 'baby silicone bib',
+          'baby teether silicone', 'baby feeding set'
+        ];
+
+        try {
+          const { createAliExpressClient } = await import('@/integrations/aliexpress/client');
+          const aliClient = createAliExpressClient();
+          for (const kw of aliKeywords) {
+            if (resultsBySource.aliexpress >= limitPerSource) break;
+            try {
+              const searchRes = await aliClient.searchProducts({
+                q: kw,
+                limit: Math.min(limitPerSource, 20),
+                sort: 'orders',
+                targetCurrency: 'PLN',
+                targetLanguage: 'PL',
+                shipToCountry: 'PL',
+              });
+
+              if (searchRes.success && Array.isArray(searchRes.products)) {
+                for (const p of searchRes.products) {
+                  if (resultsBySource.aliexpress >= limitPerSource) break;
+                  const titleStr = p.title || '';
+                  const titleLower = titleStr.toLowerCase();
+                  if (STRICT_BABY_NEGATIVE.some(neg => titleLower.includes(neg))) continue;
+
+                  const currentPrice = (p as any).price?.current ?? (p as any).salePrice ?? 0;
+                  const priceNum = typeof currentPrice === 'number'
+                    ? currentPrice
+                    : parseFloat(String(currentPrice || '').replace(/[^0-9.,]/g, '').replace(',', '.'));
+                  if (isNaN(priceNum) || priceNum < 5) continue;
+
+                  const origPrice = (p as any).price?.original ?? (p as any).originalPrice;
+                  const origPriceNum = typeof origPrice === 'number'
+                    ? origPrice
+                    : (origPrice ? parseFloat(String(origPrice).replace(/[^0-9.,]/g, '').replace(',', '.')) : undefined);
+                  const rawLink = (p as any).product_url || (p as any).promotionLink || (p as any).productUrl || `https://www.aliexpress.com/item/${(p as any).item_id || (p as any).productId}.html`;
+                  const trackedLink = resolveBabyAffiliateUrl(rawLink, config.tracking?.campaign || 'Maluch_1');
+                  if (existingLinks.has(trackedLink) || existingTitles.has(titleLower)) continue;
+
+                  const imageUrl = Array.isArray((p as any).image_urls) && (p as any).image_urls.length > 0
+                    ? (p as any).image_urls[0]
+                    : ((p as any).imageUrl || '');
+
+                  const newDeal = {
+                    title: { pl: titleStr, en: titleStr },
+                    description: { pl: titleStr, en: titleStr },
+                    price: priceNum,
+                    originalPrice: origPriceNum,
+                    legacyPrice: priceNum,
+                    link: trackedLink,
+                    affiliateLink: trackedLink,
+                    image: imageUrl,
+                    imageHint: 'dla dzieci i mamy aliexpress',
+                    category: 'dziecko-zabawki',
+                    mainCategorySlug: 'dziecko-zabawki',
+                    subCategorySlug: 'zabawki',
+                    merchant: 'AliExpress',
+                    merchantName: 'AliExpress',
+                    status: 'approved',
+                    temperature: 20,
+                    voteCount: 1,
+                    commentsCount: 0,
+                    source: 'aliexpress',
+                    dealType: 'sale',
+                    tags: ['dla dzieci', 'mama i dziecko', 'aliexpress', 'perełki dla malucha'],
+                    postedBy: 'Perełki dla Malucha (AliExpress)',
+                    postedAt: new Date().toISOString(),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    verified: true,
+                    verifiedAt: new Date().toISOString(),
+                  };
+
+                  await adminDb.collection('deals').add(newDeal);
+                  existingLinks.add(trackedLink);
+                  existingTitles.add(titleLower);
+                  resultsBySource.aliexpress++;
+                  totalImported++;
+                }
+              }
+            } catch (kwErr) {
+              console.warn('[AliExpress API] Baby search error for kw:', kw, kwErr);
+            }
+          }
+        } catch (apiErr) {
+          console.warn('[AliExpress API] Client init error in baby harvest:', apiErr);
+        }
+
+        // 3b. Uzupełniająco: przeszukaj istniejące oferty z AliExpress w Firestore i przypisz kategorię
+        if (resultsBySource.aliexpress < limitPerSource) {
+          const aliSnap = await adminDb
+            .collection('deals')
+            .where('source', '==', 'aliexpress')
+            .where('status', '==', 'approved')
+            .limit(300)
+            .get();
+
+          const babyTerms = [
+            'baby', 'kids', 'infant', 'newborn', 'toddler', 'pacifier', 'diaper',
+            'dzieck', 'niemowl', 'maluch', 'smoczek', 'butelka', 'gryzak',
+            'montessori', 'zabawk', 'lalka', 'ubrank', 'body', 'pajacyk'
+          ];
+
+          for (const doc of aliSnap.docs) {
+            if (resultsBySource.aliexpress >= limitPerSource) break;
+            const data = doc.data();
+            const titlePl = (data.title?.pl || '').toLowerCase();
+            const titleEn = (data.title?.en || '').toLowerCase();
+            const titleStr = typeof data.title === 'string' ? data.title.toLowerCase() : '';
+            const descStr = typeof data.description === 'string' ? data.description.toLowerCase() : (data.description?.pl || '').toLowerCase();
+
+            const fullText = `${titlePl} ${titleEn} ${titleStr} ${descStr}`;
+            const matchesBaby = babyTerms.some(term => fullText.includes(term));
+            const isNegative = STRICT_BABY_NEGATIVE.some(neg => fullText.includes(neg));
+
+            if (matchesBaby && !isNegative) {
+              await doc.ref.set(
+                {
+                  category: 'dziecko-zabawki',
+                  mainCategorySlug: 'dziecko-zabawki',
+                  tags: Array.from(new Set([...(data.tags || []), 'dla dzieci', 'mama i dziecko', 'perełki dla malucha'])),
+                  updatedAt: new Date().toISOString(),
+                },
+                { merge: true }
+              );
+              resultsBySource.aliexpress++;
+              totalImported++;
+            }
+          }
+        }
+      } catch (aliErr) {
+        console.error('[AliExpress] Baby harvesting error:', aliErr);
+      }
+    }
+
+    try {
+      revalidatePath('/[locale]/admin/baby-autopilot', 'page');
+      revalidatePath('/[locale]/deals', 'page');
+    } catch {
+      // Ignoruj gdy wywołane poza kontekstem żądania HTTP Next.js (np. cron lub skrypt)
+    }
+
+    const message = `Pobrano łącznie ${totalImported} nowych okazji z feedów (Convertiser: ${resultsBySource.convertiser}, TradeTracker: ${resultsBySource.tradetracker}, AliExpress: ${resultsBySource.aliexpress}).`;
+
+    return {
+      success: true,
+      importedCount: totalImported,
+      resultsBySource,
+      message,
+    };
+  } catch (err: any) {
+    console.error('Error harvesting baby partner offers:', err);
+    return {
+      success: false,
+      importedCount: 0,
+      resultsBySource: {},
+      message: '',
+      error: err.message,
+    };
+  }
+}
+
+export async function harvestBabyPartnerOffersAction(options?: {
+  sources?: ('convertiser' | 'tradetracker' | 'aliexpress')[];
+  keywords?: string[];
+  limitPerSource?: number;
+}): Promise<{
+  success: boolean;
+  importedCount?: number;
+  resultsBySource?: Record<string, number>;
+  message?: string;
+  error?: string;
+}> {
+  return harvestBabyPartnerOffers(options, false);
+}
+
+// ============================================================================
 // CYKL AUTOPILOTA (DLA CRON)
 // ============================================================================
 
@@ -1318,11 +1820,20 @@ export async function executeBabyAutopilotCycle(): Promise<{
       }
     }
 
-    // 2. Jeśli kolejka ma mało elementów, wygeneruj nową propozycję
+    // 2. Jeśli kolejka ma mało elementów, pobierz z feeda i wygeneruj nową propozycję
     const pendingCount = queueRes.items.filter(i => i.status === 'pending').length;
     if (pendingCount < 3) {
-      logs.push(`Mało oczekujących postów (${pendingCount}), wyszukuję nowe okazje dziecięce...`);
-      const dealsRes = await getBabyDeals({ limit: 10, minDiscount: config.filters.minDiscountPercent }, true);
+      logs.push(`Mało oczekujących postów (${pendingCount}), sprawdzam feedy partnerskie i okazje dziecięce...`);
+
+      // Automatyczny harvest z feedów partnerskich
+      try {
+        const harvestRes = await harvestBabyPartnerOffers(undefined, true);
+        logs.push(`Harvester feeda: ${harvestRes.message}`);
+      } catch (hErr: any) {
+        logs.push(`Błąd pobierania z feeda: ${hErr?.message}`);
+      }
+
+      const dealsRes = await getBabyDeals({ limit: 15, minDiscount: config.filters.minDiscountPercent }, true);
 
       if (dealsRes.deals.length > 0) {
         // Wybierz deal, który nie był jeszcze publikowany

@@ -297,8 +297,8 @@ export function BabySettingsTab({
             </div>
           </div>
 
-          <div className="pt-2 border-t">
-            <Label className="text-xs font-semibold block mb-2">Aktywne sieci afiliacyjne:</Label>
+          <div className="pt-2 border-t space-y-3">
+            <Label className="text-xs font-semibold block">Aktywne sieci afiliacyjne i źródła feedów:</Label>
             <div className="grid grid-cols-3 gap-3">
               <div className="flex items-center justify-between p-2.5 border rounded-lg">
                 <span className="font-medium text-xs">AliExpress</span>
@@ -321,6 +321,31 @@ export function BabySettingsTab({
                 <Switch
                   checked={formData.partners?.tradetracker ?? true}
                   onCheckedChange={checked => updatePartners('tradetracker', checked)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">TradeTracker — URL Feeda Produktowego (XML / CSV):</Label>
+                <Input
+                  placeholder="https://pf.tradetracker.net/?aid=...&encoding=utf-8&type=xml"
+                  value={formData.partners?.tradeTrackerFeedUrl || ''}
+                  onChange={e => updatePartners('tradeTrackerFeedUrl', e.target.value)}
+                  className="text-xs h-8 font-mono"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Wklej bezpośredni link do pliku XML lub CSV z produktami z TradeTracker.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">TradeTracker Affiliate Site ID (opcjonalnie):</Label>
+                <Input
+                  placeholder="np. 456789"
+                  value={formData.partners?.tradeTrackerSiteId || ''}
+                  onChange={e => updatePartners('tradeTrackerSiteId', e.target.value)}
+                  className="text-xs h-8 font-mono"
                 />
               </div>
             </div>
