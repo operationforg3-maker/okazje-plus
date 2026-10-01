@@ -21,6 +21,7 @@ import {
   deleteCalendarPostAction,
   getDiverseAiDealRecommendationAction,
   regeneratePostContentAction,
+  publishCalendarPostNowAction,
   type CandidateDealSummary,
 } from '@/app/actions/calendar-schedule';
 import { sanitizeSocialPostText } from '@/lib/social-growth-types';
@@ -34,6 +35,8 @@ import {
   ExternalLink,
   Search,
   Check,
+  CheckCircle2,
+  Send,
   Calendar,
   Trash2,
   Dices,
@@ -82,6 +85,7 @@ export function PostEditDialog({
   const [status, setStatus] = useState<'pending' | 'approved'>('approved');
   const [wifeAlibi, setWifeAlibi] = useState('');
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [recommendingAi, setRecommendingAi] = useState(false);
   const [regeneratingText, setRegeneratingText] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -265,12 +269,13 @@ export function PostEditDialog({
     toast.success('Usunięto gwiazdki ** oraz formatowanie Markdown!');
   };
 
-  const handleSave = async () => {
+  const handleSave = async (overrideStatus?: 'approved' | 'pending') => {
     if (!item) return;
 
     try {
       setSaving(true);
       const cleanContent = sanitizeSocialPostText(content);
+      const targetStatus = overrideStatus || status;
 
       const res = await saveScheduledPostEditsAction({
         niche,
@@ -282,13 +287,17 @@ export function PostEditDialog({
           imageUrl: imageUrl || undefined,
           linkUrl: linkUrl || undefined,
           scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : undefined,
-          status,
+          status: targetStatus,
           wifeAlibi: niche === 'fishing' ? wifeAlibi : undefined,
         },
       });
 
       if (res.success) {
-        toast.success('Zapisano zmiany w poście!');
+        toast.success(
+          targetStatus === 'approved' && item.status === 'pending'
+            ? '✓ Post został zatwierdzony do publikacji!'
+            : 'Zapisano zmiany w poście!'
+        );
         onSaved();
         onOpenChange(false);
       } else {
@@ -298,6 +307,49 @@ export function PostEditDialog({
       toast.error(err.message || 'Błąd zapisu');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePublishNow = async () => {
+    if (!item) return;
+    if (!window.confirm('Czy na pewno chcesz opublikować ten post na Facebooku NATYCHMIAST?')) return;
+
+    try {
+      setPublishing(true);
+      // Zapisujemy najpierw ewentualne naniesione zmiany w formularzu:
+      const cleanContent = sanitizeSocialPostText(content);
+      await saveScheduledPostEditsAction({
+        niche,
+        queueItemId: item.id,
+        updates: {
+          title,
+          content: cleanContent,
+          firstComment: firstComment || undefined,
+          imageUrl: imageUrl || undefined,
+          linkUrl: linkUrl || undefined,
+          scheduledFor: scheduledFor ? new Date(scheduledFor).toISOString() : undefined,
+          status: 'approved',
+          wifeAlibi: niche === 'fishing' ? wifeAlibi : undefined,
+        },
+      });
+
+      toast.info('Publikowanie posta na Facebooku...');
+      const pubRes = await publishCalendarPostNowAction({
+        niche,
+        queueItemId: item.id,
+      });
+
+      if (pubRes.success) {
+        toast.success('🎉 Post został pomyślnie opublikowany na Facebooku!');
+        onSaved();
+        onOpenChange(false);
+      } else {
+        toast.error(pubRes.error || 'Nie udało się opublikować posta');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Błąd publikacji');
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -670,14 +722,14 @@ export function PostEditDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">
+        <DialogFooter className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 pt-3 border-t mt-2">
           {item?.status !== 'posted' ? (
             <Button
               type="button"
               variant="destructive"
               size="sm"
               onClick={handleDeletePost}
-              disabled={deleting || saving}
+              disabled={deleting || saving || publishing}
               className="text-xs gap-1.5 self-start"
             >
               {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
@@ -686,27 +738,69 @@ export function PostEditDialog({
           ) : (
             <div />
           )}
-          <div className="flex items-center gap-2 self-end">
+          <div className="flex items-center gap-2 flex-wrap self-end">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => onOpenChange(false)}
-              disabled={saving || deleting}
+              disabled={saving || deleting || publishing}
               className="text-xs"
             >
               Anuluj
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleSave}
-              disabled={saving || deleting}
-              className="text-xs gap-1.5"
-            >
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-              Zapisz zmiany w poście
-            </Button>
+
+            {item?.status !== 'posted' && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handlePublishNow}
+                disabled={saving || deleting || publishing}
+                className="text-xs gap-1.5 border-blue-500/40 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                title="Natychmiast wysyła post na fanpage Facebook"
+              >
+                {publishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                Opublikuj teraz na FB
+              </Button>
+            )}
+
+            {item?.status === 'pending' || status === 'pending' ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSave('pending')}
+                  disabled={saving || deleting || publishing}
+                  className="text-xs gap-1.5"
+                >
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  Zapisz wersję roboczą
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => handleSave('approved')}
+                  disabled={saving || deleting || publishing}
+                  className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs"
+                >
+                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                  ✓ Zaakceptuj i Zapisz
+                </Button>
+              </>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => handleSave()}
+                disabled={saving || deleting || publishing}
+                className="text-xs gap-1.5"
+              >
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                Zapisz zmiany w poście
+              </Button>
+            )}
           </div>
         </DialogFooter>
       </DialogContent>

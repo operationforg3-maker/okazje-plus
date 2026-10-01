@@ -10,9 +10,9 @@
 import { adminDb } from '@/lib/firebase-admin';
 import { getServerAuthSession } from '@/lib/auth-server';
 import { revalidatePath } from 'next/cache';
-import { getGeneralAutopilotConfig, getGeneralDeals, generateGeneralPostAction } from '@/app/actions/general-autopilot';
-import { getFishingAutopilotConfig, getFishingDeals, generateFishingPost } from '@/app/actions/fishing-autopilot';
-import { getBabyAutopilotConfig, getBabyDeals, generateBabyPost } from '@/app/actions/baby-autopilot';
+import { getGeneralAutopilotConfig, getGeneralDeals, generateGeneralPostAction, publishGeneralPostAction } from '@/app/actions/general-autopilot';
+import { getFishingAutopilotConfig, getFishingDeals, generateFishingPost, publishFishingPost } from '@/app/actions/fishing-autopilot';
+import { getBabyAutopilotConfig, getBabyDeals, generateBabyPost, publishBabyPostAction } from '@/app/actions/baby-autopilot';
 import { sanitizeSocialPostText } from '@/lib/social-growth-types';
 import {
   diversifyDealsList,
@@ -849,5 +849,144 @@ export async function regeneratePostContentAction(params: {
     return { success: false, error: err.message || 'Błąd generowania treści' };
   }
 }
+
+/**
+ * Akceptuje / zatwierdza post oczekujący w kolejce (zmienia status z 'pending' na 'approved').
+ */
+export async function approveCalendarPostAction(params: {
+  niche: 'general' | 'fishing' | 'baby';
+  queueItemId: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    const { niche, queueItemId } = params;
+    const collectionName = niche === 'fishing'
+      ? 'fishingPostsQueue'
+      : niche === 'baby'
+        ? 'babyPostQueue'
+        : 'generalPostQueue';
+
+    await adminDb.collection(collectionName).doc(queueItemId).update({
+      status: 'approved',
+      updatedAt: new Date().toISOString(),
+    });
+
+    revalidatePath('/[locale]/admin/social-media', 'page');
+    revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
+    revalidatePath('/[locale]/admin/baby-autopilot', 'page');
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error approving calendar post:', err);
+    return { success: false, error: err.message || 'Błąd zatwierdzania posta' };
+  }
+}
+
+/**
+ * Publikuje post z kalendarza natychmiast na Facebooku (omijając czekanie na zaplanowaną godzinę).
+ */
+export async function publishCalendarPostNowAction(params: {
+  niche: 'general' | 'fishing' | 'baby';
+  queueItemId: string;
+}): Promise<{ success: boolean; fbPostUrl?: string; error?: string }> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    const { niche, queueItemId } = params;
+    if (niche === 'fishing') {
+      const res = await publishFishingPost(queueItemId);
+      if (res.success) {
+        revalidatePath('/[locale]/admin/social-media', 'page');
+        return { success: true, fbPostUrl: (res as any).fbPostUrl };
+      }
+      return { success: false, error: res.error || 'Błąd publikacji na profilu wędkarskim' };
+    } else if (niche === 'baby') {
+      const res = await publishBabyPostAction(queueItemId);
+      if (res.success) {
+        revalidatePath('/[locale]/admin/social-media', 'page');
+        return { success: true, fbPostUrl: (res as any).fbPostUrl || (res as any).fbPostId };
+      }
+      return { success: false, error: res.error || 'Błąd publikacji na profilu Perełki dla Malucha' };
+    } else {
+      const res = await publishGeneralPostAction(queueItemId);
+      if (res.success) {
+        revalidatePath('/[locale]/admin/social-media', 'page');
+        return { success: true, fbPostUrl: (res as any).fbPostUrl || (res as any).fbPostId };
+      }
+      return { success: false, error: res.error || 'Błąd publikacji na profilu Okazje Plus' };
+    }
+  } catch (err: any) {
+    console.error('Error in publishCalendarPostNowAction:', err);
+    return { success: false, error: err.message || 'Błąd natychmiastowej publikacji posta' };
+  }
+}
+
+/**
+ * Zaakceptuj slot: natychmiast generuje post AI dla proponowanej okazji i zapisuje go w kolejce jako 'approved'.
+ */
+export async function acceptAndGenerateSlotPostAction(params: {
+  niche: 'general' | 'fishing' | 'baby';
+  scheduledTime: string;
+  dealId: string;
+}): Promise<{ success: boolean; queueItemId?: string; error?: string }> {
+  try {
+    const res = await preGenerateSlotPostAction(params);
+    if (res.success && res.queueItemId) {
+      return { success: true, queueItemId: res.queueItemId };
+    }
+    return { success: false, error: res.error || 'Błąd generowania posta dla slotu' };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Błąd akceptacji slotu' };
+  }
+}
+
+/**
+ * Zbiorcze zatwierdzenie wszystkich oczekujących postów we wszystkich profilach.
+ */
+export async function approveAllPendingCalendarPostsAction(): Promise<{
+  success: boolean;
+  count: number;
+  error?: string;
+}> {
+  try {
+    const session = await getServerAuthSession();
+    if (!session || session.role !== 'admin') {
+      return { success: false, count: 0, error: 'Wymagane uprawnienia administratora' };
+    }
+
+    const collections = ['generalPostQueue', 'fishingPostsQueue', 'babyPostQueue'];
+    let totalApproved = 0;
+
+    for (const col of collections) {
+      const snap = await adminDb.collection(col).where('status', '==', 'pending').get();
+      if (!snap.empty) {
+        const batch = adminDb.batch();
+        snap.docs.forEach(docSnap => {
+          batch.update(docSnap.ref, {
+            status: 'approved',
+            updatedAt: new Date().toISOString(),
+          });
+          totalApproved++;
+        });
+        await batch.commit();
+      }
+    }
+
+    revalidatePath('/[locale]/admin/social-media', 'page');
+    revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
+    revalidatePath('/[locale]/admin/baby-autopilot', 'page');
+    return { success: true, count: totalApproved };
+  } catch (err: any) {
+    console.error('Error approving all pending posts:', err);
+    return { success: false, count: 0, error: err.message || 'Błąd zbiorczego zatwierdzania' };
+  }
+}
+
 
 

@@ -17,6 +17,7 @@ import {
   Send,
   Eye,
   CheckCircle2,
+  Check,
   AlertCircle,
   HelpCircle,
   Zap,
@@ -35,6 +36,10 @@ import {
   preGenerateSlotPostAction,
   deleteCalendarPostAction,
   getDiverseAiDealRecommendationAction,
+  approveCalendarPostAction,
+  publishCalendarPostNowAction,
+  acceptAndGenerateSlotPostAction,
+  approveAllPendingCalendarPostsAction,
 } from '@/app/actions/calendar-schedule';
 import { PostEditDialog, type EditablePostItem } from '@/components/admin/social/post-edit-dialog';
 import { sanitizeSocialPostText } from '@/lib/social-growth-types';
@@ -222,6 +227,117 @@ export function UnifiedCalendarTab() {
     }
   };
 
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [approvingAll, setApprovingAll] = useState(false);
+  const [acceptingSlotId, setAcceptingSlotId] = useState<string | null>(null);
+
+  const handleApprovePost = async (item: CalendarTimelineItem) => {
+    const qId = item.queueItemId || item.id;
+    try {
+      setApprovingId(qId);
+      const res = await approveCalendarPostAction({
+        niche: item.niche,
+        queueItemId: qId,
+      });
+      if (res.success) {
+        toast.success(`Post "${item.title.slice(0, 35)}..." został zatwierdzony do automatycznej publikacji!`);
+        if (selectedItem?.id === item.id) {
+          setSelectedItem(prev => prev ? { ...prev, status: 'approved' } : null);
+        }
+        await loadCalendarData();
+      } else {
+        toast.error(res.error || 'Nie udało się zatwierdzić posta');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Błąd zatwierdzania');
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handlePublishNow = async (item: CalendarTimelineItem) => {
+    const qId = item.queueItemId || item.id;
+    if (!window.confirm(`Czy na pewno chcesz OPUBLIKOWAĆ ten post NATYCHMIAST na profilu ${item.nicheLabel}?\n\n"${item.title}"`)) {
+      return;
+    }
+
+    try {
+      setPublishingId(qId);
+      toast.info('Wysyłam post na Facebooka...');
+      const res = await publishCalendarPostNowAction({
+        niche: item.niche,
+        queueItemId: qId,
+      });
+      if (res.success) {
+        toast.success('Post został pomyślnie opublikowany na Facebooku!');
+        if (selectedItem?.id === item.id) {
+          setSelectedItem(prev => prev ? { ...prev, status: 'posted', fbPostUrl: res.fbPostUrl } : null);
+        }
+        await loadCalendarData();
+      } else {
+        toast.error(res.error || 'Błąd publikacji na Facebooku');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Błąd publikacji');
+    } finally {
+      setPublishingId(null);
+    }
+  };
+
+  const handleAcceptSlotDeal = async (item: CalendarTimelineItem) => {
+    const dealId = item.candidateDeal?.id || item.dealId;
+    if (!dealId) {
+      handlePreGenerate(item);
+      return;
+    }
+
+    try {
+      setAcceptingSlotId(item.id);
+      toast.info(`AI generuje i zatwierdza post dla: "${(item.candidateDeal?.title || item.title).slice(0, 35)}..."`);
+      const res = await acceptAndGenerateSlotPostAction({
+        niche: item.niche,
+        scheduledTime: item.scheduledTime,
+        dealId,
+      });
+
+      if (res.success) {
+        toast.success('Okazja zaakceptowana! Post wygenerowany i dodany do kolejki jako zatwierdzony.');
+        await loadCalendarData();
+        if (selectedItem?.id === item.id) {
+          setSelectedItem(null);
+        }
+      } else {
+        toast.error(res.error || 'Nie udało się zaakceptować slotu');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Błąd akceptacji');
+    } finally {
+      setAcceptingSlotId(null);
+    }
+  };
+
+  const handleApproveAllPending = async () => {
+    if (!window.confirm('Czy na pewno chcesz zatwierdzić WSZYSTKIE oczekujące posty we wszystkich profilach?')) {
+      return;
+    }
+
+    try {
+      setApprovingAll(true);
+      const res = await approveAllPendingCalendarPostsAction();
+      if (res.success) {
+        toast.success(`Zatwierdzono ${res.count} postów! Wszystkie zostaną opublikowane automatycznie o swoich godzinach.`);
+        await loadCalendarData();
+      } else {
+        toast.error(res.error || 'Błąd zatwierdzania');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Błąd zatwierdzania');
+    } finally {
+      setApprovingAll(false);
+    }
+  };
+
   // Month navigation helpers
   const firstDayOfMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
   const lastDayOfMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0);
@@ -360,6 +476,34 @@ export function UnifiedCalendarTab() {
           </CardContent>
         </Card>
       </div>
+
+      {/* PENDING APPROVAL ACTION BANNER (Gdy są posty wymagające akceptacji) */}
+      {data?.stats?.totalPendingModeration && data.stats.totalPendingModeration > 0 ? (
+        <div className="p-3.5 sm:p-4 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold text-sm text-foreground">
+                {data.stats.totalPendingModeration} {data.stats.totalPendingModeration === 1 ? 'post oczekuje' : 'posty oczekują'} na Twoją akceptację!
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                Zatwierdź je jednym kliknięciem, aby autopilot opublikował je na Facebooku o zaplanowanych godzinach.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            onClick={handleApproveAllPending}
+            disabled={approvingAll}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 shrink-0 self-start sm:self-auto shadow-sm"
+          >
+            {approvingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            Zaakceptuj wszystkie ({data.stats.totalPendingModeration})
+          </Button>
+        </div>
+      ) : null}
 
       {/* Control Bar: View Switcher, Niche Filter & Refresh */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-muted/30 rounded-xl border border-border/70">
@@ -562,8 +706,10 @@ export function UnifiedCalendarTab() {
                           <span className="flex items-center gap-1">
                             {item.status === 'scheduled_slot' ? (
                               <span className="text-blue-500 font-medium">⚡ Proponowana okazja (niewygenerowany)</span>
+                            ) : item.status === 'pending' ? (
+                              <span className="text-amber-600 font-bold flex items-center gap-1">⚠️ Wymaga akceptacji</span>
                             ) : (
-                              <span className="text-emerald-600 font-medium">✓ Post gotowy w kolejce</span>
+                              <span className="text-emerald-600 font-medium">✓ Post zatwierdzony w kolejce</span>
                             )}
                           </span>
 
@@ -572,12 +718,29 @@ export function UnifiedCalendarTab() {
                               <>
                                 <Button
                                   size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAcceptSlotDeal(item);
+                                  }}
+                                  disabled={acceptingSlotId === item.id || preGeneratingId === item.id}
+                                  className="h-7 text-xs px-2.5 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs"
+                                  title="Zaakceptuj tę okazję - AI natychmiast wygeneruje post i zatwierdzi go w kolejce"
+                                >
+                                  {acceptingSlotId === item.id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Check className="w-3.5 h-3.5" />
+                                  )}
+                                  <span>Zaakceptuj okazję</span>
+                                </Button>
+                                <Button
+                                  size="sm"
                                   variant="outline"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleSlotAiPickDeal(item);
                                   }}
-                                  disabled={preGeneratingId === item.id}
+                                  disabled={acceptingSlotId === item.id || preGeneratingId === item.id}
                                   className="h-7 text-xs px-2 gap-1 text-primary border-primary/30 hover:bg-primary/5 font-medium"
                                   title="AI dobiera inną, urozmaiconą okazję z innej kategorii dla tego slotu"
                                 >
@@ -590,24 +753,58 @@ export function UnifiedCalendarTab() {
                                 </Button>
                                 <Button
                                   size="sm"
-                                  variant="default"
+                                  variant="outline"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handlePreGenerate(item);
                                   }}
-                                  disabled={preGeneratingId === item.id}
-                                  className="h-7 text-xs px-2.5 gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                                  disabled={acceptingSlotId === item.id || preGeneratingId === item.id}
+                                  className="h-7 text-xs px-2 gap-1 text-muted-foreground"
+                                  title="Dostosuj treść posta przed zatwierdzeniem"
                                 >
-                                  {preGeneratingId === item.id ? (
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                  ) : (
-                                    <Sparkles className="w-3 h-3 text-amber-300" />
-                                  )}
-                                  Wygeneruj wcześniej
+                                  <Edit className="w-3 h-3" />
+                                  <span>Dostosuj</span>
                                 </Button>
                               </>
                             ) : (
                               <>
+                                {item.status === 'pending' && (
+                                  <Button
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleApprovePost(item);
+                                    }}
+                                    disabled={approvingId === (item.queueItemId || item.id)}
+                                    className="h-7 text-xs px-2.5 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs"
+                                    title="Zatwierdź ten post do automatycznej publikacji"
+                                  >
+                                    {approvingId === (item.queueItemId || item.id) ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                    )}
+                                    <span>Zaakceptuj post</span>
+                                  </Button>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePublishNow(item);
+                                  }}
+                                  disabled={publishingId === (item.queueItemId || item.id)}
+                                  className="h-7 text-xs px-2 gap-1 text-blue-600 border-blue-200 hover:bg-blue-50 font-medium"
+                                  title="Opublikuj ten post natychmiast na Facebooku"
+                                >
+                                  {publishingId === (item.queueItemId || item.id) ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Send className="w-3 h-3" />
+                                  )}
+                                  <span>Publikuj teraz</span>
+                                </Button>
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -618,7 +815,7 @@ export function UnifiedCalendarTab() {
                                   className="h-7 text-xs px-2.5 gap-1.5"
                                 >
                                   <Edit className="w-3 h-3" />
-                                  Edytuj post
+                                  <span>Edytuj</span>
                                 </Button>
                                 <Button
                                   size="sm"
@@ -965,9 +1162,22 @@ export function UnifiedCalendarTab() {
                   <>
                     <Button
                       size="sm"
+                      onClick={() => handleAcceptSlotDeal(selectedItem)}
+                      disabled={preGeneratingId === selectedItem.id || acceptingSlotId === selectedItem.id}
+                      className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs"
+                    >
+                      {acceptingSlotId === selectedItem.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Check className="w-3.5 h-3.5" />
+                      )}
+                      Zaakceptuj tę okazję
+                    </Button>
+                    <Button
+                      size="sm"
                       variant="outline"
                       onClick={() => handleSlotAiPickDeal(selectedItem)}
-                      disabled={preGeneratingId === selectedItem.id}
+                      disabled={preGeneratingId === selectedItem.id || acceptingSlotId === selectedItem.id}
                       className="text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/5"
                     >
                       {preGeneratingId === selectedItem.id ? (
@@ -979,28 +1189,56 @@ export function UnifiedCalendarTab() {
                     </Button>
                     <Button
                       size="sm"
+                      variant="outline"
                       onClick={() => handlePreGenerate(selectedItem)}
-                      disabled={preGeneratingId === selectedItem.id}
-                      className="text-xs gap-1.5 bg-primary text-primary-foreground font-semibold"
+                      disabled={preGeneratingId === selectedItem.id || acceptingSlotId === selectedItem.id}
+                      className="text-xs gap-1.5"
                     >
-                      {preGeneratingId === selectedItem.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                      )}
-                      Wygeneruj post wcześniej
+                      <Edit className="w-3.5 h-3.5" />
+                      Dostosuj w edytorze
                     </Button>
                   </>
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={() => handleEditPost(selectedItem)}
-                    className="text-xs gap-1.5"
-                  >
-                    <Edit className="w-3.5 h-3.5" />
-                    Edytuj post
-                  </Button>
+                  <>
+                    {selectedItem.status === 'pending' && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleApprovePost(selectedItem)}
+                        disabled={approvingId === (selectedItem.queueItemId || selectedItem.id)}
+                        className="text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xs"
+                      >
+                        {approvingId === (selectedItem.queueItemId || selectedItem.id) ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        )}
+                        Zaakceptuj post do publikacji
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handlePublishNow(selectedItem)}
+                      disabled={publishingId === (selectedItem.queueItemId || selectedItem.id)}
+                      className="text-xs gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 font-medium"
+                    >
+                      {publishingId === (selectedItem.queueItemId || selectedItem.id) ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                      Publikuj teraz na FB
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEditPost(selectedItem)}
+                      className="text-xs gap-1.5"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      Edytuj treść
+                    </Button>
+                  </>
                 )}
 
                 {selectedItem.fbPostUrl && (
