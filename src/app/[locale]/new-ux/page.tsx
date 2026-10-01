@@ -3,6 +3,7 @@ import HomeClient from './home-client';
 import { getRecommendedProducts, getCategories } from '@/lib/data';
 import { searchDeals } from '@/lib/search-server';
 import { generateHomePageJsonLd } from '@/lib/json-ld-generators';
+import { serializeFirestoreDoc } from '@/lib/sanitizers';
 
 // Cache home page more aggressively for better performance
 export const revalidate = 300; // ISR co 5 minut dla niższego kosztu backendu i stabilniejszego TTFB
@@ -173,10 +174,10 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd) }}
       />
       <HomeClient 
-        initialHotDeals={hotDeals}
-        initialTopProducts={topProducts}
-        categories={categories}
-        weeklyDeals={weeklyDeals}
+        initialHotDeals={serializeFirestoreDoc(hotDeals)}
+        initialTopProducts={serializeFirestoreDoc(topProducts)}
+        categories={serializeFirestoreDoc(categories)}
+        weeklyDeals={serializeFirestoreDoc(weeklyDeals)}
       />
     </>
   );

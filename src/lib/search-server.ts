@@ -1,4 +1,5 @@
 import { Deal, ProductCore } from '@/lib/types';
+import { serializeFirestoreDoc } from '@/lib/sanitizers';
 
 export type Suggestion = {
   type: 'product' | 'deal';
@@ -339,7 +340,7 @@ export async function getDealById(dealId: string): Promise<Deal | null> {
     const { adminDb } = await import('@/lib/firebase-admin');
     const snap = await adminDb.collection('deals').doc(dealId).get();
     if (!snap.exists) return null;
-    return { id: snap.id, ...snap.data() } as Deal;
+    return serializeFirestoreDoc({ id: snap.id, ...snap.data() }) as Deal;
   } catch (error) {
     console.warn('getDealById failed:', error);
     return null;
@@ -406,7 +407,7 @@ async function searchProductsFirestoreFallback(
         docs = snap.docs.map((docSnap: any) => {
           const data = docSnap.data();
           delete data.embedding;
-          return { id: docSnap.id, ...data };
+          return serializeFirestoreDoc({ id: docSnap.id, ...data });
         });
         docs = docs.filter((d: any) => d.status === targetStatus);
         vectorSearchSuccess = true;
@@ -450,7 +451,7 @@ async function searchProductsFirestoreFallback(
         let kwDocs = snap.docs.map((docSnap: any) => {
           const data = docSnap.data();
           delete data.embedding;
-          return { id: docSnap.id, ...data };
+          return serializeFirestoreDoc({ id: docSnap.id, ...data });
         });
 
         kwDocs = kwDocs.filter((d: any) => {
@@ -480,7 +481,7 @@ async function searchProductsFirestoreFallback(
       if (minRating !== undefined) docs = docs.filter((d: any) => (d.ratingCard?.average || d.rating || 0) >= Number(minRating));
 
       const offset = (page - 1) * safeLimit;
-      return docs.slice(offset, offset + safeLimit) as ProductCore[];
+      return docs.slice(offset, offset + safeLimit).map(serializeFirestoreDoc) as ProductCore[];
     } else {
       const { getProductCoresByFiltersData } = await import('@/lib/data/products');
       const fetchLimit = safeLimit * page;
@@ -499,7 +500,7 @@ async function searchProductsFirestoreFallback(
         fetchLimit
       );
       const offset = (page - 1) * safeLimit;
-      return allDocs.slice(offset, offset + safeLimit);
+      return allDocs.slice(offset, offset + safeLimit).map(serializeFirestoreDoc);
     }
   } catch (err) {
     console.error('Firestore fallback for searchProducts failed:', err);
@@ -568,7 +569,7 @@ async function searchDealsFirestoreFallback(
             let docsVal = snap.docs.map((docSnap: any) => {
               const data = docSnap.data();
               delete data.embedding;
-              return { id: docSnap.id, ...data };
+              return serializeFirestoreDoc({ id: docSnap.id, ...data });
             });
             return docsVal.filter((d: any) => d.status === status);
           })
@@ -673,7 +674,7 @@ async function searchDealsFirestoreFallback(
               return snap.docs.map((docSnap: any) => {
                 const data = docSnap.data();
                 delete data.embedding;
-                return { id: docSnap.id, ...data };
+                return serializeFirestoreDoc({ id: docSnap.id, ...data });
               });
             })
           );
@@ -688,7 +689,7 @@ async function searchDealsFirestoreFallback(
           const data = typeof doc.data === 'function' ? doc.data() : doc;
           const docId = doc.id || data.id;
           delete data.embedding;
-          textMatchDeals.push({ id: docId, ...data });
+          textMatchDeals.push(serializeFirestoreDoc({ id: docId, ...data }));
         }
       }
 
@@ -754,7 +755,8 @@ async function searchDealsFirestoreFallback(
       });
 
       const offset = (page - 1) * safeLimit;
-      return await hydrateFallbackDealImages(docs.slice(offset, offset + safeLimit) as Deal[]);
+      const sliced = docs.slice(offset, offset + safeLimit).map(serializeFirestoreDoc);
+      return await hydrateFallbackDealImages(sliced as Deal[]);
     } else {
       const { adminDb } = await import('@/lib/firebase-admin');
       const statuses = statusFilter === 'waiting_room'
@@ -800,7 +802,7 @@ async function searchDealsFirestoreFallback(
       let docs: any[] = snap.docs.map((docSnap) => {
         const data = docSnap.data();
         delete data.embedding;
-        return { id: docSnap.id, ...data };
+        return serializeFirestoreDoc({ id: docSnap.id, ...data });
       });
 
       // Post-filtering in memory
@@ -841,7 +843,8 @@ async function searchDealsFirestoreFallback(
       });
 
       const offset = (page - 1) * safeLimit;
-      return await hydrateFallbackDealImages(docs.slice(offset, offset + safeLimit) as Deal[]);
+      const sliced = docs.slice(offset, offset + safeLimit).map(serializeFirestoreDoc);
+      return await hydrateFallbackDealImages(sliced as Deal[]);
     }
   } catch (err) {
     console.error('Firestore fallback for searchDeals failed:', err);

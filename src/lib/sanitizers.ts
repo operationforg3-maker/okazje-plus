@@ -54,6 +54,52 @@ const ensureString = (value: unknown, fallback = ''): string => {
   return fallback;
 };
 
+/**
+ * Recursively converts Firestore Timestamps and Dates to ISO strings,
+ * and converts classes/non-plain objects into plain serializable JS objects.
+ * Essential for Next.js React Server Components (RSC) boundary safety.
+ */
+export function serializeFirestoreDoc<T = any>(val: T): T {
+  if (val === null || val === undefined) return val;
+
+  if (typeof val === 'object') {
+    // 1. Client SDK Timestamp
+    if (typeof (val as any).toDate === 'function') {
+      try {
+        return (val as any).toDate().toISOString() as any;
+      } catch {
+        // fallthrough
+      }
+    }
+    // 2. Admin SDK Timestamp
+    if ('_seconds' in (val as any) && typeof (val as any)._seconds === 'number') {
+      try {
+        const seconds = (val as any)._seconds;
+        const nanos = (val as any)._nanoseconds || 0;
+        return new Date(seconds * 1000 + nanos / 1000000).toISOString() as any;
+      } catch {
+        // fallthrough
+      }
+    }
+    // 3. JavaScript Date instance
+    if (val instanceof Date) {
+      return val.toISOString() as any;
+    }
+    // 4. Arrays
+    if (Array.isArray(val)) {
+      return val.map(serializeFirestoreDoc) as any;
+    }
+    // 5. Objects: convert to pure plain object with Object.prototype
+    const plain: Record<string, any> = {};
+    for (const [key, value] of Object.entries(val)) {
+      plain[key] = serializeFirestoreDoc(value);
+    }
+    return plain as T;
+  }
+
+  return val;
+}
+
 const ensureOptionalString = (value: unknown): string | undefined => {
   const str = ensureString(value, '');
   return str.length > 0 ? str : undefined;
@@ -630,13 +676,34 @@ export const sanitizeDealPayload = (raw: Partial<Deal>): Omit<Deal, 'id'> => {
     aiQuality: raw.aiQuality,
     importMetadata: raw.importMetadata,
     metadata: sanitizeDealMetadata(raw.metadata),
+    createdAt: ensureString(raw.createdAt, ensureString(raw.postedAt, new Date().toISOString())),
+    updatedAt: ensureString(raw.updatedAt, ensureString(raw.createdAt, new Date().toISOString())),
+    promotedAt: ensureOptionalString(raw.promotedAt),
+    approvedAt: ensureOptionalString(raw.approvedAt),
+    lastCheck: ensureOptionalString(raw.lastCheck),
+    productId: ensureOptionalString((raw as any).productId),
+    productCoreId: ensureOptionalString((raw as any).productCoreId),
+    sourceProductId: ensureOptionalString((raw as any).sourceProductId),
+    shipping: ensureOptionalNumber((raw as any).shipping),
+    totalPrice: ensureOptionalNumber((raw as any).totalPrice),
+    images: ensureStringArray((raw as any).images, 20),
+    categorySlug: ensureOptionalString((raw as any).categorySlug),
+    stockStatus: ensureOptionalString((raw as any).stockStatus),
+    isActive: (raw as any).isActive === undefined ? undefined : ensureBoolean((raw as any).isActive),
+    commissionRate: ensureOptionalNumber((raw as any).commissionRate),
+    incentiveCommissionRate: ensureOptionalNumber((raw as any).incentiveCommissionRate),
+    popularity: ensureOptionalNumber((raw as any).popularity),
+    isHot: (raw as any).isHot === undefined ? undefined : ensureBoolean((raw as any).isHot),
+    promoCode: ensureOptionalString((raw as any).promoCode),
+    promoDetails: ensureOptionalString((raw as any).promoDetails),
   };
 };
 
-export const sanitizeDealRecord = (raw: any, id: string): Deal => ({
-  id,
-  ...sanitizeDealPayload(raw || {}),
-});
+export const sanitizeDealRecord = (raw: any, id: string): Deal =>
+  serializeFirestoreDoc({
+    id,
+    ...sanitizeDealPayload(raw || {}),
+  });
 
 /**
  * Sanitize ProductCore from Firestore (M6)
@@ -831,7 +898,7 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
     };
   };
 
-  return {
+  return serializeFirestoreDoc({
     id,
     identityHash: ensureString((raw as any).identityHash, ''),
     title: sanitizeLocalizedTextValues(sanitizeLocalizedText((raw as any).title), sanitizeTextForGoogleTitle),
@@ -915,5 +982,5 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
               : undefined,
           }
         : undefined,
-  } as ProductCore;
+  }) as ProductCore;
 };
