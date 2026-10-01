@@ -840,7 +840,8 @@ export async function updateBabyQueueItemAction(
 
 export async function publishBabyPostAction(
   postId: string,
-  editedContent?: string
+  editedContent?: string,
+  skipAuth: boolean = false
 ): Promise<{
   success: boolean;
   fbPostId?: string;
@@ -848,9 +849,11 @@ export async function publishBabyPostAction(
   error?: string;
 }> {
   try {
-    const session = await getServerAuthSession();
-    if (!session || session.role !== 'admin') {
-      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    if (!skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return { success: false, error: 'Wymagane uprawnienia administratora' };
+      }
     }
 
     const docRef = adminDb.collection('babyPostQueue').doc(postId);
@@ -1057,7 +1060,9 @@ export async function publishBabyPostAction(
       }
     }
 
-    revalidatePath('/[locale]/admin/baby-autopilot', 'page');
+    try {
+      revalidatePath('/[locale]/admin/baby-autopilot', 'page');
+    } catch (_) {}
     return {
       success: hasSucceeded,
       fbPostId,
@@ -1853,14 +1858,16 @@ export async function executeBabyAutopilotCycle(): Promise<{
       return { success: true, generatedCount: 0, publishedCount: 0, logs };
     }
 
-    // 1. Publikuj zatwierdzone posty z kolejki
+    // 1. Publikuj zatwierdzone posty z kolejki (lub oczekujące w trybie autopilot)
     const queueRes = await getBabyQueue(true);
-    const approvedPosts = queueRes.items.filter(i => i.status === 'approved');
+    const approvedPosts = queueRes.items.filter(i => 
+      i.status === 'approved' || (config.mode === 'autopilot' && i.status === 'pending')
+    );
 
     if (approvedPosts.length > 0) {
-      logs.push(`Znaleziono ${approvedPosts.length} zatwierdzonych postów do publikacji`);
+      logs.push(`Znaleziono ${approvedPosts.length} postów kwalifikujących się do publikacji`);
       const postToPublish = approvedPosts[0]; // Publikuj 1 na cykl aby nie spamować
-      const pubRes = await publishBabyPostAction(postToPublish.id);
+      const pubRes = await publishBabyPostAction(postToPublish.id, undefined, true);
       if (pubRes.success) {
         publishedCount++;
         logs.push(`Opublikowano post ${postToPublish.id} na FB: ${pubRes.fbPostId || 'OK'}`);
@@ -1870,9 +1877,9 @@ export async function executeBabyAutopilotCycle(): Promise<{
     }
 
     // 2. Jeśli kolejka ma mało elementów, pobierz z feeda i wygeneruj nową propozycję
-    const pendingCount = queueRes.items.filter(i => i.status === 'pending').length;
-    if (pendingCount < 3) {
-      logs.push(`Mało oczekujących postów (${pendingCount}), sprawdzam feedy partnerskie i okazje dziecięce...`);
+    const pendingCount = queueRes.items.filter(i => i.status === 'pending' || i.status === 'approved').length;
+    if (pendingCount < 4) {
+      logs.push(`Mało aktywnych postów w kolejce (${pendingCount}), sprawdzam feedy partnerskie i okazje dziecięce...`);
 
       // Automatyczny harvest z feedów partnerskich
       try {
@@ -1923,13 +1930,26 @@ export async function executeBabyAutopilotCycle(): Promise<{
         );
 
         if (genRes.success && genRes.item) {
+          const itemStatus = config.mode === 'autopilot' ? 'approved' : genRes.item.status;
           const addRes = await adminDb.collection('babyPostQueue').add({
             ...genRes.item,
+            status: itemStatus,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           });
           generatedCount++;
-          logs.push(`Utworzono post w kolejce ID: ${addRes.id} (status: ${genRes.item.status})`);
+          logs.push(`Utworzono post w kolejce ID: ${addRes.id} (status: ${itemStatus})`);
+
+          // Jeśli w trybie autopilot nic jeszcze nie opublikowano w tym cyklu, opublikuj ten post od razu
+          if (config.mode === 'autopilot' && publishedCount === 0) {
+            const pubRes = await publishBabyPostAction(addRes.id, undefined, true);
+            if (pubRes.success) {
+              publishedCount++;
+              logs.push(`Opublikowano nowo wygenerowany post ${addRes.id} na FB: ${pubRes.fbPostId || 'OK'}`);
+            } else {
+              logs.push(`Błąd publikacji nowego posta ${addRes.id}: ${pubRes.error}`);
+            }
+          }
         }
       } else {
         logs.push('Brak świeżych ofert dziecięcych spełniających kryteria');

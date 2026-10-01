@@ -2183,22 +2183,44 @@ export async function executeFishingAutopilotCycle(options?: {
     }
 
     // A. SPRAWDŹ CZY W KOLEJCE CZEKA JUŻ ZATWIERDZONY / OCZEKUJĄCY POST
-    const pendingSnap = await adminDb
+    let postToPublishDoc: FirebaseFirestore.DocumentSnapshot | null = null;
+    const approvedSnap = await adminDb
       .collection('fishingPostsQueue')
-      .where('status', '==', 'pending')
-      .orderBy('createdAt', 'asc')
-      .limit(1)
+      .where('status', '==', 'approved')
+      .limit(10)
       .get();
 
-    if (!pendingSnap.empty && config.mode === 'autopilot') {
-      const pendingDoc = pendingSnap.docs[0];
-      const pubRes = await publishFishingPost(pendingDoc.id, undefined, true);
+    if (!approvedSnap.empty) {
+      const sortedApproved = [...approvedSnap.docs].sort((a, b) => {
+        const ta = new Date(a.data().createdAt || 0).getTime();
+        const tb = new Date(b.data().createdAt || 0).getTime();
+        return ta - tb;
+      });
+      postToPublishDoc = sortedApproved[0];
+    } else if (config.mode === 'autopilot') {
+      const pendingSnap = await adminDb
+        .collection('fishingPostsQueue')
+        .where('status', '==', 'pending')
+        .limit(10)
+        .get();
+      if (!pendingSnap.empty) {
+        const sortedPending = [...pendingSnap.docs].sort((a, b) => {
+          const ta = new Date(a.data().createdAt || 0).getTime();
+          const tb = new Date(b.data().createdAt || 0).getTime();
+          return ta - tb;
+        });
+        postToPublishDoc = sortedPending[0];
+      }
+    }
+
+    if (postToPublishDoc && (config.mode === 'autopilot' || postToPublishDoc.data()?.status === 'approved')) {
+      const pubRes = await publishFishingPost(postToPublishDoc.id, undefined, true);
       return {
         success: pubRes.success,
         message: pubRes.success
-          ? '🚀 Opublikowano oczekujący post z kolejki moderacji!'
-          : `Błąd publikacji oczekującego posta: ${pubRes.error}`,
-        postId: pendingDoc.id,
+          ? '🚀 Opublikowano post z kolejki wędkarskiej!'
+          : `Błąd publikacji posta wędkarskiego: ${pubRes.error}`,
+        postId: postToPublishDoc.id,
         published: pubRes.success,
         error: pubRes.error,
       };

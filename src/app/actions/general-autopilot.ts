@@ -29,7 +29,11 @@ import {
   buildGeneralHashtags,
   formatGeneralPricePLN,
 } from '@/lib/general-utils';
-import { diversifyDealsList } from '@/lib/deal-diversity';
+import {
+  diversifyDealsList,
+  detectDealCategory,
+  pickDiverseRecommendation,
+} from '@/lib/deal-diversity';
 
 // ============================================================================
 // POBIERANIE I ZAPIS KONFIGURACJI
@@ -360,12 +364,15 @@ export async function getGeneralQueueAction(): Promise<{
 }
 
 export async function addGeneralPostToQueueAction(
-  item: Omit<GeneralPostQueueItem, 'id' | 'createdAt' | 'updatedAt'>
+  item: Omit<GeneralPostQueueItem, 'id' | 'createdAt' | 'updatedAt'>,
+  skipAuth: boolean = false
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
-    const session = await getServerAuthSession();
-    if (!session || session.role !== 'admin') {
-      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    if (!skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return { success: false, error: 'Wymagane uprawnienia administratora' };
+      }
     }
 
     const docRef = await adminDb.collection('generalPostQueue').add({
@@ -484,22 +491,27 @@ export async function updateGeneralQueueItemAction(
 // GENEROWANIE POSTÓW PRZEZ AI
 // ============================================================================
 
-export async function generateGeneralPostAction(params: {
-  botRole: GeneralBotRole;
-  dealId?: string;
-  targetDealData?: Partial<GeneralDealItem>;
-  customTopic?: string;
-  humorLevel?: 'subtle' | 'high' | 'legendary' | 'none';
-  target?: 'facebook' | 'portal' | 'both';
-}): Promise<{
+export async function generateGeneralPostAction(
+  params: {
+    botRole: GeneralBotRole;
+    dealId?: string;
+    targetDealData?: Partial<GeneralDealItem>;
+    customTopic?: string;
+    humorLevel?: 'subtle' | 'high' | 'legendary' | 'none';
+    target?: 'facebook' | 'portal' | 'both';
+  },
+  skipAuth: boolean = false
+): Promise<{
   success: boolean;
   post?: Partial<GeneralPostQueueItem>;
   error?: string;
 }> {
   try {
-    const session = await getServerAuthSession();
-    if (!session || session.role !== 'admin') {
-      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    if (!skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return { success: false, error: 'Wymagane uprawnienia administratora' };
+      }
     }
 
     const { botRole, dealId, customTopic, targetDealData } = params;
@@ -709,7 +721,8 @@ Pamiętaj: zero '**', zwięźle, naturalny język!
 
 export async function publishGeneralPostAction(
   postId: string,
-  editedContent?: string
+  editedContent?: string,
+  skipAuth: boolean = false
 ): Promise<{
   success: boolean;
   fbPostId?: string;
@@ -717,9 +730,11 @@ export async function publishGeneralPostAction(
   error?: string;
 }> {
   try {
-    const session = await getServerAuthSession();
-    if (!session || session.role !== 'admin') {
-      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    if (!skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return { success: false, error: 'Wymagane uprawnienia administratora' };
+      }
     }
 
     const docRef = adminDb.collection('generalPostQueue').doc(postId);
@@ -1401,20 +1416,116 @@ export async function executeGeneralAutopilotCycle(): Promise<{
       return { ...result, errors: ['General Autopilot jest wyłączony w konfiguracji'] };
     }
 
-    const queueSnap = await adminDb
+    // 1. Sprawdź zatwierdzone posty lub oczekujące (jeśli tryb autopilot)
+    let postDocToPublish: FirebaseFirestore.DocumentSnapshot | null = null;
+    const approvedSnap = await adminDb
       .collection('generalPostQueue')
       .where('status', '==', 'approved')
-      .orderBy('createdAt', 'asc')
-      .limit(1)
+      .limit(10)
       .get();
 
-    if (!queueSnap.empty) {
-      const postDoc = queueSnap.docs[0];
-      const pubRes = await publishGeneralPostAction(postDoc.id);
+    if (!approvedSnap.empty) {
+      const sortedApproved = [...approvedSnap.docs].sort((a, b) => {
+        const ta = new Date(a.data().createdAt || 0).getTime();
+        const tb = new Date(b.data().createdAt || 0).getTime();
+        return ta - tb;
+      });
+      postDocToPublish = sortedApproved[0];
+    } else if (config.mode === 'autopilot') {
+      const pendingSnap = await adminDb
+        .collection('generalPostQueue')
+        .where('status', '==', 'pending')
+        .limit(10)
+        .get();
+      if (!pendingSnap.empty) {
+        const sortedPending = [...pendingSnap.docs].sort((a, b) => {
+          const ta = new Date(a.data().createdAt || 0).getTime();
+          const tb = new Date(b.data().createdAt || 0).getTime();
+          return ta - tb;
+        });
+        postDocToPublish = sortedPending[0];
+      }
+    }
+
+    if (postDocToPublish) {
+      const pubRes = await publishGeneralPostAction(postDocToPublish.id, undefined, true);
       if (pubRes.success) {
         result.publishedCount++;
       } else if (pubRes.error) {
-        result.errors.push(`Błąd publikacji ${postDoc.id}: ${pubRes.error}`);
+        result.errors.push(`Błąd publikacji ${postDocToPublish.id}: ${pubRes.error}`);
+      }
+    }
+
+    // 2. Jeśli w kolejce brakuje postów (< 4 aktywnych), wygeneruj nowy post z okazji
+    const queueItemsRes = await getGeneralQueue(true);
+    const activeQueueItems = queueItemsRes.items.filter(i => i.status === 'pending' || i.status === 'approved');
+    if (activeQueueItems.length < 4) {
+      // Spróbuj pobrać nowe oferty z partnerów
+      try {
+        await harvestGeneralPartnerOffers({ limitPerSource: 5 });
+      } catch (hErr) {
+        console.warn('Harvest general partner offers error in cycle:', hErr);
+      }
+
+      // Pobierz najlepsze ogólne okazje
+      const dealsRes = await getGeneralDeals({ limit: 20, minDiscount: config.filters?.minDiscountPercent || 15 }, true);
+      if (dealsRes.deals.length > 0) {
+        const recentCategories = activeQueueItems.slice(0, 5).map(i =>
+          detectDealCategory(i.title || '', i.content || '', 'general')
+        );
+        const existingDealIds = activeQueueItems.map(q => q.dealId).filter(Boolean) as string[];
+
+        const diverseRec = pickDiverseRecommendation(dealsRes.deals, {
+          niche: 'general',
+          recentCategories,
+          excludeDealIds: existingDealIds,
+        });
+
+        const selectedDeal = diverseRec.deal || dealsRes.deals[0];
+
+        const botsRes = await getGeneralBots(true);
+        const activeBots = botsRes.bots.filter(b => b.enabled);
+        const chosenBot = activeBots.length > 0 
+          ? activeBots[Math.floor(Math.random() * activeBots.length)]
+          : DEFAULT_GENERAL_BOTS[0];
+
+        const genRes = await generateGeneralPostAction({
+          botRole: chosenBot.role,
+          dealId: selectedDeal.id,
+          targetDealData: {
+            id: selectedDeal.id,
+            title: selectedDeal.title,
+            price: selectedDeal.price,
+            oldPrice: selectedDeal.oldPrice,
+            discount: selectedDeal.discount,
+            merchant: selectedDeal.merchant,
+            imageUrl: selectedDeal.imageUrl,
+            dealUrl: selectedDeal.dealUrl,
+            description: selectedDeal.description,
+          },
+        }, true);
+
+        if (genRes.success && genRes.post) {
+          const itemStatus = config.mode === 'autopilot' ? 'approved' : 'pending';
+          const addRes = await addGeneralPostToQueueAction({
+            ...genRes.post,
+            status: itemStatus,
+          } as any, true);
+
+          if (addRes.success && addRes.id) {
+            result.generatedCount++;
+
+            // Jeśli w tym cyklu nic jeszcze nie opublikowano i jesteśmy w trybie autopilot, opublikuj ten post od razu!
+            if (config.mode === 'autopilot' && result.publishedCount === 0) {
+              const pubRes = await publishGeneralPostAction(addRes.id, undefined, true);
+              if (pubRes.success) {
+                result.publishedCount++;
+              } else if (pubRes.error) {
+                result.errors.push(`Błąd publikacji wygenerowanego posta ${addRes.id}: ${pubRes.error}`);
+              }
+            }
+          }
+        }
       }
     }
 

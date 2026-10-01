@@ -82,15 +82,7 @@ async function handleCron(request: NextRequest) {
       .where('enabled', '==', true)
       .get();
 
-    if (botsSnap.empty) {
-      return NextResponse.json({
-        success: true,
-        message: 'No active AI bots found',
-        executedCount: 0,
-      });
-    }
-
-    const bots = botsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as SocialAIBot));
+    const bots = botsSnap.empty ? [] : botsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as SocialAIBot));
     const dueBots = bots.filter(isBotDue);
 
     const results = [];
