@@ -228,62 +228,10 @@ export const DEFAULT_BABY_BOTS: BabyBotPersona[] = [
 // HELPERY I RESOLVER LINKÓW AFILIACYJNYCH
 // ============================================================================
 
+import { resolveUnifiedAffiliateUrl } from '@/lib/affiliate-links';
+
 export function resolveBabyAffiliateUrl(dealOrUrl: any, campaignSubId: string = 'Maluch_1'): string {
-  let targetUrl = '';
-
-  if (typeof dealOrUrl === 'string') {
-    targetUrl = dealOrUrl;
-  } else if (dealOrUrl && typeof dealOrUrl === 'object') {
-    targetUrl =
-      dealOrUrl.directAffiliateUrl ||
-      dealOrUrl.affiliateUrl ||
-      dealOrUrl.dealUrl ||
-      dealOrUrl.link ||
-      dealOrUrl.url ||
-      dealOrUrl.rawLink ||
-      '';
-  }
-
-  if (!targetUrl) return '';
-
-  try {
-    const urlObj = new URL(targetUrl);
-
-    // 1. AliExpress link
-    if (urlObj.hostname.includes('aliexpress.')) {
-      if (!urlObj.searchParams.has('subid') && !urlObj.searchParams.has('sub_id')) {
-        urlObj.searchParams.set('subid', campaignSubId);
-      }
-      return urlObj.toString();
-    }
-
-    // 2. Convertiser wrapper link
-    if (urlObj.hostname.includes('convertiser.com') || urlObj.hostname.includes('cvtr.pl')) {
-      if (!urlObj.searchParams.has('subid')) {
-        urlObj.searchParams.set('subid', campaignSubId);
-      }
-      return urlObj.toString();
-    }
-
-    // 3. TradeTracker link
-    if (urlObj.hostname.includes('tradetracker.net') || urlObj.hostname.includes('tc.tradetracker.net')) {
-      if (!urlObj.searchParams.has('u')) {
-        urlObj.searchParams.set('u', campaignSubId);
-      }
-      return urlObj.toString();
-    }
-
-    // Ogólny dodatek trackingowy
-    if (!urlObj.searchParams.has('utm_campaign')) {
-      urlObj.searchParams.set('utm_source', 'facebook');
-      urlObj.searchParams.set('utm_medium', 'social');
-      urlObj.searchParams.set('utm_campaign', campaignSubId);
-    }
-
-    return urlObj.toString();
-  } catch {
-    return targetUrl;
-  }
+  return resolveUnifiedAffiliateUrl(dealOrUrl, campaignSubId);
 }
 
 /**

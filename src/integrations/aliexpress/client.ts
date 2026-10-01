@@ -860,8 +860,15 @@ export class AliExpressClient {
         const rating = p.evaluate_rate ? parseFloat(p.evaluate_rate) : 0;
         const salesVolume = p.volume ? parseInt(p.volume, 10) : 0;
         
+        const aliId = p.product_id || p.item_id;
+        const cleanProductUrl = aliId ? `https://pl.aliexpress.com/item/${aliId}.html` : (p.product_detail_url || '');
+        const directAffiliateUrl = aliId
+          ? `https://s.click.aliexpress.com/deep_link.htm?aff_short_key=_pz9sEiR&dl_target_url=${encodeURIComponent(cleanProductUrl)}`
+          : (p.product_detail_url || p.promotion_link);
+
         return {
-          item_id: p.product_id || p.item_id,
+          item_id: aliId,
+          product_id: aliId,
           title: p.product_title || p.title,
           image_urls: uniqueImages.length > 0 ? uniqueImages : [p.product_main_image_url || p.image_url].filter(Boolean),
           product_video_url: p.product_video_url || null,
@@ -870,7 +877,9 @@ export class AliExpressClient {
             original: parseFloat(p.target_original_price || p.original_price || '0'),
             currency: 'PLN', // M6: Always PLN from API
           },
-          product_url: p.promotion_link || p.product_detail_url,
+          product_url: directAffiliateUrl,
+          direct_url: cleanProductUrl,
+          promotion_link: directAffiliateUrl,
           discount_percent: p.discount ? parseFloat(p.discount) : undefined,
           rating: rating > 0 ? {
             score: rating,

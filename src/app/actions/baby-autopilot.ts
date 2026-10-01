@@ -1664,8 +1664,18 @@ export async function harvestBabyPartnerOffers(
                   const origPriceNum = typeof origPrice === 'number'
                     ? origPrice
                     : (origPrice ? parseFloat(String(origPrice).replace(/[^0-9.,]/g, '').replace(',', '.')) : undefined);
-                  const rawLink = (p as any).product_url || (p as any).promotionLink || (p as any).productUrl || `https://www.aliexpress.com/item/${(p as any).item_id || (p as any).productId}.html`;
-                  const trackedLink = resolveBabyAffiliateUrl(rawLink, config.tracking?.campaign || 'Maluch_1');
+                  const aliId = String((p as any).product_id || (p as any).item_id || (p as any).productId || '');
+                  const rawLink = aliId
+                    ? `https://pl.aliexpress.com/item/${aliId}.html`
+                    : ((p as any).product_url || (p as any).productUrl || '');
+                  const trackedLink = resolveBabyAffiliateUrl(
+                    {
+                      link: rawLink,
+                      source: 'aliexpress',
+                      sourceProductId: aliId || undefined,
+                    },
+                    config.tracking?.campaign || 'Maluch_1'
+                  );
                   if (existingLinks.has(trackedLink) || existingTitles.has(titleLower)) continue;
 
                   const imageUrl = Array.isArray((p as any).image_urls) && (p as any).image_urls.length > 0
@@ -1680,6 +1690,11 @@ export async function harvestBabyPartnerOffers(
                     legacyPrice: priceNum,
                     link: trackedLink,
                     affiliateLink: trackedLink,
+                    sourceProductId: aliId || undefined,
+                    metadata: {
+                      originalId: aliId || undefined,
+                      source: 'aliexpress',
+                    },
                     image: imageUrl,
                     imageHint: 'dla dzieci i mamy aliexpress',
                     category: 'dziecko-zabawki',

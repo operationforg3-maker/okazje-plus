@@ -183,65 +183,13 @@ export const DEFAULT_GENERAL_BOTS: GeneralBotPersona[] = [
 // REZOLWACJA I WZBOGACANIE LINKÓW AFILIACYJNYCH
 // ============================================================================
 
+import { resolveUnifiedAffiliateUrl } from '@/lib/affiliate-links';
+
 export function resolveGeneralAffiliateUrl(
   dealOrUrl: { dealUrl?: string; portalUrl?: string; rawLink?: string; link?: string; source?: string } | string,
   campaignSubId = 'Okazje_1'
 ): string {
-  let targetUrl = '';
-  let source = '';
-
-  if (typeof dealOrUrl === 'string') {
-    targetUrl = dealOrUrl;
-  } else if (dealOrUrl && typeof dealOrUrl === 'object') {
-    targetUrl = dealOrUrl.dealUrl || dealOrUrl.link || dealOrUrl.rawLink || dealOrUrl.portalUrl || '';
-    source = dealOrUrl.source || '';
-  }
-
-  if (!targetUrl) return 'https://okazjeplus.pl';
-
-  try {
-    const parsed = new URL(targetUrl);
-
-    // 1. ALIEXPRESS
-    if (parsed.hostname.includes('aliexpress.') || source.toLowerCase() === 'aliexpress') {
-      if (!parsed.searchParams.has('subId') && !parsed.searchParams.has('aff_sub')) {
-        parsed.searchParams.set('aff_sub', campaignSubId);
-      }
-      return parsed.toString();
-    }
-
-    // 2. CONVERTISER
-    if (parsed.hostname.includes('convertiser.com') || parsed.searchParams.has('cvtr')) {
-      if (!parsed.searchParams.has('subid') && !parsed.searchParams.has('subId')) {
-        parsed.searchParams.set('subid', campaignSubId);
-      }
-      return parsed.toString();
-    }
-
-    // 3. TRADETRACKER
-    if (parsed.hostname.includes('tradetracker.net') || parsed.hostname.includes('tc.trakker.pl')) {
-      if (!parsed.searchParams.has('r')) {
-        parsed.searchParams.set('r', campaignSubId);
-      }
-      return parsed.toString();
-    }
-
-    // 4. PORTAL OKAZJEPLUS.PL
-    if (parsed.hostname.includes('okazjeplus.pl')) {
-      parsed.searchParams.set('utm_source', 'facebook');
-      parsed.searchParams.set('utm_medium', 'social');
-      parsed.searchParams.set('utm_campaign', campaignSubId);
-      return parsed.toString();
-    }
-
-    // Pozostałe linki zewnętrzne
-    parsed.searchParams.set('utm_source', 'okazjeplus');
-    parsed.searchParams.set('utm_medium', 'social_fb');
-    parsed.searchParams.set('utm_campaign', campaignSubId);
-    return parsed.toString();
-  } catch {
-    return targetUrl;
-  }
+  return resolveUnifiedAffiliateUrl(dealOrUrl, campaignSubId);
 }
 
 // ============================================================================
