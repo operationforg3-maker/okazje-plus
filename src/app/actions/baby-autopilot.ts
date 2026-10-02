@@ -240,12 +240,30 @@ export async function getBabyDeals(
       const lowerTitle = rawTitle.toLowerCase();
       const lowerDesc = rawDesc.toLowerCase();
 
-      // Filtr wykluczeń
-      if (negativeKeywords.some(neg => lowerTitle.includes(neg.toLowerCase()))) {
+      const fullSearchText = `${lowerTitle} ${lowerDesc} ${cat}`;
+
+      // 1. Filtr wykluczeń negatywnych słów kluczowych
+      if (negativeKeywords.some(neg => {
+        const n = neg.toLowerCase().trim();
+        return n && (lowerTitle.includes(n) || lowerDesc.includes(n));
+      })) {
         continue;
       }
 
-      // Sprawdź dopasowanie do malucha i mamy
+      // 2. Wykluczenie produktów dla starszych dzieci (>4 lata) i młodzieży
+      const olderKidsRegex = /\b(5|6|7|8|9|10|11|12|13|14|15|16)\s*(lat|lata|latka|latków|yo|years)/i;
+      if (
+        olderKidsRegex.test(lowerTitle) ||
+        lowerTitle.includes('szkoła') ||
+        lowerTitle.includes('szkoln') ||
+        lowerTitle.includes('tornister') ||
+        lowerTitle.includes('piórnik') ||
+        lowerTitle.includes('nastolat')
+      ) {
+        continue;
+      }
+
+      // 3. Sprawdź dopasowanie do malucha (0-4 lata) i mamy
       const isCategoryMatch =
         cat.includes('dziec') ||
         cat.includes('zabaw') ||
@@ -255,14 +273,14 @@ export async function getBabyDeals(
 
       const isKeywordMatch = babyKeywords.some(kw => {
         const k = kw.toLowerCase().trim();
-        return lowerTitle.includes(k) || lowerDesc.includes(k);
+        return k && (lowerTitle.includes(k) || lowerDesc.includes(k));
       });
 
       if (!isCategoryMatch && !isKeywordMatch) {
         continue;
       }
 
-      // Sprawdź zapytanie wyszukiwania
+      // 4. Sprawdź zapytanie wyszukiwania
       if (options.searchQuery) {
         const q = options.searchQuery.toLowerCase();
         if (!lowerTitle.includes(q) && !lowerDesc.includes(q)) {
@@ -270,9 +288,39 @@ export async function getBabyDeals(
         }
       }
 
-      // Źródło i partner
+      // 5. Źródło i partner
       const merchant = d.merchantName || d.merchant || 'Sklep dziecięcy';
       const source = d.source || (merchant.toLowerCase().includes('aliexpress') ? 'aliexpress' : 'convertiser');
+
+      // 6. REGUŁA JAKOŚCIOWA: Bezwzględny zakaz ubranek z AliExpress dla profilu "Perełki dla Malucha i Mamy"
+      // Ubranka akceptujemy wyłącznie ze sprawdzonych feedów partnerskich (5.10.15, Smyk, Endo, Pinkorblue, Limango itp.)
+      const isAliSource = source.toLowerCase().includes('aliexpress') || merchant.toLowerCase().includes('aliexpress');
+      const isClothingItem =
+        lowerTitle.includes('ubran') ||
+        lowerTitle.includes('body') ||
+        lowerTitle.includes('pajac') ||
+        lowerTitle.includes('rampers') ||
+        lowerTitle.includes('sukienk') ||
+        lowerTitle.includes('spodni') ||
+        lowerTitle.includes('bluz') ||
+        lowerTitle.includes('kombinezon') ||
+        lowerTitle.includes('kurtecz') ||
+        lowerTitle.includes('romper') ||
+        lowerTitle.includes('dress') ||
+        lowerTitle.includes('strój') ||
+        lowerTitle.includes('przebrani') ||
+        lowerTitle.includes('t-shirt') ||
+        lowerTitle.includes('koszulk') ||
+        lowerTitle.includes('skarpet') ||
+        lowerTitle.includes('czapk') ||
+        lowerTitle.includes('piżam') ||
+        lowerTitle.includes('leggins') ||
+        lowerTitle.includes('fartuch') ||
+        lowerTitle.includes('szalik');
+
+      if (isAliSource && isClothingItem) {
+        continue;
+      }
 
       if (partnerFilter !== 'all') {
         if (partnerFilter === 'aliexpress' && !source.includes('aliexpress') && !merchant.toLowerCase().includes('aliexpress')) {
@@ -531,6 +579,12 @@ Twoja rola: ${bot.name} (${bot.role}).
 Instrukcje bota: ${bot.customInstructions}
 Poziom humoru: ${params.humorLevel || bot.humorLevel}.
 
+PROFIL SPOŁECZNOŚCI I GRUPA DOCELOWA:
+- Kobiety w ciąży i przyszłe mamy (wyprawka do szpitala, organizacja kącika niemowlaka, laktacja, poduszki ciążowe).
+- Mamy i maluszki w wieku od 0 do 4 lat (noworodki, niemowlęta, maluchy stawiające pierwsze kroki, przedszkolaki).
+- ESTETYKA I DOBRY SMAK: Promujemy rzeczy ładne, estetyczne, edukacyjne, sensoryczne, Montessori, z naturalnych materiałów (drewno, bawełna organiczna, bambus, bezpieczny silikon spożywczy BPA free).
+- Zero tandety, plastiku, kiczowatych przebrań czy niebezpiecznych zabawek!
+
 DANE PRODUKTU I OKAZJI:
 - Tytuł/Nazwa produktu: ${dealInfo?.title || customTopic || 'Artykuły dla dzieci'}
 - Cena promocyjna: ${dealInfo?.price || 'Świetna okazja'}
@@ -553,8 +607,8 @@ Jeśli chcesz coś zaakcentować, użyj WIELKICH LITER, nowej linii lub emoji (�
 
 Elementy posta:
 1. 🎯 CHWYTLIWY NAGŁÓWEK Z TYTUŁEM OKAZJI (np. ✨ PEREŁKA DLA MALUCHA: ${dealInfo?.title || customTopic})
-2. 👶 DLA KOGO I DLACZEGO WARTO: Wskazanie wieku (niemowlak, roczniak, przedszkolak itp.) i w czym ułatwia życie rodzicom.
-3. 🛡️ BEZPIECZEŃSTWO I ZALETY: 2-3 najważniejsze atuty wypunktowane punktorami '• ' (bez '**').
+2. 👶 DLA KOGO I DLACZEGO WARTO: Wskazanie wieku (ciąża, niemowlak, roczniak, 2-4 latka) i w czym ułatwia życie mamie lub jak wspiera rozwój dziecka ze smakiem.
+3. 🛡️ BEZPIECZEŃSTWO I ZALETY: 2-3 najważniejsze atuty wypunktowane punktorami '• ' (bez '**'), np. atesty, naturalne materiały, wygoda.
 4. 💰 CENY:
    • Cena promocyjna: ${dealInfo?.price || 'Okazyjna'}
    ${dealInfo?.oldPrice ? `• Cena regularna: ${dealInfo.oldPrice}` : ''}
@@ -564,13 +618,13 @@ Elementy posta:
 ${botRole === 'bargain_mom' ? '   Krótka wskazówka ile oszczędzamy w porównaniu do cen w znanych sieciówkach/drogeriach.' : ''}
 ${botRole === 'safety_expert' ? '   Krótka uwaga o atestach, bezpieczeństwie materiałów bez BPA i delikatności dla skóry.' : ''}
 ${botRole === 'mom_community' ? '   Ciepłe pytanie do innych mam czy też używają takiego rozwiązania.' : ''}
-${botRole === 'montessori_play' ? '   Krótka wzmianka jak ta zabawka rozwija zmysły i kreatywność malucha.' : ''}
+${botRole === 'montessori_play' ? '   Krótka wzmianka jak ta zabawka rozwija zmysły, małą motorykę i samodzielność malucha.' : ''}
 6. 🔗 CALL TO ACTION:
    "👉 Bezpośredni link do okazji i kod rabatowy znajdziecie w PIERWSZYM KOMENTARZU ⬇️!"
 7. #️⃣ HASHTAGI NA KOŃCU:
    Zakończ post hashtagami: ${dynamicHashtags.join(' ')}.
 
-Pamiętaj: zero '**', zwięźle, ludzki ciepły język!
+Pamiętaj: zero '**', zwięźle, ludzki ciepły język z klasą!
 `;
 
       const aiResponse = await ai.generate({
@@ -1345,23 +1399,35 @@ export async function harvestBabyPartnerOffers(
 
     const sources = options?.sources || (['convertiser', 'tradetracker', 'aliexpress'] as const);
     const keywords = options?.keywords || [
-      'Pampers pieluchy',
-      'wózek spacerowy',
-      'fotelik samochodowy isofix',
+      // Wyprawka, ciąża i akcesoria dla mam
+      'wyprawka niemowlęca',
       'laktator elektryczny',
+      'poduszka ciążowa',
+      'torba do wózka',
+      'organizer do wózka',
       'butelka antykolkowa',
       'smoczek uspokajający',
-      'zabawki edukacyjne montessori',
-      'lego duplo',
-      'Kinderkraft wózek',
-      'Chicco zabawki',
-      'Cybex fotelik',
-      'Fisher Price',
-      'Canpol babies',
-      'Lovi butelka',
-      'ubranka niemowlęce body',
+      'Pampers pieluchy',
+      'otulacz bambusowy',
+      'kocyk niemowlęcy',
+      // Dzieci 0-4 lata - edukacyjne, sensoryczne, Montessori, drewniane
+      'zabawki montessori drewniane',
+      'klocki drewniane',
+      'sorter drewniany',
+      'mata edukacyjna niemowlęca',
       'bujaczek leżaczek',
-      'mata edukacyjna',
+      'gryzak silikonowy',
+      'śliniak silikonowy',
+      'naczynia silikonowe dla dzieci',
+      'rowerek biegowy',
+      'pchacz drewniany',
+      // Wózki i foteliki
+      'wózek spacerowy',
+      'fotelik samochodowy isofix',
+      // Ubranka ze sprawdzonych feedów partnerskich (PL/EU)
+      'ubranka niemowlęce body bawełna organiczna',
+      'pajacyk niemowlęcy bawełna',
+      'rampers niemowlęcy',
     ];
     const limitPerSource = options?.limitPerSource || 25;
 
@@ -1380,13 +1446,30 @@ export async function harvestBabyPartnerOffers(
     );
 
     const STRICT_BABY_NEGATIVE = [
+      // Zwierzęta
       'pies', 'psa', 'psów', 'psom', 'dla psów', 'suczek', 'suczki', 'dla suczek',
       'kot', 'kota', 'kotów', 'kotom', 'dla kota', 'barry king', 'zwierząt', 'zwierzęta',
       'dla zwierząt', 'gryzoń', 'obroża', 'smycz', 'kuweta', 'żwirek', 'drapak',
-      'przerzutka', 'rower', 'stelaż podtynkowy', 'roca', 'uchwyt samochodowy',
+      // Warsztat / auto / dom / elektronika
+      'przerzutka', 'rower górski', 'stelaż podtynkowy', 'roca', 'uchwyt samochodowy',
       'multimetr', 'wkrętarka', 'lutownica', 'olej silnikowy', 'opona', 'cement',
-      'wędka', 'kołowrotek', 'erotyk', 'papierosy', 'alkohol', 'bateria do wkrętarki', 'felga',
-      'kurtka narciarska', 'narty', 'joy-con', 'switch', 'ssz 230v', 'eaton', 'satel', 'siemens',
+      'bateria do wkrętarki', 'felga', 'kurtka narciarska', 'narty', 'joy-con', 'switch',
+      'ssz 230v', 'eaton', 'satel', 'siemens',
+      'akumulator', 'zasilacz awaryjny', 'vrla', 'agm', 'ups', 'kasa fiskalna', 'kasy wagi',
+      // Odzież dla dorosłych / kardigany itp.
+      'kardigan', 'żakiet', 'marynarka', 'sukienka wieczorowa', 'spódnica', 'rozmiar: l', 'rozmiar: xl', 'rozmiar: m', 'rozmiar: s',
+      // Używki i wędkarstwo
+      'wędka', 'kołowrotek', 'erotyk', 'papierosy', 'alkohol',
+      // Militaria / czołgi / broń / modele plastikowe
+      'czołg', 'tank', 'model czołgu', 'revell', 'militaria', 'broń', 'karabin', 'pistolet', 'wojsko', 'wojskow',
+      // Czyszczenie i chemia do ekranów
+      'czyścik do ekran', 'czyszczenia ekran', 'ściereczka z mikrofibry do ekran', 'do czyszczenia ekranów',
+      // Starsze dzieci i szkoła (profil ściśle 0 - 4 lata)
+      'tornister', 'plecak szkolny', 'piórnik', 'szkoła', 'szkolny', 'szkoła podstawowa', 'dla ucznia',
+      'zeszyt szkolny', 'dla nastolatka', 'nastolatki', 'dla młodzieży', 'klasa 1-3', 'klasy 1-3',
+      'playstation', 'ps5', 'ps4', 'xbox', 'nintendo switch', 'gaming', 'smartfon dla dziecka',
+      // Kicz / chińskie przebrania anime / cosplay
+      'cosplay', 'anime', 'dragon ball', 'vegeta', 'goku', 'strój na karnawał', 'przebranie karnawałowe',
       ...(config.filters?.negativeKeywords || []).map(k => k.toLowerCase().trim()).filter(Boolean)
     ];
 
@@ -1632,9 +1715,14 @@ export async function harvestBabyPartnerOffers(
     if (sources.includes('aliexpress') && (config.partners?.aliexpress ?? true)) {
       try {
         const aliKeywords = [
-          'baby romper newborn', 'baby pacifier clip', 'baby stroller',
-          'montessori wooden toys', 'diaper bag backpack', 'baby silicone bib',
-          'baby teether silicone', 'baby feeding set'
+          'montessori wooden toys toddler',
+          'baby wooden sensory puzzle',
+          'baby sensory toys 0 12 months',
+          'baby silicone bib food grade',
+          'baby teether silicone BPA free',
+          'baby silicone suction plate bowl',
+          'baby stroller organizer bag',
+          'baby night light silicone'
         ];
 
         try {
@@ -1658,6 +1746,31 @@ export async function harvestBabyPartnerOffers(
                   const titleStr = p.title || '';
                   const titleLower = titleStr.toLowerCase();
                   if (STRICT_BABY_NEGATIVE.some(neg => titleLower.includes(neg))) continue;
+
+                  // REGUŁA: Bezwzględny zakaz ubranek z AliExpress dla Perełek dla Malucha i Mamy
+                  // Ubranka kupujemy wyłącznie z polskich/europejskich renomowanych partnerów
+                  const isAliClothing =
+                    titleLower.includes('romper') ||
+                    titleLower.includes('cloth') ||
+                    titleLower.includes('dress') ||
+                    titleLower.includes('suit') ||
+                    titleLower.includes('jumpsuit') ||
+                    titleLower.includes('pajac') ||
+                    titleLower.includes('body') ||
+                    titleLower.includes('ubran') ||
+                    titleLower.includes('sukienk') ||
+                    titleLower.includes('spodni') ||
+                    titleLower.includes('bluz') ||
+                    titleLower.includes('kombinezon') ||
+                    titleLower.includes('kostium') ||
+                    titleLower.includes('cosplay') ||
+                    titleLower.includes('strój') ||
+                    titleLower.includes('przebrani') ||
+                    titleLower.includes('t-shirt') ||
+                    titleLower.includes('anime') ||
+                    titleLower.includes('fartuch') ||
+                    titleLower.includes('szalik');
+                  if (isAliClothing) continue;
 
                   const currentPrice = (p as any).price?.current ?? (p as any).salePrice ?? 0;
                   const priceNum = typeof currentPrice === 'number'
@@ -1737,7 +1850,7 @@ export async function harvestBabyPartnerOffers(
           console.warn('[AliExpress API] Client init error in baby harvest:', apiErr);
         }
 
-        // 3b. Uzupełniająco: przeszukaj istniejące oferty z AliExpress w Firestore i przypisz kategorię
+        // 3b. Uzupełniająco: przeszukaj istniejące oferty z AliExpress w Firestore i przypisz kategorię (bez ubrań)
         if (resultsBySource.aliexpress < limitPerSource) {
           const aliSnap = await adminDb
             .collection('deals')
@@ -1749,7 +1862,7 @@ export async function harvestBabyPartnerOffers(
           const babyTerms = [
             'baby', 'kids', 'infant', 'newborn', 'toddler', 'pacifier', 'diaper',
             'dzieck', 'niemowl', 'maluch', 'smoczek', 'butelka', 'gryzak',
-            'montessori', 'zabawk', 'lalka', 'ubrank', 'body', 'pajacyk'
+            'montessori', 'zabawk', 'drewnian'
           ];
 
           for (const doc of aliSnap.docs) {
@@ -1763,8 +1876,13 @@ export async function harvestBabyPartnerOffers(
             const fullText = `${titlePl} ${titleEn} ${titleStr} ${descStr}`;
             const matchesBaby = babyTerms.some(term => fullText.includes(term));
             const isNegative = STRICT_BABY_NEGATIVE.some(neg => fullText.includes(neg));
+            const isClothing =
+              fullText.includes('romper') || fullText.includes('cloth') || fullText.includes('dress') ||
+              fullText.includes('pajac') || fullText.includes('body') || fullText.includes('ubran') ||
+              fullText.includes('spodni') || fullText.includes('bluz') || fullText.includes('kombinezon') ||
+              fullText.includes('strój') || fullText.includes('przebrani') || fullText.includes('fartuch');
 
-            if (matchesBaby && !isNegative) {
+            if (matchesBaby && !isNegative && !isClothing) {
               await doc.ref.set(
                 {
                   category: 'dziecko-zabawki',
