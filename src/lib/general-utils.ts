@@ -20,9 +20,9 @@ export const DEFAULT_GENERAL_CONFIG: GeneralAutopilotConfig = {
   enabled: true,
   mode: 'moderation',
   fb: {
-    pageId: '',
+    pageId: '895877533605655',
     pageName: 'Okazje Plus',
-    groupId: 'okazjepluspl',
+    groupId: '1419456073494287',
     accessToken: '',
     postTarget: 'page',
     autoPostFirstComment: true,

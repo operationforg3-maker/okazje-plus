@@ -25,6 +25,8 @@ import {
 } from '@/lib/deal-diversity';
 
 const CONFIG_DOC_ID = 'fishing-autopilot-settings';
+const CONFIG_COLL = 'appSettings';
+const LEGACY_CONFIG_COLL = 'systemSettings';
 
 const DEFAULT_CONFIG: FishingAutopilotConfig = {
   id: CONFIG_DOC_ID,
@@ -170,12 +172,19 @@ export async function getFishingAutopilotConfig(skipAuth: boolean = false): Prom
       }
     }
 
-    const docRef = adminDb.collection('systemSettings').doc(CONFIG_DOC_ID);
-    const snap = await docRef.get();
+    const docRef = adminDb.collection(CONFIG_COLL).doc(CONFIG_DOC_ID);
+    let snap = await docRef.get();
 
     if (!snap.exists) {
-      await docRef.set(DEFAULT_CONFIG);
-      return { success: true, config: DEFAULT_CONFIG };
+      const legacyDocRef = adminDb.collection(LEGACY_CONFIG_COLL).doc(CONFIG_DOC_ID);
+      const legacySnap = await legacyDocRef.get();
+      if (legacySnap.exists) {
+        snap = legacySnap;
+        await docRef.set(legacySnap.data());
+      } else {
+        await docRef.set(DEFAULT_CONFIG);
+        return { success: true, config: DEFAULT_CONFIG };
+      }
     }
 
     const data = snap.data() as Partial<FishingAutopilotConfig>;
@@ -239,11 +248,18 @@ export async function saveFishingAutopilotConfigAction(
       }
     }
 
-    const docRef = adminDb.collection('systemSettings').doc(CONFIG_DOC_ID);
+    const docRef = adminDb.collection(CONFIG_COLL).doc(CONFIG_DOC_ID);
     await docRef.set({
       ...payload,
       updatedAt: new Date().toISOString(),
     }, { merge: true });
+
+    try {
+      await adminDb.collection(LEGACY_CONFIG_COLL).doc(CONFIG_DOC_ID).set({
+        ...payload,
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+    } catch {}
 
     revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
     return { success: true, resolvedPageToken };
@@ -415,9 +431,14 @@ export async function testFacebookApiAction(
             resolvedPageToken = activeToken;
 
             // Zapisz Page Token w ustawieniach bazy
-            await adminDb.collection('systemSettings').doc(CONFIG_DOC_ID).set({
+            await adminDb.collection(CONFIG_COLL).doc(CONFIG_DOC_ID).set({
               fb: { accessToken: activeToken }
             }, { merge: true });
+            try {
+              await adminDb.collection(LEGACY_CONFIG_COLL).doc(CONFIG_DOC_ID).set({
+                fb: { accessToken: activeToken }
+              }, { merge: true });
+            } catch {}
 
             // Ponowny test feedu z tokenem strony
             const reFeedRes = await fetch(
@@ -458,9 +479,14 @@ export async function testFacebookApiAction(
 
     // Jeśli udało się rozwiązać token, zapisz go w bazie
     if (resolvedPageToken) {
-      await adminDb.collection('systemSettings').doc(CONFIG_DOC_ID).set({
+      await adminDb.collection(CONFIG_COLL).doc(CONFIG_DOC_ID).set({
         fb: { accessToken: resolvedPageToken }
       }, { merge: true });
+      try {
+        await adminDb.collection(LEGACY_CONFIG_COLL).doc(CONFIG_DOC_ID).set({
+          fb: { accessToken: resolvedPageToken }
+        }, { merge: true });
+      } catch {}
     }
 
     return {
@@ -1480,14 +1506,18 @@ export async function publishFishingPost(
         } catch {}
       }
 
-      await adminDb.collection('systemSettings').doc(CONFIG_DOC_ID).set({
+      const statsPayload = {
         stats: {
           totalGenerated: (config.stats.totalGenerated || 0) + 1,
           totalPublishedFb: (config.stats.totalPublishedFb || 0) + (fbPostId ? 1 : 0),
           totalPublishedPortal: (config.stats.totalPublishedPortal || 0) + (portalDealId ? 1 : 0),
           lastPublishedAt: new Date().toISOString(),
         },
-      }, { merge: true });
+      };
+      await adminDb.collection(CONFIG_COLL).doc(CONFIG_DOC_ID).set(statsPayload, { merge: true });
+      try {
+        await adminDb.collection(LEGACY_CONFIG_COLL).doc(CONFIG_DOC_ID).set(statsPayload, { merge: true });
+      } catch {}
     }
 
     try {
