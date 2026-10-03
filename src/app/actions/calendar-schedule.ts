@@ -189,12 +189,17 @@ export async function getUnifiedCalendarDataAction(options?: {
       };
     }), { niche: 'baby' });
 
-    // 2. Fetch Queued Items from all 3 collections (fixing fishingPostsQueue with 's')
-    const [genQueueSnap, fishQueueSnap, babyQueueSnap] = await Promise.all([
+    // 2. Fetch Queued Items from all 3 collections and Canceled Slots settings
+    const [genQueueSnap, fishQueueSnap, babyQueueSnap, calSettingsSnap] = await Promise.all([
       adminDb.collection('generalPostQueue').orderBy('createdAt', 'desc').limit(50).get(),
       adminDb.collection('fishingPostsQueue').orderBy('createdAt', 'desc').limit(50).get(),
       adminDb.collection('babyPostQueue').orderBy('createdAt', 'desc').limit(50).get(),
+      adminDb.collection('appSettings').doc('calendar-schedule-settings').get(),
     ]);
+
+    const canceledSlotsSet = new Set<string>(
+      Array.isArray(calSettingsSnap.data()?.canceledSlots) ? calSettingsSnap.data()!.canceledSlots : []
+    );
 
     const genQueue = genQueueSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
     const fishQueue = fishQueueSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
@@ -266,6 +271,19 @@ export async function getUnifiedCalendarDataAction(options?: {
             continue; // Skip slots older than 30 mins
           }
 
+          const slotId = `slot-${n.key}-${dateKey}-${timeStr.replace(':', '')}`;
+          const timeSlotKey = `${n.key}-${slotDateTime.toISOString()}`;
+          const slotDateTimeKey = `${n.key}-${dateKey}-${timeStr}`;
+
+          // Sprawdź czy slot nie został anulowany/usunięty przez użytkownika z harmonogramu
+          if (
+            canceledSlotsSet.has(slotId) ||
+            canceledSlotsSet.has(timeSlotKey) ||
+            canceledSlotsSet.has(slotDateTimeKey)
+          ) {
+            continue;
+          }
+
           const countdown = formatCountdown(slotDateTime, now);
 
           // Check if there is an item in the queue explicitly scheduled for this time or assign FIFO
@@ -276,6 +294,10 @@ export async function getUnifiedCalendarDataAction(options?: {
           if (!matchedQueueItem && queueCursor < readyQueueItems.length) {
             matchedQueueItem = readyQueueItems[queueCursor];
             queueCursor++;
+          }
+
+          if (matchedQueueItem && canceledSlotsSet.has(matchedQueueItem.id)) {
+            continue;
           }
 
           if (matchedQueueItem) {
@@ -669,19 +691,71 @@ export async function getNicheAvailableDealsAction(params: {
 }
 
 /**
- * Usuwa post z kolejki publikacji kalendarza.
+ * Usuwa post lub zaplanowany termin publikacji z kalendarza i kolejki.
  */
-export async function deleteCalendarPostAction(params: {
-  niche: 'general' | 'fishing' | 'baby';
-  queueItemId: string;
-}): Promise<{ success: boolean; error?: string }> {
+export async function deleteCalendarPostAction(
+  params: {
+    niche: 'general' | 'fishing' | 'baby';
+    queueItemId: string;
+    slotId?: string;
+    scheduledTime?: string;
+  },
+  skipAuth: boolean = false
+): Promise<{ success: boolean; error?: string }> {
   try {
-    const session = await getServerAuthSession();
-    if (!session || session.role !== 'admin') {
-      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    if (!skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return { success: false, error: 'Wymagane uprawnienia administratora' };
+      }
     }
 
-    const { niche, queueItemId } = params;
+    const { niche, queueItemId, slotId, scheduledTime } = params;
+
+    const deriveSlotId = (): string | undefined => {
+      if (slotId && slotId.startsWith('slot-')) return slotId;
+      if (queueItemId.startsWith('slot-')) return queueItemId;
+      if (scheduledTime) {
+        const d = new Date(scheduledTime);
+        if (!isNaN(d.getTime())) {
+          const dateKey = d.toISOString().split('T')[0];
+          const hours = String(d.getHours()).padStart(2, '0');
+          const mins = String(d.getMinutes()).padStart(2, '0');
+          return `slot-${niche}-${dateKey}-${hours}${mins}`;
+        }
+      }
+      return undefined;
+    };
+
+    const targetSlotId = deriveSlotId();
+
+    // 1. Jeśli to jest slot dynamiczny (zaczyna się od slot-) lub brak fizycznego posta w kolejce
+    if (queueItemId.startsWith('slot-')) {
+      if (targetSlotId) {
+        const settingsRef = adminDb.collection('appSettings').doc('calendar-schedule-settings');
+        const settingsSnap = await settingsRef.get();
+        const currentCanceled = Array.isArray(settingsSnap.data()?.canceledSlots)
+          ? settingsSnap.data()!.canceledSlots
+          : [];
+
+        if (!currentCanceled.includes(targetSlotId)) {
+          await settingsRef.set(
+            {
+              canceledSlots: [...currentCanceled, targetSlotId],
+              updatedAt: new Date().toISOString(),
+            },
+            { merge: true }
+          );
+        }
+      }
+
+      try {
+        revalidatePath('/[locale]/admin/social-media', 'page');
+      } catch {}
+      return { success: true };
+    }
+
+    // 2. Jeśli to jest fizyczny post z kolejki Firestore
     const collectionName = niche === 'fishing'
       ? 'fishingPostsQueue'
       : niche === 'baby'
@@ -690,13 +764,79 @@ export async function deleteCalendarPostAction(params: {
 
     await adminDb.collection(collectionName).doc(queueItemId).delete();
 
-    revalidatePath('/[locale]/admin/social-media', 'page');
-    revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
-    revalidatePath('/[locale]/admin/baby-autopilot', 'page');
+    // Jeśli znamy slot powiązany z tym postem, zapisujemy go jako anulowany,
+    // aby po usunięciu posta w to miejsce nie wskoczył natychmiast pusty slot-autopilot
+    if (targetSlotId) {
+      const settingsRef = adminDb.collection('appSettings').doc('calendar-schedule-settings');
+      const settingsSnap = await settingsRef.get();
+      const currentCanceled = Array.isArray(settingsSnap.data()?.canceledSlots)
+        ? settingsSnap.data()!.canceledSlots
+        : [];
+
+      if (!currentCanceled.includes(targetSlotId)) {
+        await settingsRef.set(
+          {
+            canceledSlots: [...currentCanceled, targetSlotId],
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      }
+    }
+
+    try {
+      revalidatePath('/[locale]/admin/social-media', 'page');
+      revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
+      revalidatePath('/[locale]/admin/baby-autopilot', 'page');
+    } catch {}
     return { success: true };
   } catch (err: any) {
     console.error('Error deleting calendar post:', err);
     return { success: false, error: err.message || 'Błąd usuwania posta' };
+  }
+}
+
+/**
+ * Przywraca anulowany slot publikacji w kalendarzu.
+ */
+export async function restoreCalendarSlotAction(
+  params: {
+    slotId: string;
+  },
+  skipAuth: boolean = false
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return { success: false, error: 'Wymagane uprawnienia administratora' };
+      }
+    }
+
+    const { slotId } = params;
+    const settingsRef = adminDb.collection('appSettings').doc('calendar-schedule-settings');
+    const settingsSnap = await settingsRef.get();
+    if (settingsSnap.exists) {
+      const currentCanceled = Array.isArray(settingsSnap.data()?.canceledSlots)
+        ? settingsSnap.data()!.canceledSlots
+        : [];
+      const updated = currentCanceled.filter((s: string) => s !== slotId);
+      await settingsRef.set(
+        {
+          canceledSlots: updated,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    }
+
+    try {
+      revalidatePath('/[locale]/admin/social-media', 'page');
+    } catch {}
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error restoring calendar slot:', err);
+    return { success: false, error: err.message || 'Błąd przywracania slotu' };
   }
 }
 

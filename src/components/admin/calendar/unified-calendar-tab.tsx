@@ -151,12 +151,13 @@ export function UnifiedCalendarTab() {
 
   const handleDeletePost = async (item: CalendarTimelineItem) => {
     const qId = item.queueItemId || item.id;
-    if (qId.startsWith('slot-')) {
-      toast.info('To jest slot dynamiczny z harmonogramu godzin — nie ma fizycznego posta w bazie do usunięcia.');
-      return;
-    }
+    const isSlot = qId.startsWith('slot-');
 
-    if (!window.confirm(`Czy na pewno chcesz usunąć ten post z kolejki publikacji?\n\n"${item.title}"`)) {
+    const confirmMsg = isSlot
+      ? `Czy na pewno chcesz usunąć ten zaplanowany post z harmonogramu (${item.timeDisplay})?\n\n"${item.title}"\n\nAutopilot pominie ten termin i nie opublikuje posta o tej godzinie.`
+      : `Czy na pewno chcesz usunąć ten post z kolejki publikacji?\n\n"${item.title}"`;
+
+    if (!window.confirm(confirmMsg)) {
       return;
     }
 
@@ -165,10 +166,16 @@ export function UnifiedCalendarTab() {
       const res = await deleteCalendarPostAction({
         niche: item.niche,
         queueItemId: qId,
+        slotId: isSlot ? qId : undefined,
+        scheduledTime: item.scheduledTime,
       });
 
       if (res.success) {
-        toast.success('Post został pomyślnie usunięty z kolejki!');
+        toast.success(
+          isSlot
+            ? `Zaplanowany termin (${item.timeDisplay}) został usunięty z harmonogramu!`
+            : 'Post został pomyślnie usunięty z kolejki publikacji!'
+        );
         if (selectedItem?.id === item.id) {
           setSelectedItem(null);
         }
@@ -765,6 +772,24 @@ export function UnifiedCalendarTab() {
                                   <Edit className="w-3 h-3" />
                                   <span>Dostosuj</span>
                                 </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeletePost(item);
+                                  }}
+                                  disabled={deletingId === item.id}
+                                  className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1"
+                                  title="Usuń ten zaplanowany post z harmonogramu"
+                                >
+                                  {deletingId === item.id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  )}
+                                  <span>Usuń</span>
+                                </Button>
                               </>
                             ) : (
                               <>
@@ -825,14 +850,15 @@ export function UnifiedCalendarTab() {
                                     handleDeletePost(item);
                                   }}
                                   disabled={deletingId === (item.queueItemId || item.id)}
-                                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                  title="Usuń post z kolejki"
+                                  className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1"
+                                  title="Usuń post z harmonogramu"
                                 >
                                   {deletingId === (item.queueItemId || item.id) ? (
                                     <Loader2 className="w-3 h-3 animate-spin" />
                                   ) : (
                                     <Trash2 className="w-3.5 h-3.5" />
                                   )}
+                                  <span>Usuń</span>
                                 </Button>
                               </>
                             )}
@@ -1004,6 +1030,45 @@ export function UnifiedCalendarTab() {
                       <p className="text-[11px] text-muted-foreground line-clamp-2">
                         {item.content}
                       </p>
+
+                      <div className="flex items-center justify-between pt-1 border-t border-border/40 mt-1">
+                        <span className="text-[11px] text-primary font-semibold flex items-center gap-0.5">
+                          Szczegóły <ArrowRight className="w-3 h-3" />
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {item.status === 'pending' && (
+                            <Button
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleApprovePost(item);
+                              }}
+                              disabled={approvingId === (item.queueItemId || item.id)}
+                              className="h-6 text-[10px] px-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                            >
+                              Zatwierdź
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePost(item);
+                            }}
+                            disabled={deletingId === (item.queueItemId || item.id)}
+                            className="h-6 px-2 text-[10px] text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1"
+                            title="Usuń ten zaplanowany post"
+                          >
+                            {deletingId === (item.queueItemId || item.id) ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3 h-3" />
+                            )}
+                            <span>Usuń</span>
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   ))
                 )}
@@ -1051,13 +1116,42 @@ export function UnifiedCalendarTab() {
                   </div>
                 </div>
 
-                <div className="text-left sm:text-right shrink-0">
-                  <p className="font-extrabold text-xs sm:text-sm text-foreground">
-                    {item.timeDisplay}
-                  </p>
-                  <p className="text-[11px] text-primary font-semibold">
-                    {item.countdownText}
-                  </p>
+                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                  <div className="text-left sm:text-right shrink-0">
+                    <p className="font-extrabold text-xs sm:text-sm text-foreground">
+                      {item.timeDisplay}
+                    </p>
+                    <p className="text-[11px] text-primary font-semibold">
+                      {item.countdownText}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEditPost(item)}
+                      className="h-7 text-xs px-2.5 gap-1"
+                    >
+                      <Edit className="w-3 h-3" />
+                      <span className="hidden sm:inline">Edytuj</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDeletePost(item)}
+                      disabled={deletingId === (item.queueItemId || item.id)}
+                      className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 gap-1"
+                      title="Usuń post z harmonogramu"
+                    >
+                      {deletingId === (item.queueItemId || item.id) ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                      <span>Usuń</span>
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -1138,24 +1232,22 @@ export function UnifiedCalendarTab() {
             </div>
 
             <DialogFooter className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">
-              {selectedItem.status !== 'scheduled_slot' ? (
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => handleDeletePost(selectedItem)}
-                  disabled={deletingId === (selectedItem.queueItemId || selectedItem.id)}
-                  className="text-xs gap-1.5 self-start"
-                >
-                  {deletingId === (selectedItem.queueItemId || selectedItem.id) ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-3.5 h-3.5" />
-                  )}
-                  Usuń post z kolejki
-                </Button>
-              ) : (
-                <div />
-              )}
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => handleDeletePost(selectedItem)}
+                disabled={deletingId === (selectedItem.queueItemId || selectedItem.id)}
+                className="text-xs gap-1.5 self-start"
+              >
+                {deletingId === (selectedItem.queueItemId || selectedItem.id) ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5" />
+                )}
+                {selectedItem.status === 'scheduled_slot'
+                  ? 'Usuń ten zaplanowany termin'
+                  : 'Usuń post z harmonogramu'}
+              </Button>
 
               <div className="flex items-center gap-2 flex-wrap self-end">
                 {selectedItem.status === 'scheduled_slot' ? (
