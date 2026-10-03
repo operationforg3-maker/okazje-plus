@@ -24,7 +24,7 @@ export const DEFAULT_BABY_CONFIG: BabyAutopilotConfig = {
     pageName: 'Perełki dla Malucha i Mamy',
     groupId: '',
     accessToken:
-      'EAAW0YiYKc1UBSm75x0WIOWkncUBj3WUFiNIIep3xpcGOXh81ZBXDV3W2MwQvGZBFlrru7G1j4QcbGvZCrAmTTLjkSzGfXg9YLwf70oaTeBI9nkzDdsj3RkuDZBZAEZANw48bkotPs9YxB463k5XAbQGf49O3wYAWucwv5DxG5efaeWoZBZAgftj7OC0UN0e9sspjZBVlySSEyMC1GgvZBZBMP8Q36M7g61Dl27YCkxh0lNjrdmeGhZCeqZCesERoX',
+      'EAAW0YiYKc1UBSt73LZB61ALi4EplGRHK9OpOXxcnkbIdwkuMxj4erP4QOZB0jZAwnzqFtZAiwPjRgE8h9Fp7Pl1OuXHH7EBhPhfczVv6czcUcuuFiOyl3ZAApWb6FWqMHh5WljyP1fGefHLhRbAIda5aZCVzt2hB3Ahc5Sb4UzREO7QtiOnZB4ZBlqUg9ZBqY6mcZAVUTCAwxbb2RMRYGRJiAzDyHN',
     postTarget: 'page',
     autoPostFirstComment: true,
     includePhoto: true,
