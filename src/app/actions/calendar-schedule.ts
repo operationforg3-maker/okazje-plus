@@ -471,6 +471,7 @@ export async function preGenerateSlotPostAction(params: {
   dealId?: string;
   botId?: string;
   customTopic?: string;
+  skipAuth?: boolean;
 }): Promise<{
   success: boolean;
   queueItemId?: string;
@@ -478,9 +479,11 @@ export async function preGenerateSlotPostAction(params: {
   error?: string;
 }> {
   try {
-    const session = await getServerAuthSession();
-    if (!session || session.role !== 'admin') {
-      return { success: false, error: 'Wymagane uprawnienia administratora' };
+    if (!params.skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return { success: false, error: 'Wymagane uprawnienia administratora' };
+      }
     }
 
     const { niche, scheduledTime, dealId, customTopic } = params;
@@ -505,8 +508,10 @@ export async function preGenerateSlotPostAction(params: {
       };
 
       const docRef = await adminDb.collection('fishingPostsQueue').add(postData);
-      revalidatePath('/[locale]/admin/social-media', 'page');
-      revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
+      try {
+        revalidatePath('/[locale]/admin/social-media', 'page');
+        revalidatePath('/[locale]/admin/fishing-autopilot', 'page');
+      } catch {}
       return { success: true, queueItemId: docRef.id, post: { id: docRef.id, ...postData } };
     } else if (niche === 'baby') {
       const genRes = await generateBabyPost({
@@ -528,15 +533,17 @@ export async function preGenerateSlotPostAction(params: {
       };
 
       const docRef = await adminDb.collection('babyPostQueue').add(postData);
-      revalidatePath('/[locale]/admin/social-media', 'page');
-      revalidatePath('/[locale]/admin/baby-autopilot', 'page');
+      try {
+        revalidatePath('/[locale]/admin/social-media', 'page');
+        revalidatePath('/[locale]/admin/baby-autopilot', 'page');
+      } catch {}
       return { success: true, queueItemId: docRef.id, post: { id: docRef.id, ...postData } };
     } else {
       const genRes = await generateGeneralPostAction({
         botRole: 'bargain_hunter',
         dealId,
         customTopic,
-      });
+      }, true);
 
       if (!genRes.success || !genRes.post) {
         return { success: false, error: genRes.error || 'Nie udało się wygenerować posta Okazje Plus' };
@@ -551,12 +558,182 @@ export async function preGenerateSlotPostAction(params: {
       };
 
       const docRef = await adminDb.collection('generalPostQueue').add(postData);
-      revalidatePath('/[locale]/admin/social-media', 'page');
+      try {
+        revalidatePath('/[locale]/admin/social-media', 'page');
+      } catch {}
       return { success: true, queueItemId: docRef.id, post: { id: docRef.id, ...postData } };
     }
   } catch (err: any) {
     console.error('Error in preGenerateSlotPostAction:', err);
     return { success: false, error: err.message || 'Błąd generowania posta z wyprzedzeniem' };
+  }
+}
+
+/**
+ * Automatycznie planuje i z góry generuje posty przez AI dla wszystkich nadchodzących slotów
+ * na dany dzień (np. poranny batch na 12:00, 15:00, 18:00, 21:00).
+ */
+export async function autoPlanDailyScheduleAction(options?: {
+  niche?: 'all' | 'general' | 'fishing' | 'baby';
+  daysAhead?: number;
+  skipAuth?: boolean;
+}): Promise<{
+  success: boolean;
+  plannedCount: number;
+  slots: { niche: string; scheduledTime: string; title: string }[];
+  error?: string;
+}> {
+  try {
+    if (!options?.skipAuth) {
+      const session = await getServerAuthSession();
+      if (!session || session.role !== 'admin') {
+        return { success: false, plannedCount: 0, slots: [], error: 'Wymagane uprawnienia administratora' };
+      }
+    }
+
+    const filterNiche = options?.niche || 'all';
+    const daysAhead = Math.min(options?.daysAhead || 1, 3);
+    const now = new Date();
+    const plannedSlots: { niche: string; scheduledTime: string; title: string }[] = [];
+
+    // Pobierz konfiguracje, oferty i ustawienia anulowanych slotów
+    const [genConfigRes, fishConfigRes, babyConfigRes, genDealsRes, fishDealsRes, babyDealsRes, calSettingsSnap] = await Promise.all([
+      getGeneralAutopilotConfig(true),
+      getFishingAutopilotConfig(true),
+      getBabyAutopilotConfig(true),
+      getGeneralDeals({ limit: 25 }, true),
+      getFishingDeals(undefined, 25, undefined, true),
+      getBabyDeals({ limit: 25 }, true),
+      adminDb.collection('appSettings').doc('calendar-schedule-settings').get(),
+    ]);
+
+    const canceledSlotsSet = new Set<string>(
+      Array.isArray(calSettingsSnap.data()?.canceledSlots) ? calSettingsSnap.data()!.canceledSlots : []
+    );
+
+    const [genQueueSnap, fishQueueSnap, babyQueueSnap] = await Promise.all([
+      adminDb.collection('generalPostQueue').orderBy('createdAt', 'desc').limit(50).get(),
+      adminDb.collection('fishingPostsQueue').orderBy('createdAt', 'desc').limit(50).get(),
+      adminDb.collection('babyPostQueue').orderBy('createdAt', 'desc').limit(50).get(),
+    ]);
+
+    const genQueue = genQueueSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+    const fishQueue = fishQueueSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+    const babyQueue = babyQueueSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+
+    const niches = [
+      {
+        key: 'general' as const,
+        config: genConfigRes.config,
+        deals: genDealsRes.deals || [],
+        queue: genQueue,
+        scheduleTimes: genConfigRes.config.schedule?.scheduleTimes || ['09:00', '12:00', '15:00', '18:00', '21:00'],
+      },
+      {
+        key: 'fishing' as const,
+        config: fishConfigRes.config,
+        deals: fishDealsRes.deals || [],
+        queue: fishQueue,
+        scheduleTimes: fishConfigRes.config.schedule?.scheduleTimes || ['06:30', '12:00', '17:30', '21:30'],
+      },
+      {
+        key: 'baby' as const,
+        config: babyConfigRes.config,
+        deals: babyDealsRes.deals || [],
+        queue: babyQueue,
+        scheduleTimes: babyConfigRes.config.schedule?.scheduleTimes || ['08:00', '11:00', '14:00', '17:00', '20:00'],
+      },
+    ];
+
+    for (const n of niches) {
+      if (filterNiche !== 'all' && filterNiche !== n.key) continue;
+      if (!n.config.enabled) continue;
+
+      const usedDealIds = new Set<string>(
+        n.queue.map(q => q.dealId).filter(Boolean)
+      );
+
+      for (let dayOffset = 0; dayOffset < daysAhead; dayOffset++) {
+        const targetDate = new Date(now);
+        targetDate.setDate(now.getDate() + dayOffset);
+        const dateKey = targetDate.toISOString().split('T')[0];
+
+        for (const timeStr of n.scheduleTimes) {
+          const [hours, mins] = timeStr.split(':').map(Number);
+          const slotDateTime = new Date(targetDate);
+          slotDateTime.setHours(hours, mins, 0, 0);
+
+          // Pomiń przeszłe sloty (starsze niż 15 minut)
+          if (slotDateTime.getTime() <= now.getTime() - 1000 * 60 * 15) {
+            continue;
+          }
+
+          const slotId = `slot-${n.key}-${dateKey}-${timeStr.replace(':', '')}`;
+          const timeSlotKey = `${n.key}-${slotDateTime.toISOString()}`;
+          const slotDateTimeKey = `${n.key}-${dateKey}-${timeStr}`;
+
+          if (
+            canceledSlotsSet.has(slotId) ||
+            canceledSlotsSet.has(timeSlotKey) ||
+            canceledSlotsSet.has(slotDateTimeKey)
+          ) {
+            continue;
+          }
+
+          // Sprawdź czy już istnieje wygenerowany post na ten slot
+          const alreadyPlanned = n.queue.some(item =>
+            item.status !== 'failed' &&
+            item.scheduledFor &&
+            item.scheduledFor.startsWith(dateKey) &&
+            item.scheduledFor.includes(timeStr)
+          );
+
+          if (alreadyPlanned) {
+            continue;
+          }
+
+          // Wybierz najlepszą unikalną ofertę
+          const availableDeal = n.deals.find(d => !usedDealIds.has(d.id));
+          if (!availableDeal) {
+            continue;
+          }
+
+          usedDealIds.add(availableDeal.id);
+
+          try {
+            const genRes = await preGenerateSlotPostAction({
+              niche: n.key,
+              scheduledTime: slotDateTime.toISOString(),
+              dealId: availableDeal.id,
+              skipAuth: true,
+            });
+
+            if (genRes.success && genRes.post) {
+              plannedSlots.push({
+                niche: n.key,
+                scheduledTime: slotDateTime.toISOString(),
+                title: genRes.post.title || availableDeal.title || 'Okazja',
+              });
+            }
+          } catch (slotErr) {
+            console.warn(`[AutoPlanner] Error pre-generating slot ${slotId}:`, slotErr);
+          }
+        }
+      }
+    }
+
+    try {
+      revalidatePath('/[locale]/admin/social-media', 'page');
+    } catch {}
+
+    return {
+      success: true,
+      plannedCount: plannedSlots.length,
+      slots: plannedSlots,
+    };
+  } catch (error: any) {
+    console.error('Error in autoPlanDailyScheduleAction:', error);
+    return { success: false, plannedCount: 0, slots: [], error: error.message || 'Błąd planowania harmonogramu' };
   }
 }
 

@@ -1977,14 +1977,25 @@ export async function executeBabyAutopilotCycle(): Promise<{
     }
 
     // 1. Publikuj zatwierdzone posty z kolejki (lub oczekujące w trybie autopilot)
+    // UWAGA: publikujemy wyłącznie posty, których wyznaczony czas (scheduledFor) już nadszedł (lub bez daty)
     const queueRes = await getBabyQueue(true);
-    const approvedPosts = queueRes.items.filter(i => 
-      i.status === 'approved' || (config.mode === 'autopilot' && i.status === 'pending')
-    );
+    const nowThreshold = Date.now() + 5 * 60 * 1000;
+    const isDue = (item: any) => {
+      if (!item.scheduledFor) return true;
+      return new Date(item.scheduledFor).getTime() <= nowThreshold;
+    };
 
-    if (approvedPosts.length > 0) {
-      logs.push(`Znaleziono ${approvedPosts.length} postów kwalifikujących się do publikacji`);
-      const postToPublish = approvedPosts[0]; // Publikuj 1 na cykl aby nie spamować
+    const eligiblePosts = queueRes.items
+      .filter(i => (i.status === 'approved' || (config.mode === 'autopilot' && i.status === 'pending')) && isDue(i))
+      .sort((a, b) => {
+        const ta = a.scheduledFor ? new Date(a.scheduledFor).getTime() : new Date(a.createdAt || 0).getTime();
+        const tb = b.scheduledFor ? new Date(b.scheduledFor).getTime() : new Date(b.createdAt || 0).getTime();
+        return ta - tb;
+      });
+
+    if (eligiblePosts.length > 0) {
+      logs.push(`Znaleziono ${eligiblePosts.length} postów kwalifikujących się do publikacji o tej porze`);
+      const postToPublish = eligiblePosts[0]; // Publikuj 1 na cykl aby nie spamować
       const pubRes = await publishBabyPostAction(postToPublish.id, undefined, true);
       if (pubRes.success) {
         publishedCount++;

@@ -2213,33 +2213,49 @@ export async function executeFishingAutopilotCycle(options?: {
     }
 
     // A. SPRAWDŹ CZY W KOLEJCE CZEKA JUŻ ZATWIERDZONY / OCZEKUJĄCY POST
+    // Publikujemy wyłącznie posty, których czas (scheduledFor) już nadszedł (lub bez daty)
     let postToPublishDoc: FirebaseFirestore.DocumentSnapshot | null = null;
+    const nowThreshold = Date.now() + 5 * 60 * 1000;
+    const isDue = (doc: FirebaseFirestore.DocumentSnapshot) => {
+      const scheduledFor = doc.data()?.scheduledFor;
+      if (!scheduledFor) return true;
+      return new Date(scheduledFor).getTime() <= nowThreshold;
+    };
+
     const approvedSnap = await adminDb
       .collection('fishingPostsQueue')
       .where('status', '==', 'approved')
-      .limit(10)
+      .limit(20)
       .get();
 
     if (!approvedSnap.empty) {
-      const sortedApproved = [...approvedSnap.docs].sort((a, b) => {
-        const ta = new Date(a.data().createdAt || 0).getTime();
-        const tb = new Date(b.data().createdAt || 0).getTime();
-        return ta - tb;
-      });
-      postToPublishDoc = sortedApproved[0];
-    } else if (config.mode === 'autopilot') {
+      const dueApproved = approvedSnap.docs.filter(isDue);
+      if (dueApproved.length > 0) {
+        const sortedApproved = dueApproved.sort((a, b) => {
+          const ta = a.data().scheduledFor ? new Date(a.data().scheduledFor).getTime() : new Date(a.data().createdAt || 0).getTime();
+          const tb = b.data().scheduledFor ? new Date(b.data().scheduledFor).getTime() : new Date(b.data().createdAt || 0).getTime();
+          return ta - tb;
+        });
+        postToPublishDoc = sortedApproved[0];
+      }
+    }
+
+    if (!postToPublishDoc && config.mode === 'autopilot') {
       const pendingSnap = await adminDb
         .collection('fishingPostsQueue')
         .where('status', '==', 'pending')
-        .limit(10)
+        .limit(20)
         .get();
       if (!pendingSnap.empty) {
-        const sortedPending = [...pendingSnap.docs].sort((a, b) => {
-          const ta = new Date(a.data().createdAt || 0).getTime();
-          const tb = new Date(b.data().createdAt || 0).getTime();
-          return ta - tb;
-        });
-        postToPublishDoc = sortedPending[0];
+        const duePending = pendingSnap.docs.filter(isDue);
+        if (duePending.length > 0) {
+          const sortedPending = duePending.sort((a, b) => {
+            const ta = a.data().scheduledFor ? new Date(a.data().scheduledFor).getTime() : new Date(a.data().createdAt || 0).getTime();
+            const tb = b.data().scheduledFor ? new Date(b.data().scheduledFor).getTime() : new Date(b.data().createdAt || 0).getTime();
+            return ta - tb;
+          });
+          postToPublishDoc = sortedPending[0];
+        }
       }
     }
 

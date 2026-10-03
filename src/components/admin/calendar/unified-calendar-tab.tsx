@@ -40,6 +40,7 @@ import {
   publishCalendarPostNowAction,
   acceptAndGenerateSlotPostAction,
   approveAllPendingCalendarPostsAction,
+  autoPlanDailyScheduleAction,
 } from '@/app/actions/calendar-schedule';
 import { PostEditDialog, type EditablePostItem } from '@/components/admin/social/post-edit-dialog';
 import { sanitizeSocialPostText } from '@/lib/social-growth-types';
@@ -69,6 +70,7 @@ export function UnifiedCalendarTab() {
   const [editingPostItem, setEditingPostItem] = useState<EditablePostItem | null>(null);
   const [editingNiche, setEditingNiche] = useState<'general' | 'fishing' | 'baby'>('general');
   const [preGeneratingId, setPreGeneratingId] = useState<string | null>(null);
+  const [autoPlanning, setAutoPlanning] = useState(false);
 
   const loadCalendarData = useCallback(async () => {
     try {
@@ -345,6 +347,32 @@ export function UnifiedCalendarTab() {
     }
   };
 
+  const handleAutoPlanToday = async () => {
+    try {
+      setAutoPlanning(true);
+      toast.info('AI analizuje dzisiejsze sloty i generuje gotowe posty na kolejne godziny...');
+      const res = await autoPlanDailyScheduleAction({
+        niche: nicheFilter,
+        daysAhead: 1,
+      });
+
+      if (res.success) {
+        if (res.plannedCount > 0) {
+          toast.success(`Zaplanowano ${res.plannedCount} postów z wyprzedzeniem! Są już widoczne w harmonogramie.`);
+        } else {
+          toast.info('Wszystkie nadchodzące sloty na dziś mają już przygotowane posty!');
+        }
+        await loadCalendarData();
+      } else {
+        toast.error(res.error || 'Błąd automatycznego planowania');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Błąd planowania');
+    } finally {
+      setAutoPlanning(false);
+    }
+  };
+
   // Month navigation helpers
   const firstDayOfMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth(), 1);
   const lastDayOfMonth = new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 0);
@@ -592,6 +620,18 @@ export function UnifiedCalendarTab() {
             title="Odśwież kalendarz"
           >
             <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAutoPlanToday}
+            disabled={autoPlanning || loading}
+            className="text-xs h-7 px-2.5 bg-gradient-to-r from-primary/10 via-indigo-500/10 to-amber-500/10 hover:from-primary/20 hover:to-indigo-500/20 text-primary border-primary/30 font-medium ml-1"
+            title="Wygeneruj z wyprzedzeniem gotowe posty przez AI dla wszystkich pustych slotów na dziś"
+          >
+            <Sparkles className={cn("w-3.5 h-3.5 mr-1.5 text-amber-500", autoPlanning && "animate-spin")} />
+            {autoPlanning ? 'Planowanie AI...' : 'Zaplanuj sloty na dziś'}
           </Button>
         </div>
       </div>

@@ -128,6 +128,20 @@ async function handleCron(request: NextRequest) {
       babyResult = { success: false, error: babyErr?.message };
     }
 
+    // Auto-plan upcoming daily schedule slots ahead of time (np. rano na cały dzień)
+    let autoPlanResult = null;
+    try {
+      const { autoPlanDailyScheduleAction } = await import('@/app/actions/calendar-schedule');
+      autoPlanResult = await autoPlanDailyScheduleAction({
+        niche: 'all',
+        daysAhead: 1,
+        skipAuth: true,
+      });
+    } catch (planErr: any) {
+      console.warn('[Cron:SocialBots] AutoPlan error:', planErr);
+      autoPlanResult = { success: false, error: planErr?.message };
+    }
+
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
@@ -137,6 +151,7 @@ async function handleCron(request: NextRequest) {
       generalAutopilot: generalResult,
       fishingAutopilot: fishingResult,
       babyAutopilot: babyResult,
+      autoPlan: autoPlanResult,
     });
   } catch (error) {
     console.error('[Cron:SocialBots] Error in cron execution:', error);
