@@ -149,7 +149,7 @@ function ImportPage() {
           </TabsTrigger>
           <TabsTrigger value="csv" className="gap-2">
             <FileSpreadsheet className="h-4 w-4 text-orange-500" />
-            <span className="hidden sm:inline">Import CSV</span>
+            <span className="hidden sm:inline">Import CSV / XLS</span>
           </TabsTrigger>
           <TabsTrigger value="scraping" className="gap-2">
             <Image className="h-4 w-4" />
@@ -194,7 +194,7 @@ function ImportPage() {
           />
         </TabsContent>
 
-        {/* ── Tab: Import CSV ─────────────────────────────────── */}
+        {/* ── Tab: Import CSV / XLS ───────────────────────────── */}
         <TabsContent value="csv" className="space-y-4">
           <AliExpressCsvImporter authToken={authToken} />
         </TabsContent>

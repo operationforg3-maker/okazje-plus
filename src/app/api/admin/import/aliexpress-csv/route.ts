@@ -97,37 +97,43 @@ export async function POST(request: NextRequest) {
     
     // Find header column indices
     const getIndex = (possibleNames: string[]): number => {
+      // First try exact matches
+      const exactIdx = headers.findIndex(h => possibleNames.some(name => h === name.toLowerCase()));
+      if (exactIdx !== -1) return exactIdx;
+      // Fallback to substring matches
       return headers.findIndex(h => possibleNames.some(name => h.includes(name.toLowerCase())));
     };
 
-    const idxName = getIndex(['product name', 'title']);
+    const idxProductId = getIndex(['productid', 'product id']);
+    const idxName = getIndex(['product desc', 'product name', 'title', 'desc', 'nazwa']);
     const idxImage = getIndex(['product image url', 'image url', 'image']);
+    const idxVideo = getIndex(['video url', 'video']);
     const idxUrl = getIndex(['product url', 'url']);
-    const idxClickUrl = getIndex(['click url', 'affiliate url']);
-    const idxOriginalPrice = getIndex(['originalprice', 'original price']);
-    const idxSalePrice = getIndex(['saleprice', 'sale price', 'price']);
+    const idxClickUrl = getIndex(['promotion url', 'click url', 'affiliate url']);
+    const idxSalePrice = getIndex(['discount price', 'saleprice', 'sale price', 'cena', 'price']);
+    const idxOriginalPrice = getIndex(['origin price', 'originalprice', 'original price', 'regular price']);
     const idxDiscount = getIndex(['discount(%)', 'discount']);
     const idxDirectCommission = getIndex(['direct linking commission rate', 'commission rate']);
-    const idxIncentiveCommission = getIndex(['limited-time incentive commission rate', 'incentive commission']);
-    const idxOrders = getIndex(['orders']);
+    const idxIncentiveCommission = getIndex(['indirect linking commission rate', 'limited-time incentive commission rate', 'incentive commission']);
+    const idxOrders = getIndex(['sales180day', 'orders', 'sales']);
     const idxIsHot = getIndex(['is hot', 'ishot']);
     const idxSpecialOffer = getIndex(['special offer', 'specialoffer']);
-    const idxPromoCode = getIndex(['promocode', 'promo code', 'code']);
+    const idxPromoCode = getIndex(['code name', 'promocode', 'promo code', 'code']);
     const idxCodeMinSpend = getIndex(['code minimum spend', 'minimum spend']);
-    const idxCodeDiscount = getIndex(['code discount']);
-    const idxCodeStart = getIndex(['code available time start', 'start time']);
-    const idxCodeEnd = getIndex(['code available time end', 'end time']);
+    const idxCodeDiscount = getIndex(['code value', 'code discount']);
+    const idxCodeStart = getIndex(['code start time', 'code available time start', 'start time']);
+    const idxCodeEnd = getIndex(['code end time', 'code available time end', 'end time']);
     const idxCategory = getIndex(['category name', 'category']);
     const idxCategoryId = getIndex(['categoryid', 'category id']);
 
     if (idxName === -1 || idxSalePrice === -1) {
       return NextResponse.json({
-        error: 'Required CSV columns missing. Header must include "Product Name" and "SalePrice".',
+        error: 'Nie znaleziono wymaganych kolumn w pliku. Nagłówek musi zawierać nazwę produktu ("Product Desc" lub "Product Name") oraz cenę ("Discount Price" lub "SalePrice").',
         detectedHeaders: headers,
       }, { status: 400 });
     }
 
-    const rows: AliExpressCsvRow[] = [];
+    const rows: (AliExpressCsvRow & { productId?: string })[] = [];
     for (let i = 1; i < lines.length; i++) {
       const cols = parseCsvLine(lines[i]);
       if (cols.length < 2) continue;
@@ -136,11 +142,14 @@ export async function POST(request: NextRequest) {
       if (!name) continue;
 
       const salePrice = parsePriceNumber(cols[idxSalePrice]);
+      if (salePrice <= 0) continue;
+
       const originalPrice = idxOriginalPrice !== -1 ? parsePriceNumber(cols[idxOriginalPrice]) : salePrice;
       const directCommission = idxDirectCommission !== -1 ? parsePriceNumber(cols[idxDirectCommission]) : 0;
       const incentiveCommission = idxIncentiveCommission !== -1 ? parsePriceNumber(cols[idxIncentiveCommission]) : 0;
 
       rows.push({
+        productId: idxProductId !== -1 ? cols[idxProductId] : undefined,
         productName: name,
         productImageUrl: idxImage !== -1 ? cols[idxImage] : undefined,
         productUrl: idxUrl !== -1 ? cols[idxUrl] : undefined,
@@ -153,7 +162,7 @@ export async function POST(request: NextRequest) {
         orders: idxOrders !== -1 ? parseInt(cols[idxOrders], 10) || 0 : 0,
         isHot: idxIsHot !== -1 && /true|1|yes/i.test(cols[idxIsHot]),
         specialOffer: idxSpecialOffer !== -1 && /true|1|yes/i.test(cols[idxSpecialOffer]),
-        promoCode: idxPromoCode !== -1 ? cols[idxPromoCode] : undefined,
+        promoCode: idxPromoCode !== -1 && cols[idxPromoCode]?.trim() ? cols[idxPromoCode].trim() : undefined,
         codeMinSpend: idxCodeMinSpend !== -1 ? cols[idxCodeMinSpend] : undefined,
         codeDiscount: idxCodeDiscount !== -1 ? cols[idxCodeDiscount] : undefined,
         codeStartTime: idxCodeStart !== -1 ? cols[idxCodeStart] : undefined,
@@ -172,7 +181,7 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString();
 
     for (const row of rows) {
-      const aliExpressId = extractAliExpressId(row.productUrl) || extractAliExpressId(row.clickUrl);
+      const aliExpressId = row.productId || extractAliExpressId(row.productUrl) || extractAliExpressId(row.clickUrl);
       const dealId = aliExpressId ? `ali_csv_${aliExpressId}` : `ali_csv_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
       const dealRef = adminDb.collection('deals').doc(dealId);

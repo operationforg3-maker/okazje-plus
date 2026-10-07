@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import * as XLSX from "xlsx";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,30 +42,64 @@ export function AliExpressCsvImporter({ authToken, onImportComplete }: AliExpres
     setError(null);
     setResult(null);
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      setCsvContent(text);
-      parsePreview(text);
-    };
-    reader.readAsText(selectedFile);
+    const isExcel = /\.(xlsx|xls)$/i.test(selectedFile.name);
+
+    if (isExcel) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const buffer = event.target?.result as ArrayBuffer;
+          const workbook = XLSX.read(buffer, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          if (!firstSheetName) {
+            setError("Plik arkusza nie zawiera żadnego arkusza.");
+            return;
+          }
+          const sheet = workbook.Sheets[firstSheetName];
+          const text = XLSX.utils.sheet_to_csv(sheet);
+          setCsvContent(text);
+          parsePreview(text);
+        } catch (err: any) {
+          setError(`Błąd odczytu pliku Excel (XLS/XLSX): ${err.message}`);
+        }
+      };
+      reader.readAsArrayBuffer(selectedFile);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target?.result as string;
+        setCsvContent(text);
+        parsePreview(text);
+      };
+      reader.readAsText(selectedFile);
+    }
   };
 
   const parsePreview = (text: string) => {
     try {
       const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
       if (lines.length < 2) {
-        setError("Plik CSV jest pusty lub nie posiada nagłówków.");
+        setError("Plik jest pusty lub nie posiada nagłówków.");
         setPreview(null);
         return;
       }
 
       const headers = lines[0].toLowerCase().split(",").map(h => h.trim().replace(/"/g, ""));
-      const hasTitle = headers.some(h => h.includes("product name") || h.includes("title"));
-      const hasPrice = headers.some(h => h.includes("saleprice") || h.includes("price"));
+      const hasTitle = headers.some(h => 
+        h.includes("product name") || 
+        h.includes("product desc") || 
+        h.includes("title") || 
+        h.includes("nazwa")
+      );
+      const hasPrice = headers.some(h => 
+        h.includes("saleprice") || 
+        h.includes("discount price") || 
+        h.includes("price") || 
+        h.includes("cena")
+      );
 
       if (!hasTitle || !hasPrice) {
-        setError("Wykryty plik CSV nie zawiera wymaganych kolumn 'Product Name' oraz 'SalePrice'.");
+        setError("Wykryty plik nie zawiera wymaganych kolumn nazwy ('Product Desc' lub 'Product Name') oraz ceny ('Discount Price' lub 'SalePrice').");
         setPreview(null);
         return;
       }
@@ -74,26 +109,32 @@ export function AliExpressCsvImporter({ authToken, onImportComplete }: AliExpres
       let validDiscountRows = 0;
       let maxComm = 0;
 
-      const idxPromo = headers.findIndex(h => h.includes("promocode") || h.includes("code"));
+      const idxPromo = headers.findIndex(h => h.includes("code name") || h.includes("promocode") || h.includes("code"));
       const idxDiscount = headers.findIndex(h => h.includes("discount"));
       const idxComm1 = headers.findIndex(h => h.includes("direct linking commission"));
-      const idxComm2 = headers.findIndex(h => h.includes("incentive commission"));
+      const idxComm2 = headers.findIndex(h => h.includes("indirect linking commission") || h.includes("incentive commission"));
 
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i];
-        if (idxPromo !== -1 && line.toLowerCase().includes("code")) {
-          promoCount++;
+        if (idxPromo !== -1) {
+          const promoVal = line.split(",")[idxPromo]?.trim().replace(/"/g, "");
+          if (promoVal && promoVal.length > 2 && !promoVal.toLowerCase().includes("code")) {
+            promoCount++;
+          }
         }
         if (idxDiscount !== -1) {
           const match = line.split(",")[idxDiscount]?.match(/[\d.]+/);
           if (match) {
-            totalDiscount += parseFloat(match[0]);
-            validDiscountRows++;
+            const disc = parseFloat(match[0]);
+            if (disc > 0) {
+              totalDiscount += disc;
+              validDiscountRows++;
+            }
           }
         }
         if (idxComm1 !== -1 || idxComm2 !== -1) {
-          const match1 = idxComm1 !== -1 ? parseFloat(line.split(",")[idxComm1] || "0") : 0;
-          const match2 = idxComm2 !== -1 ? parseFloat(line.split(",")[idxComm2] || "0") : 0;
+          const match1 = idxComm1 !== -1 ? parseFloat(line.split(",")[idxComm1]?.replace(/[^\d.]/g, '') || "0") : 0;
+          const match2 = idxComm2 !== -1 ? parseFloat(line.split(",")[idxComm2]?.replace(/[^\d.]/g, '') || "0") : 0;
           const comm = (isNaN(match1) ? 0 : match1) + (isNaN(match2) ? 0 : match2);
           if (comm > maxComm) maxComm = comm;
         }
@@ -106,7 +147,7 @@ export function AliExpressCsvImporter({ authToken, onImportComplete }: AliExpres
         maxCommission: Math.round(maxComm * 10) / 10,
       });
     } catch (err: any) {
-      setError(`Błąd odczytu nagłówków CSV: ${err.message}`);
+      setError(`Błąd odczytu nagłówków pliku: ${err.message}`);
       setPreview(null);
     }
   };
@@ -164,13 +205,13 @@ export function AliExpressCsvImporter({ authToken, onImportComplete }: AliExpres
             </div>
             <div>
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                Importer Okazji i Kodów Rabatowych z Pliku CSV AliExpress
+                Importer Okazji i Kodów z Pliku CSV / XLS / XLSX AliExpress
                 <Badge variant="outline" className="bg-orange-500/10 text-orange-400 border-orange-500/20">
                   Dedykowany dla AliExpress Portals
                 </Badge>
               </CardTitle>
               <CardDescription>
-                Wgraj wygenerowany z Portalu Afiliacyjnego AliExpress plik CSV z promocjami, kodami rabatowymi i wyższą prowizją.
+                Wgraj wygenerowany z Portalu Afiliacyjnego AliExpress plik CSV lub XLS/XLSX z promocjami, kodami rabatowymi i wyższą prowizją.
               </CardDescription>
             </div>
           </div>
@@ -187,15 +228,15 @@ export function AliExpressCsvImporter({ authToken, onImportComplete }: AliExpres
             type="file" 
             ref={fileInputRef} 
             onChange={handleFileChange} 
-            accept=".csv" 
+            accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
             className="hidden" 
           />
           <Upload className="w-8 h-8 text-orange-400 animate-bounce" />
           <p className="font-medium text-sm text-foreground">
-            {file ? `Wybrano plik: ${file.name}` : "Kliknij lub przeciągnij plik CSV z promocjami AliExpress"}
+            {file ? `Wybrano plik: ${file.name}` : "Kliknij lub przeciągnij plik CSV / XLS / XLSX z promocjami AliExpress"}
           </p>
           <p className="text-xs text-muted-foreground">
-            Obsługuje standardowe pliki CSV z Portalu Afiliacyjnego AliExpress (Promotions, Special Offers)
+            Obsługuje pliki CSV oraz arkusze kalkulacyjne XLS / XLSX z Portalu Afiliacyjnego AliExpress (Promotions, Special Offers)
           </p>
         </div>
 
