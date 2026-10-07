@@ -3,8 +3,8 @@
 # Updated: 2025-12-12 15:35 - Force rebuild with skipExisting=false fix
 runConfig:
   minInstances: 0
-  maxInstances: 100
-  concurrency: 200
+  maxInstances: 10
+  concurrency: 80
   cpu: 2
   memoryMiB: 2048
   timeoutSeconds: 3600
