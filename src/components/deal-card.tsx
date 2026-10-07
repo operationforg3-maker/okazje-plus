@@ -254,13 +254,11 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
       formattedPrice = `${safePrice.toFixed(2).replace('.', ',')} zł`;
     }
 
-    if (typeof deal.originalPrice === 'number' && deal.originalPrice > 0) {
+    if (typeof deal.originalPrice === 'number' && deal.originalPrice > safePrice && safePrice > 0) {
       formattedOriginal = `${deal.originalPrice.toFixed(2).replace('.', ',')} zł`;
-      if (deal.originalPrice > safePrice && safePrice > 0) {
-        discount = Math.round(100 - (safePrice / deal.originalPrice) * 100);
-        const savingsVal = deal.originalPrice - safePrice;
-        formattedSavings = `${savingsVal.toFixed(2).replace('.', ',')} zł`;
-      }
+      discount = Math.round(100 - (safePrice / deal.originalPrice) * 100);
+      const savingsVal = deal.originalPrice - safePrice;
+      formattedSavings = `${savingsVal.toFixed(2).replace('.', ',')} zł`;
     }
 
     const fallbackDiscount = typeof deal.discountPercent === 'number' ? deal.discountPercent : null;
@@ -317,15 +315,11 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
     let savings: string | null = null;
     let shipping: string | null = null;
 
-    if (typeof deal.originalPrice === 'number') {
+    if (typeof deal.originalPrice === 'number' && deal.originalPrice > safePrice && safePrice > 0) {
       const origInPLN = convertToPLN(deal.originalPrice, sourceCurrency);
-      formattedOrig = formatPrice(origInPLN);
-
-      if (deal.originalPrice > 0) {
+      if (origInPLN > priceInPLN) {
+        formattedOrig = formatPrice(origInPLN);
         calculatedDiscount = Math.round(100 - (safePrice / deal.originalPrice) * 100);
-      }
-
-      if (deal.originalPrice > safePrice) {
         const savingsInPLN = origInPLN - priceInPLN;
         savings = formatPrice(savingsInPLN);
       }
@@ -740,7 +734,7 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
           {/* Price & Savings */}
           <div className="space-y-0.5">
             <div className={cn("flex items-baseline gap-2", isList && "justify-end")}>
-              <span className="text-xl font-black text-foreground">{priceData.formattedPrice || 'N/A'}</span>
+              <span className="text-xl font-black text-foreground">{priceData.formattedPrice || 'Sprawdź ofertę'}</span>
               {priceData.formattedOriginal && (
                 <span className="text-xs text-muted-foreground line-through font-bold">{priceData.formattedOriginal}</span>
               )}

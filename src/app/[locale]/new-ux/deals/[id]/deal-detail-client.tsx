@@ -222,15 +222,11 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
     let savings: string | null = null;
     let minOrder: string | null = null;
     
-    if (typeof deal.originalPrice === 'number') {
+    if (typeof deal.originalPrice === 'number' && deal.originalPrice > safePrice && safePrice > 0) {
       const origInPLN = CurrencyManager.convertToPLN(deal.originalPrice, sourceCurrency);
-      formattedOrig = CurrencyManager.formatPrice(origInPLN, userCurrency);
-      
-      if (deal.originalPrice > 0) {
+      if (origInPLN > priceInPLN) {
+        formattedOrig = CurrencyManager.formatPrice(origInPLN, userCurrency);
         calculatedDiscount = Math.round(100 - (safePrice / deal.originalPrice) * 100);
-      }
-      
-      if (deal.originalPrice > safePrice) {
         const savingsInPLN = origInPLN - priceInPLN;
         savings = CurrencyManager.formatPrice(savingsInPLN, userCurrency);
       }

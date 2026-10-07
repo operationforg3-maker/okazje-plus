@@ -412,7 +412,11 @@ export async function getRecommendedProducts(count: number): Promise<Product[]> 
       }
     }
 
-    const allProducts = Array.from(productMap.values());
+    const allProducts = Array.from(productMap.values()).filter((p: any) => {
+      const price = Number(p?.bestPrice?.amount || p?.price?.amount || (typeof p?.price === 'number' ? p.price : 0));
+      const title = typeof p?.title === 'string' ? p.title : (p?.title?.pl || p?.title?.en || p?.name);
+      return Number.isFinite(price) && price > 0 && !!title;
+    });
 
     const getScore = (p: any): number => {
       let s = 0;

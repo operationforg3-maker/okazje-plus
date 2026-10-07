@@ -1503,9 +1503,10 @@ export async function harvestBabyPartnerOffers(
               const affiliateLink = resolveBabyAffiliateUrl(rawLink, config.tracking?.campaign || 'Maluch_1');
               if (existingLinks.has(affiliateLink) || existingTitles.has(titleLower)) continue;
 
-              const origPriceNum = item.old_price 
+              const rawOrigPrice = item.old_price 
                 ? parseFloat(String(item.old_price).replace(/[^0-9.,]/g, '').replace(',', '.')) 
                 : undefined;
+              const origPriceNum = (rawOrigPrice && rawOrigPrice > priceNum) ? rawOrigPrice : undefined;
               const merchant = item.offer || item.merchant || item.brand || 'Sklep dziecięcy';
               const imageUrl = item.images?.default || item.image_link || item.images?.thumb_180 || item.image_url || '';
 
@@ -1599,11 +1600,13 @@ export async function harvestBabyPartnerOffers(
               const link = resolveBabyAffiliateUrl(rawLink, config.tracking?.campaign || 'Maluch_1');
               if (existingLinks.has(link) || existingTitles.has(titleLower)) continue;
 
+              const origPriceNum = (typeof item.fromPrice === 'number' && item.fromPrice > priceNum) ? item.fromPrice : undefined;
+
               const dealDoc = {
                 title: { pl: item.name },
                 description: { pl: item.description || item.shortDescription || item.name },
                 price: priceNum,
-                originalPrice: item.fromPrice,
+                originalPrice: origPriceNum,
                 legacyPrice: priceNum,
                 link,
                 affiliateLink: link,
@@ -1778,10 +1781,11 @@ export async function harvestBabyPartnerOffers(
                     : parseFloat(String(currentPrice || '').replace(/[^0-9.,]/g, '').replace(',', '.'));
                   if (isNaN(priceNum) || priceNum < 5) continue;
 
-                  const origPrice = (p as any).price?.original ?? (p as any).originalPrice;
-                  const origPriceNum = typeof origPrice === 'number'
-                    ? origPrice
-                    : (origPrice ? parseFloat(String(origPrice).replace(/[^0-9.,]/g, '').replace(',', '.')) : undefined);
+                  const rawOrigPrice = (p as any).price?.original ?? (p as any).originalPrice;
+                  const parsedOrig = typeof rawOrigPrice === 'number'
+                    ? rawOrigPrice
+                    : (rawOrigPrice ? parseFloat(String(rawOrigPrice).replace(/[^0-9.,]/g, '').replace(',', '.')) : undefined);
+                  const origPriceNum = (parsedOrig && parsedOrig > priceNum) ? parsedOrig : undefined;
                   const aliId = String((p as any).product_id || (p as any).item_id || (p as any).productId || '');
                   const rawLink = aliId
                     ? `https://pl.aliexpress.com/item/${aliId}.html`

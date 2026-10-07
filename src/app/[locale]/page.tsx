@@ -268,7 +268,19 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   // Gorące okazje do siatki (12 elementów): bierzemy top deale z uwzględnieniem różnorodności kategorii
   // Wykluczamy deale z karuzeli "Okazja Tygodnia", żeby się nie powtarzały
   const weeklyDealIds = new Set(weeklyDeals.map((d: any) => d.id));
-  const sourceDealsFull = allHotDeals.length >= 12 ? allHotDeals : combinedDeals;
+  const sourceDealsFull = (allHotDeals.length >= 12 ? allHotDeals : combinedDeals)
+    .filter((d: any) => {
+      const price = getDealPrice(d);
+      return price > 0 && !!d.title;
+    })
+    .map((d: any) => {
+      const price = getDealPrice(d);
+      const orig = getDealOrigPrice(d);
+      if (orig <= price) {
+        return { ...d, originalPrice: undefined, oldPrice: undefined };
+      }
+      return d;
+    });
   const sourceDeals = sourceDealsFull.filter((d: any) => !weeklyDealIds.has(d.id));
   const categoryBuckets = new Map<string, any[]>();
   for (const d of sourceDeals) {

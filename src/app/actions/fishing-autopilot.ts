@@ -1788,9 +1788,10 @@ export async function harvestFishingPartnerOffers(
               const affiliateLink = resolveFishingAffiliateUrl(rawLink, config.tracking?.campaign || 'Fishing_2');
               if (existingLinks.has(affiliateLink) || existingTitles.has(titleLower)) continue;
 
-              const origPriceNum = item.old_price 
+              const rawOrigPrice = item.old_price 
                 ? parseFloat(String(item.old_price).replace(/[^0-9.,]/g, '').replace(',', '.')) 
                 : undefined;
+              const origPriceNum = (rawOrigPrice && rawOrigPrice > priceNum) ? rawOrigPrice : undefined;
               const merchant = item.offer || item.merchant || item.brand || (rawLink.includes('decathlon') ? 'Decathlon.pl' : 'Sklep partnerski');
               const imageUrl = item.images?.default || item.image_link || item.images?.thumb_180 || item.image_url || '';
 
@@ -1886,11 +1887,13 @@ export async function harvestFishingPartnerOffers(
               const priceNum = item.price || 0;
               if (priceNum <= 0) continue;
 
+              const origPriceNum = (typeof item.fromPrice === 'number' && item.fromPrice > priceNum) ? item.fromPrice : undefined;
+
               const dealDoc = {
                 title: { pl: item.name },
                 description: { pl: item.description || item.name },
                 price: priceNum,
-                originalPrice: item.fromPrice,
+                originalPrice: origPriceNum,
                 legacyPrice: priceNum,
                 link,
                 affiliateLink: link,
@@ -1968,10 +1971,11 @@ export async function harvestFishingPartnerOffers(
                     ? currentPrice
                     : parseFloat(String(currentPrice || '').replace(/[^0-9.,]/g, '').replace(',', '.'));
                   if (isNaN(priceNum) || priceNum < 5) continue;
-                  const origPrice = (p as any).price?.original ?? (p as any).originalPrice;
-                  const origPriceNum = typeof origPrice === 'number'
-                    ? origPrice
-                    : (origPrice ? parseFloat(String(origPrice).replace(/[^0-9.,]/g, '').replace(',', '.')) : undefined);
+                  const rawOrigPrice = (p as any).price?.original ?? (p as any).originalPrice;
+                  const parsedOrig = typeof rawOrigPrice === 'number'
+                    ? rawOrigPrice
+                    : (rawOrigPrice ? parseFloat(String(rawOrigPrice).replace(/[^0-9.,]/g, '').replace(',', '.')) : undefined);
+                  const origPriceNum = (parsedOrig && parsedOrig > priceNum) ? parsedOrig : undefined;
                   const rawLink = (p as any).product_url || (p as any).promotionLink || (p as any).productUrl || `https://www.aliexpress.com/item/${(p as any).item_id || (p as any).productId}.html`;
                   const trackedLink = resolveFishingAffiliateUrl(rawLink, config.tracking?.campaign || 'Fishing_2');
                   if (existingLinks.has(trackedLink) || existingTitles.has(titleLower)) continue;
@@ -2184,18 +2188,24 @@ export async function executeFishingAutopilotCycle(options?: {
       // 1. Sprawdź limit dzienny
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
-      const todayPostsSnap = await adminDb
+      // 1. Sprawdź limit dzienny (filtr in-memory aby uniknąć konieczności indeksu złożonego status+publishedAt)
+      const todayStartIso = todayStart.toISOString();
+      const recentPostsSnap = await adminDb
         .collection('fishingPostsQueue')
         .where('status', '==', 'posted')
-        .where('publishedAt', '>=', todayStart.toISOString())
-        .limit(20)
+        .limit(50)
         .get();
 
+      const todayPostedCount = recentPostsSnap.docs.filter((doc) => {
+        const publishedAt = doc.data()?.publishedAt;
+        return publishedAt && publishedAt >= todayStartIso;
+      }).length;
+
       const dailyLimit = config.schedule?.dailyLimit || 4;
-      if (todayPostsSnap.size >= dailyLimit) {
+      if (todayPostedCount >= dailyLimit) {
         return {
           success: false,
-          message: `Osiągnięto dzienny limit publikacji (${todayPostsSnap.size}/${dailyLimit} postów dzisiaj).`,
+          message: `Osiągnięto dzienny limit publikacji (${todayPostedCount}/${dailyLimit} postów dzisiaj).`,
         };
       }
 
@@ -2225,7 +2235,7 @@ export async function executeFishingAutopilotCycle(options?: {
     const approvedSnap = await adminDb
       .collection('fishingPostsQueue')
       .where('status', '==', 'approved')
-      .limit(20)
+      .limit(100)
       .get();
 
     if (!approvedSnap.empty) {
@@ -2244,7 +2254,7 @@ export async function executeFishingAutopilotCycle(options?: {
       const pendingSnap = await adminDb
         .collection('fishingPostsQueue')
         .where('status', '==', 'pending')
-        .limit(20)
+        .limit(100)
         .get();
       if (!pendingSnap.empty) {
         const duePending = pendingSnap.docs.filter(isDue);

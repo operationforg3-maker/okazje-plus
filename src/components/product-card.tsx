@@ -230,16 +230,14 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
     const originalInPLN = convertToPLN(rawOriginalPrice, sourceCurrency);
     const shippingInPLN = convertToPLN(rawShipping, sourceCurrency);
 
-    const formatted = formatPrice(priceInPLN);
+    const formatted = priceInPLN > 0 ? formatPrice(priceInPLN) : null;
     let formattedOrig = '';
     let savings = '';
     let formattedShip = 'Darmowa';
 
-    if (originalInPLN > priceInPLN) {
+    if (originalInPLN > priceInPLN && priceInPLN > 0) {
       formattedOrig = formatPrice(originalInPLN);
-      if (priceInPLN > 0) {
-        savings = formatPrice(originalInPLN - priceInPLN);
-      }
+      savings = formatPrice(originalInPLN - priceInPLN);
     }
 
     if (shippingInPLN > 0) {
@@ -248,7 +246,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
 
     setPriceData({
       formattedPrice: formatted,
-      formattedOriginal: formattedOrig,
+      formattedOriginal: formattedOrig || null,
       formattedShipping: formattedShip,
       discount: (originalInPLN > priceInPLN) ? Math.round(100 - (priceInPLN / originalInPLN) * 100) : null,
       savings,
@@ -646,7 +644,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
           {/* Price & Savings */}
           <div className="space-y-0.5">
             <div className={cn("flex items-baseline gap-2", isList && "justify-end")}>
-              <span className="text-xl font-black text-foreground">{priceData.formattedPrice || 'N/A'}</span>
+              <span className="text-xl font-black text-foreground">{priceData.formattedPrice || 'Sprawdź cenę'}</span>
               {priceData.formattedOriginal && (
                 <span className="text-xs text-muted-foreground line-through font-bold">{priceData.formattedOriginal}</span>
               )}

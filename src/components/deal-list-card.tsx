@@ -287,13 +287,13 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
     const priceInPLN = rawPrice !== null && rawPrice !== undefined ? convertToPLN(rawPrice, sourceCurrency) : null;
     const originalInPLN = rawOriginal !== null && rawOriginal !== undefined ? convertToPLN(rawOriginal, sourceCurrency) : null;
 
-    const formattedPrice = priceInPLN !== null ? formatPrice(priceInPLN) : null;
-    const formattedOriginal = originalInPLN !== null && originalInPLN > 0 ? formatPrice(originalInPLN) : null;
+    const formattedPrice = (priceInPLN !== null && priceInPLN > 0) ? formatPrice(priceInPLN) : null;
+    const formattedOriginal = (originalInPLN !== null && priceInPLN !== null && originalInPLN > priceInPLN && priceInPLN > 0) ? formatPrice(originalInPLN) : null;
 
     let calculatedDiscount: number | null = null;
-    if (priceInPLN !== null && originalInPLN !== null && originalInPLN > priceInPLN) {
+    if (priceInPLN !== null && originalInPLN !== null && originalInPLN > priceInPLN && priceInPLN > 0) {
       calculatedDiscount = Math.round(((originalInPLN - priceInPLN) / originalInPLN) * 100);
-    } else if (typeof deal.discountPercent === 'number') {
+    } else if (typeof deal.discountPercent === 'number' && originalInPLN !== null && priceInPLN !== null && originalInPLN > priceInPLN) {
       calculatedDiscount = deal.discountPercent;
     }
 
@@ -423,7 +423,7 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
           {/* Price Block */}
           <div className="flex flex-col items-end text-right shrink-0">
             <p className="text-xl sm:text-2xl font-black text-foreground tracking-tight leading-none">
-              {dealData.formattedPrice || 'N/A'}
+              {dealData.formattedPrice || 'Sprawdź ofertę'}
             </p>
             {dealData.formattedOriginal && (
               <div className="flex items-center gap-1.5 text-xs mt-0.5">

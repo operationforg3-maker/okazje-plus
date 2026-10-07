@@ -724,6 +724,22 @@ async function searchDealsFirestoreFallback(
       docs = [...exactMatches, ...fuzzyMatches];
 
       // Post-filtering
+      // Ensure all returned deals have a valid positive price and non-empty title
+      docs = docs.filter((d: any) => {
+        if (!d.title) return false;
+        const p = (d as any).priceV2?.amount || (typeof d.price === 'object' && d.price ? Number(d.price.amount) : (typeof d.price === 'number' ? d.price : (parseFloat(String(d.legacyPrice || 0)) || 0)));
+        return Number.isFinite(p) && p > 0;
+      });
+
+      // Sanitize inverted or equal originalPrice so it never renders as higher than price
+      docs.forEach((d: any) => {
+        const p = (d as any).priceV2?.amount || (typeof d.price === 'object' && d.price ? Number(d.price.amount) : (typeof d.price === 'number' ? d.price : 0));
+        const orig = typeof d.originalPrice === 'number' ? d.originalPrice : (typeof d.originalPrice === 'object' && d.originalPrice?.amount ? Number(d.originalPrice.amount) : 0);
+        if (orig <= p) {
+          d.originalPrice = undefined;
+        }
+      });
+
       if (mainCategorySlug) docs = docs.filter((d: any) => d.mainCategorySlug === mainCategorySlug);
       if (subCategorySlug) docs = docs.filter((d: any) => d.subCategorySlug === subCategorySlug);
       if (subSubCategorySlug) docs = docs.filter((d: any) => d.subSubCategorySlug === subSubCategorySlug);
@@ -806,6 +822,22 @@ async function searchDealsFirestoreFallback(
       });
 
       // Post-filtering in memory
+      // Ensure all returned deals have a valid positive price and non-empty title
+      docs = docs.filter((d: any) => {
+        if (!d.title) return false;
+        const p = (d as any).priceV2?.amount || (typeof d.price === 'object' && d.price ? Number(d.price.amount) : (typeof d.price === 'number' ? d.price : (parseFloat(String(d.legacyPrice || 0)) || 0)));
+        return Number.isFinite(p) && p > 0;
+      });
+
+      // Sanitize inverted or equal originalPrice so it never renders as higher than price
+      docs.forEach((d: any) => {
+        const p = (d as any).priceV2?.amount || (typeof d.price === 'object' && d.price ? Number(d.price.amount) : (typeof d.price === 'number' ? d.price : 0));
+        const orig = typeof d.originalPrice === 'number' ? d.originalPrice : (typeof d.originalPrice === 'object' && d.originalPrice?.amount ? Number(d.originalPrice.amount) : 0);
+        if (orig <= p) {
+          d.originalPrice = undefined;
+        }
+      });
+
       if (mainCategorySlug) docs = docs.filter((d: any) => d.mainCategorySlug === mainCategorySlug);
       if (subCategorySlug) docs = docs.filter((d: any) => d.subCategorySlug === subCategorySlug);
       if (subSubCategorySlug) docs = docs.filter((d: any) => d.subSubCategorySlug === subSubCategorySlug);
