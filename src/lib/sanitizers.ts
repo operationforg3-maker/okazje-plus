@@ -894,11 +894,18 @@ export const sanitizeProductCoreRecord = (raw: any, id: string): ProductCore => 
   };
 
   const sanitizeBestPrice = (raw: any): any => {
+    if (typeof raw === 'number') {
+      return { amount: ensureNumber(raw, 0), currency: 'PLN' };
+    }
+    if (typeof raw === 'string') {
+      const parsed = parseFloat(raw.replace(/[^0-9.,]/g, '').replace(',', '.'));
+      return { amount: isNaN(parsed) ? 0 : parsed, currency: 'PLN' };
+    }
     if (!raw || typeof raw !== 'object') {
       return { amount: 0, currency: 'PLN' };
     }
     return {
-      amount: ensureNumber(raw.amount, 0),
+      amount: ensureNumber(raw.amount ?? raw.price, 0),
       currency: ensureString(raw.currency, 'PLN'),
     };
   };
