@@ -197,7 +197,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const combinedDeals = Array.from(dealsMap.values());
 
   // Wybieramy okazje do karuzeli "Okazja Tygodnia" — wysoka jakość, obrazek, cena, atrakcyjność i świeżość
-  const weeklyDeals = [...combinedDeals]
+  // Pilnujemy, aby w karuzeli nie powtarzały się te same lub bardzo zbliżone produkty (np. 3 x podstawka pod laptopa)
+  const sortedWeeklyCandidates = [...combinedDeals]
     .filter((d: any) => {
       const hasImg = !!(d.image || d.imageUrl);
       const price = getDealPrice(d);
@@ -217,11 +218,58 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       const scoreA = discA * 1.5 + Math.min(tempA, 100) * 0.5 + recencyA;
       const scoreB = discB * 1.5 + Math.min(tempB, 100) * 0.5 + recencyB;
       return scoreB - scoreA;
-    })
-    .slice(0, 5);
+    });
+
+  const weeklyDeals: any[] = [];
+  const seenHeroKeywords = new Set<string>();
+  const seenHeroImages = new Set<string>();
+
+  // Słowa-klucze do wykrywania duplikatów produktów w karuzeli Hero
+  const normalizeForDeduplication = (title: string): string[] => {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9a-ząćęłńóśźż\s]/gi, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length >= 4);
+  };
+
+  for (const deal of sortedWeeklyCandidates) {
+    if (weeklyDeals.length >= 5) break;
+
+    const img = (deal.image || deal.imageUrl || '').trim();
+    if (img && seenHeroImages.has(img)) continue;
+
+    const rawTitle = typeof deal.title === 'string'
+      ? deal.title
+      : ((deal.title as any)?.pl || (deal.title as any)?.en || '');
+    const words = normalizeForDeduplication(rawTitle);
+
+    // Sprawdź czy deal nie ma zbyt wielu wspólnych słów-kluczy z już dodanym produktem (np. "podstawka" + "laptopa")
+    const hasOverlap = words.filter((w) => seenHeroKeywords.has(w)).length >= 2;
+    if (hasOverlap && weeklyDeals.length < sortedWeeklyCandidates.length) {
+      continue;
+    }
+
+    weeklyDeals.push(deal);
+    if (img) seenHeroImages.add(img);
+    words.forEach((w) => seenHeroKeywords.add(w));
+  }
+
+  // Jeśli przez rygorystyczny filtr wpadło za mało elementów, uzupełnij unikalnymi ID
+  if (weeklyDeals.length < 5) {
+    for (const deal of sortedWeeklyCandidates) {
+      if (weeklyDeals.length >= 5) break;
+      if (!weeklyDeals.some((d) => d.id === deal.id)) {
+        weeklyDeals.push(deal);
+      }
+    }
+  }
 
   // Gorące okazje do siatki (12 elementów): bierzemy top deale z uwzględnieniem różnorodności kategorii
-  const sourceDeals = allHotDeals.length >= 12 ? allHotDeals : combinedDeals;
+  // Wykluczamy deale z karuzeli "Okazja Tygodnia", żeby się nie powtarzały
+  const weeklyDealIds = new Set(weeklyDeals.map((d: any) => d.id));
+  const sourceDealsFull = allHotDeals.length >= 12 ? allHotDeals : combinedDeals;
+  const sourceDeals = sourceDealsFull.filter((d: any) => !weeklyDealIds.has(d.id));
   const categoryBuckets = new Map<string, any[]>();
   for (const d of sourceDeals) {
     const cat = (d as any).mainCategorySlug || (d as any).category || 'inne';

@@ -127,19 +127,59 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
   );
 
   // Format prices using state to fix hydration mismatch
+  // Initialize priceData with SSR-safe initial values so prices don't flash 'N/A'
+  const initialPriceData = (() => {
+    const isPC = !!(product as any).bestPrice;
+    let rawPrice = 0;
+    let rawOriginalPrice = 0;
+
+    if (isPC) {
+      const pc = product as any;
+      if (pc.bestPrice) {
+        const { amount } = extractPriceInfo(pc.bestPrice);
+        rawPrice = amount;
+        if (pc.bestPrice.originalPrice) rawOriginalPrice = pc.bestPrice.originalPrice;
+      }
+    } else {
+      const { amount } = extractPriceInfo(product.price);
+      rawPrice = amount;
+      if (typeof product.price === 'object' && product.price !== null) {
+        const p = product.price as any;
+        if (p.originalPrice) rawOriginalPrice = p.originalPrice;
+      }
+    }
+
+    let formattedPrice: string | null = null;
+    let formattedOriginal: string | null = null;
+    let savings: string | null = null;
+    let discount: number | null = null;
+
+    if (rawPrice > 0) {
+      formattedPrice = `${rawPrice.toFixed(2).replace('.', ',')} zł`;
+    }
+
+    if (rawOriginalPrice > rawPrice && rawPrice > 0) {
+      formattedOriginal = `${rawOriginalPrice.toFixed(2).replace('.', ',')} zł`;
+      discount = Math.round(100 - (rawPrice / rawOriginalPrice) * 100);
+      savings = `${(rawOriginalPrice - rawPrice).toFixed(2).replace('.', ',')} zł`;
+    }
+
+    return {
+      formattedPrice,
+      formattedOriginal,
+      formattedShipping: null as string | null,
+      discount,
+      savings,
+    };
+  })();
+
   const [priceData, setPriceData] = useState<{
     formattedPrice: string | null;
     formattedOriginal: string | null;
     formattedShipping: string | null;
     discount: number | null;
     savings: string | null;
-  }>({
-    formattedPrice: null,
-    formattedOriginal: null,
-    formattedShipping: null,
-    discount: null,
-    savings: null,
-  });
+  }>(initialPriceData);
 
   // Sync locale when route param changes
   useEffect(() => {

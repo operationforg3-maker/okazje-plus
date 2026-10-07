@@ -240,19 +240,47 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
   const offerPreviewUrl = deal?.metadata?.offerPreviewUrl || deal?.metadata?.previewUrl || deal?.sourceUrl || deal?.link;
   
   // Format prices using state to fix Intl.NumberFormat hydration mismatch
+  // Compute SSR-safe initial price so it's visible on first render instead of "N/A"
+  const initialPriceData = (() => {
+    const { amount: priceAmount } = extractPriceInfo(deal.price, deal.legacyPrice);
+    const safePrice = Number(priceAmount) || 0;
+
+    let formattedPrice: string | null = null;
+    let formattedOriginal: string | null = null;
+    let formattedSavings: string | null = null;
+    let discount: number | null = null;
+
+    if (safePrice > 0) {
+      formattedPrice = `${safePrice.toFixed(2).replace('.', ',')} zł`;
+    }
+
+    if (typeof deal.originalPrice === 'number' && deal.originalPrice > 0) {
+      formattedOriginal = `${deal.originalPrice.toFixed(2).replace('.', ',')} zł`;
+      if (deal.originalPrice > safePrice && safePrice > 0) {
+        discount = Math.round(100 - (safePrice / deal.originalPrice) * 100);
+        const savingsVal = deal.originalPrice - safePrice;
+        formattedSavings = `${savingsVal.toFixed(2).replace('.', ',')} zł`;
+      }
+    }
+
+    const fallbackDiscount = typeof deal.discountPercent === 'number' ? deal.discountPercent : null;
+
+    return {
+      formattedPrice,
+      formattedOriginal,
+      formattedSavings,
+      formattedShippingCost: null as string | null,
+      discount: discount ?? fallbackDiscount,
+    };
+  })();
+
   const [priceData, setPriceData] = useState<{
     formattedPrice: string | null;
     formattedOriginal: string | null;
     formattedSavings: string | null;
     formattedShippingCost: string | null;
     discount: number | null;
-  }>({
-    formattedPrice: null,
-    formattedOriginal: null,
-    formattedSavings: null,
-    formattedShippingCost: null,
-    discount: null,
-  });
+  }>(initialPriceData);
 
   // Sync locale when route param changes
   useEffect(() => {

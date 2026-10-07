@@ -54,17 +54,26 @@ function getLocalizedText(value: unknown, fallback = 'Oferta'): string {
   return fallback;
 }
 
+function extractAmount(v: any): number {
+  if (typeof v === 'number') return v;
+  if (typeof v === 'object' && v?.amount) return Number(v.amount) || 0;
+  if (typeof v === 'string') {
+    const parsed = parseFloat(v.replace(/[^0-9.,]/g, '').replace(',', '.'));
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+}
+
 function formatPrice(v: any, currency = 'PLN'): string | null {
-  const n = typeof v === 'number' ? v
-    : typeof v === 'object' && v?.amount ? v.amount
-    : parseFloat(String(v || '').replace(/[^0-9.,]/g, '').replace(',', '.'));
+  const n = extractAmount(v);
   if (isNaN(n) || n <= 0) return null;
   return new Intl.NumberFormat('pl-PL', { style: 'currency', currency }).format(n);
 }
 
 function calcDiscount(deal: Deal): number {
-  const price = typeof deal.price === 'number' ? deal.price : 0;
-  const orig = typeof deal.originalPrice === 'number' ? deal.originalPrice : 0;
+  const price = extractAmount(deal.price);
+  const orig = typeof deal.originalPrice === 'number' ? deal.originalPrice
+    : (typeof (deal as any).oldPrice === 'number' ? (deal as any).oldPrice : 0);
   if (orig > 0 && price > 0 && orig > price) {
     return Math.round(((orig - price) / orig) * 100);
   }

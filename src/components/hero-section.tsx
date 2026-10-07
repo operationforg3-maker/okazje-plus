@@ -93,14 +93,16 @@ export default function HeroSection({ featuredDeal }: HeroSectionProps) {
                     const dealImage = (featuredDeal as any).imageUrl || featuredDeal.image || '/placeholder-image.webp';
                     const dealPriceAmount = typeof featuredDeal.price === 'number'
                       ? featuredDeal.price
-                      : (typeof featuredDeal.price === 'object' && featuredDeal.price !== null ? (featuredDeal.price as any).amount : 0);
+                      : (typeof featuredDeal.price === 'object' && featuredDeal.price !== null ? Number((featuredDeal.price as any).amount) || 0 : 0);
                     const dealOriginalPrice = typeof featuredDeal.originalPrice === 'number'
                       ? featuredDeal.originalPrice
                       : (typeof (featuredDeal as any).oldPrice === 'number'
                         ? (featuredDeal as any).oldPrice
-                        : (typeof featuredDeal.originalPrice === 'object' && featuredDeal.originalPrice !== null ? (featuredDeal.originalPrice as any).amount : null));
+                        : (typeof featuredDeal.originalPrice === 'object' && featuredDeal.originalPrice !== null ? Number((featuredDeal.originalPrice as any).amount) || 0 : 0));
                     const dealDiscount = (featuredDeal as any).discount
                       || (dealOriginalPrice && dealOriginalPrice > dealPriceAmount ? `-${Math.round(((dealOriginalPrice - dealPriceAmount) / dealOriginalPrice) * 100)}%` : null);
+                    
+                    const fmtPrice = (n: number) => n > 0 ? n.toFixed(2).replace('.', ',') : null;
 
                     return (
                       <>
@@ -120,9 +122,9 @@ export default function HeroSection({ featuredDeal }: HeroSectionProps) {
                             {dealTitle}
                           </h3>
                           <div className="flex items-baseline gap-2 flex-wrap">
-                            <span className="text-xl sm:text-2xl font-black text-foreground">{dealPriceAmount} zł</span>
-                            {dealOriginalPrice ? (
-                              <span className="text-sm text-muted-foreground line-through">{dealOriginalPrice} zł</span>
+                            <span className="text-xl sm:text-2xl font-black text-foreground">{fmtPrice(dealPriceAmount) || '—'} zł</span>
+                            {dealOriginalPrice > 0 && dealOriginalPrice !== dealPriceAmount ? (
+                              <span className="text-sm text-muted-foreground line-through">{fmtPrice(dealOriginalPrice)} zł</span>
                             ) : null}
                             {dealDiscount ? (
                               <span className="text-sm font-bold text-green-500 ml-auto">{dealDiscount}</span>
