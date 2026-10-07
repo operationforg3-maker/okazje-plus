@@ -14,6 +14,7 @@ import {
   ClipboardList,
   FileSpreadsheet,
   Image,
+  Link2,
   RefreshCw,
   Settings2,
   ShieldCheck,
@@ -24,6 +25,7 @@ import { ScheduleManager } from '@/components/admin/schedule-manager';
 import { ScrapingQueuePanel } from '@/components/admin/scraping-queue-panel';
 import { HarvesterJobsMonitor } from '@/components/admin/harvester-jobs-monitor';
 import { AliExpressCsvImporter } from '@/components/admin/aliexpress-csv-importer';
+import { UrlImporter } from '@/components/admin/url-importer';
 
 // ─── Status bar at the top ───────────────────────────────────────────────────
 
@@ -142,10 +144,14 @@ function ImportPage() {
 
       {/* Main tabs */}
       <Tabs defaultValue="autopilot" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-6">
           <TabsTrigger value="autopilot" className="gap-2">
             <Bot className="h-4 w-4" />
             <span className="hidden sm:inline">Autopilot</span>
+          </TabsTrigger>
+          <TabsTrigger value="url" className="gap-2">
+            <Link2 className="h-4 w-4 text-indigo-500" />
+            <span className="hidden sm:inline">Import URL</span>
           </TabsTrigger>
           <TabsTrigger value="csv" className="gap-2">
             <FileSpreadsheet className="h-4 w-4 text-orange-500" />
@@ -192,6 +198,11 @@ function ImportPage() {
             authToken={authToken}
             setAuthError={setAuthError}
           />
+        </TabsContent>
+
+        {/* ── Tab: Import z Adresu URL ─────────────────────────── */}
+        <TabsContent value="url" className="space-y-4">
+          <UrlImporter authToken={authToken} />
         </TabsContent>
 
         {/* ── Tab: Import CSV / XLS ───────────────────────────── */}
