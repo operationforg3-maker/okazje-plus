@@ -2535,6 +2535,63 @@ export async function getProductWithDeals(productId: string): Promise<{ product:
           updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
         };
       });
+
+      // Fallback 1: match deals by sourceProductId (e.g. AliExpress CSV imported deals)
+      if (deals.length === 0 && product.metadata?.originalId) {
+        const origSnap = await adminDb.collection('deals')
+          .where('sourceProductId', '==', String(product.metadata.originalId))
+          .where('status', '==', 'approved')
+          .get();
+        if (!origSnap.empty) {
+          deals = origSnap.docs.map(d => {
+            const data = d.data();
+            return {
+              ...data,
+              id: d.id,
+              createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
+              updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
+            };
+          });
+        }
+      }
+
+      // Fallback 2: match deals by legacy productId
+      if (deals.length === 0) {
+        const legacySnap = await adminDb.collection('deals')
+          .where('productId', '==', product.id)
+          .where('status', '==', 'approved')
+          .get();
+        if (!legacySnap.empty) {
+          deals = legacySnap.docs.map(d => {
+            const data = d.data();
+            return {
+              ...data,
+              id: d.id,
+              createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
+              updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
+            };
+          });
+        }
+      }
+
+      // Fallback 3: match deals by linkedProductIds array contains product.id
+      if (deals.length === 0) {
+        const linkedSnap = await adminDb.collection('deals')
+          .where('linkedProductIds', 'array-contains', product.id)
+          .where('status', '==', 'approved')
+          .get();
+        if (!linkedSnap.empty) {
+          deals = linkedSnap.docs.map(d => {
+            const data = d.data();
+            return {
+              ...data,
+              id: d.id,
+              createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
+              updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
+            };
+          });
+        }
+      }
     } else {
       const dealsRef = collection(db, "deals");
       const q = query(dealsRef, where("productCoreId", "==", product.id), where("status", "==", "approved"));
@@ -2548,6 +2605,54 @@ export async function getProductWithDeals(productId: string): Promise<{ product:
           updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
         };
       });
+
+      // Fallback 1: match deals by sourceProductId (client)
+      if (deals.length === 0 && product.metadata?.originalId) {
+        const origSnap = await getDocs(query(dealsRef, where("sourceProductId", "==", String(product.metadata.originalId)), where("status", "==", "approved")));
+        if (!origSnap.empty) {
+          deals = origSnap.docs.map(d => {
+            const data = d.data();
+            return {
+              ...data,
+              id: d.id,
+              createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
+              updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
+            };
+          });
+        }
+      }
+
+      // Fallback 2: match deals by legacy productId (client)
+      if (deals.length === 0) {
+        const legacySnap = await getDocs(query(dealsRef, where("productId", "==", product.id), where("status", "==", "approved")));
+        if (!legacySnap.empty) {
+          deals = legacySnap.docs.map(d => {
+            const data = d.data();
+            return {
+              ...data,
+              id: d.id,
+              createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
+              updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
+            };
+          });
+        }
+      }
+
+      // Fallback 3: match deals by linkedProductIds array contains product.id (client)
+      if (deals.length === 0) {
+        const linkedSnap = await getDocs(query(dealsRef, where("linkedProductIds", "array-contains", product.id), where("status", "==", "approved")));
+        if (!linkedSnap.empty) {
+          deals = linkedSnap.docs.map(d => {
+            const data = d.data();
+            return {
+              ...data,
+              id: d.id,
+              createdAt: data.createdAt?.toDate?.().toISOString?.() || data.createdAt,
+              updatedAt: data.updatedAt?.toDate?.().toISOString?.() || data.updatedAt,
+            };
+          });
+        }
+      }
     }
 
     const bestDeal = deals.length > 0
@@ -2559,6 +2664,12 @@ export async function getProductWithDeals(productId: string): Promise<{ product:
           return currentTotal < bestTotal ? current : best;
         }, deals[0])
       : null;
+
+    // Preserve existing product bestPrice if numeric or object, never wipe it out
+    const rawBestPrice = product.bestPrice;
+    const existingAmount = typeof rawBestPrice === 'number'
+      ? rawBestPrice
+      : (typeof rawBestPrice?.amount === 'number' ? rawBestPrice.amount : (typeof product.bestTotalPrice === 'number' ? product.bestTotalPrice : undefined));
 
     const resolvedProduct = bestDeal
       ? {
@@ -2573,8 +2684,8 @@ export async function getProductWithDeals(productId: string): Promise<{ product:
         }
       : {
           ...product,
-          bestPrice: undefined,
-          bestTotalPrice: undefined,
+          bestPrice: existingAmount !== undefined ? { amount: existingAmount, currency: rawBestPrice?.currency || 'PLN' } : undefined,
+          bestTotalPrice: existingAmount !== undefined ? existingAmount : undefined,
           bestDealId: undefined,
         };
 

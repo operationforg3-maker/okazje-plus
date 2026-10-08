@@ -180,15 +180,23 @@ export default function ProductDetailM6Client({
   const bestDealTotal = isM6 && Array.isArray(deals) && deals.length > 0
     ? deals.reduce((bestTotal, current) => {
         const shipping = 'shipping' in current ? (current.shipping?.cost || 0) : ((current as any).shippingCost || 0);
-        const total = (current.price?.amount || 0) + shipping;
+        const dealPrice = typeof current.price === 'number' ? current.price : (current.price?.amount || 0);
+        const total = dealPrice + shipping;
         return total < bestTotal ? total : bestTotal;
       }, Number.POSITIVE_INFINITY)
     : null;
 
-  // Price - for M6 use only active approved deals (bestDeal derived from deals prop)
+  const rawBestPrice = productCore?.bestPrice;
+  const coreBestPriceAmount = typeof rawBestPrice === 'number'
+    ? rawBestPrice
+    : (typeof rawBestPrice?.amount === 'number'
+        ? rawBestPrice.amount
+        : (typeof productCore?.bestTotalPrice === 'number' ? productCore.bestTotalPrice : 0));
+
+  // Price - for M6 use active approved deals, or fallback to productCore bestPrice
   const priceAmount = isM6
-    ? bestDealTotal
-    : (product?.price || 0);
+    ? (bestDealTotal !== null && bestDealTotal !== Number.POSITIVE_INFINITY ? bestDealTotal : (coreBestPriceAmount || null))
+    : (typeof product?.price === 'number' ? product.price : (product?.price?.amount || 0));
 
   const activePriceAmount = useMemo(() => {
     if (matchedSku && typeof matchedSku.price === 'number' && matchedSku.price > 0) {
@@ -270,7 +278,13 @@ export default function ProductDetailM6Client({
     (productData as any)?.sourceUrl,
     (productData as any)?.link
   );
-  const outboundUrl = bestDealOutboundUrl || productOutboundUrl;
+  let outboundUrl = bestDealOutboundUrl || productOutboundUrl;
+  if (!outboundUrl) {
+    const origId = (productData as any)?.metadata?.originalId || (productCore as any)?.metadata?.originalId;
+    if (origId) {
+      outboundUrl = `https://pl.aliexpress.com/item/${origId}.html`;
+    }
+  }
   const bestDealShippingCost = bestDeal
     ? (bestDeal.shipping?.cost !== undefined
         ? Number(bestDeal.shipping.cost)

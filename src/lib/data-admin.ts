@@ -534,7 +534,7 @@ export async function getProductWithDealsAdmin(productId: string): Promise<{ pro
       .get();
       
     // Admin sees ALL deals (including draft/expired), filtering should happen in UI if needed
-    const deals = dealsSnap.docs.map(doc => {
+    let deals = dealsSnap.docs.map(doc => {
        const d = doc.data();
        return {
          ...d,
@@ -548,6 +548,72 @@ export async function getProductWithDealsAdmin(productId: string): Promise<{ pro
             : (d.updatedAt || new Date().toISOString()),
        };
     });
+
+    if (deals.length === 0 && (product as any)?.metadata?.originalId) {
+      const origSnap = await adminDb
+        .collection('deals')
+        .where('sourceProductId', '==', String((product as any).metadata.originalId))
+        .get();
+      if (!origSnap.empty) {
+        deals = origSnap.docs.map(doc => {
+          const d = doc.data();
+          return {
+            ...d,
+            id: doc.id,
+            createdAt: (d.createdAt && typeof d.createdAt.toDate === 'function') 
+               ? d.createdAt.toDate().toISOString() 
+               : (d.createdAt || new Date().toISOString()),
+            updatedAt: (d.updatedAt && typeof d.updatedAt.toDate === 'function') 
+               ? d.updatedAt.toDate().toISOString() 
+               : (d.updatedAt || new Date().toISOString()),
+          };
+        });
+      }
+    }
+
+    if (deals.length === 0) {
+      const legSnap = await adminDb
+        .collection('deals')
+        .where('productId', '==', product.id)
+        .get();
+      if (!legSnap.empty) {
+        deals = legSnap.docs.map(doc => {
+          const d = doc.data();
+          return {
+            ...d,
+            id: doc.id,
+            createdAt: (d.createdAt && typeof d.createdAt.toDate === 'function') 
+               ? d.createdAt.toDate().toISOString() 
+               : (d.createdAt || new Date().toISOString()),
+            updatedAt: (d.updatedAt && typeof d.updatedAt.toDate === 'function') 
+               ? d.updatedAt.toDate().toISOString() 
+               : (d.updatedAt || new Date().toISOString()),
+          };
+        });
+      }
+    }
+
+    if (deals.length === 0) {
+      const linkedSnap = await adminDb
+        .collection('deals')
+        .where('linkedProductIds', 'array-contains', product.id)
+        .get();
+      if (!linkedSnap.empty) {
+        deals = linkedSnap.docs.map(doc => {
+          const d = doc.data();
+          return {
+            ...d,
+            id: doc.id,
+            createdAt: (d.createdAt && typeof d.createdAt.toDate === 'function') 
+               ? d.createdAt.toDate().toISOString() 
+               : (d.createdAt || new Date().toISOString()),
+            updatedAt: (d.updatedAt && typeof d.updatedAt.toDate === 'function') 
+               ? d.updatedAt.toDate().toISOString() 
+               : (d.updatedAt || new Date().toISOString()),
+          };
+        });
+      }
+    }
 
     return JSON.parse(JSON.stringify({ product, deals }));
   } catch (error) {

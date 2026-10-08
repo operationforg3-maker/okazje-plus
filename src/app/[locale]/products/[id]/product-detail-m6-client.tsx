@@ -112,14 +112,22 @@ export default function ProductDetailM6Client({
   const bestDealTotal = isM6 && Array.isArray(deals) && deals.length > 0
     ? deals.reduce((bestTotal, current) => {
         const shipping = 'shipping' in current ? (current.shipping?.cost || 0) : ((current as any).shippingCost || 0);
-        const total = (current.price?.amount || 0) + shipping;
+        const dealPrice = typeof current.price === 'number' ? current.price : (current.price?.amount || 0);
+        const total = dealPrice + shipping;
         return total < bestTotal ? total : bestTotal;
       }, Number.POSITIVE_INFINITY)
     : null;
 
+  const rawBestPrice = productCore?.bestPrice;
+  const coreBestPriceAmount = typeof rawBestPrice === 'number'
+    ? rawBestPrice
+    : (typeof rawBestPrice?.amount === 'number'
+        ? rawBestPrice.amount
+        : (typeof productCore?.bestTotalPrice === 'number' ? productCore.bestTotalPrice : 0));
+
   const priceAmount = isM6
-    ? (bestDealTotal !== Number.POSITIVE_INFINITY ? bestDealTotal : (productCore?.bestPrice?.amount || 0))
-    : (product?.price || 0);
+    ? (bestDealTotal !== null && bestDealTotal !== Number.POSITIVE_INFINITY ? bestDealTotal : coreBestPriceAmount)
+    : (typeof product?.price === 'number' ? product.price : (product?.price?.amount || 0));
 
   const formattedPrice = priceAmount ? formatPrice(priceAmount) : 'N/A';
 
@@ -162,8 +170,10 @@ export default function ProductDetailM6Client({
       return deals.reduce((best, current) => {
         const bestShipping = 'shipping' in best ? best.shipping?.cost || 0 : (best as any).shippingCost || 0;
         const currentShipping = 'shipping' in current ? current.shipping?.cost || 0 : (current as any).shippingCost || 0;
-        const bestTotal = (best.price?.amount || 0) + bestShipping;
-        const currentTotal = (current.price?.amount || 0) + currentShipping;
+        const bestPrice = typeof best.price === 'number' ? best.price : (best.price?.amount || 0);
+        const currentPrice = typeof current.price === 'number' ? current.price : (current.price?.amount || 0);
+        const bestTotal = bestPrice + bestShipping;
+        const currentTotal = currentPrice + currentShipping;
         return currentTotal < bestTotal ? current : best;
       }, deals[0]);
     } catch {
@@ -171,7 +181,7 @@ export default function ProductDetailM6Client({
     }
   })();
 
-  const outboundUrl = bestDeal
+  let outboundUrl = bestDeal
     ? getExternalUrl(
         bestDeal.affiliateLink,
         (bestDeal as any).affiliateUrl,
@@ -184,6 +194,13 @@ export default function ProductDetailM6Client({
         (productData as any)?.sourceUrl,
         (productData as any)?.link
       );
+
+  if (!outboundUrl) {
+    const origId = (productData as any)?.metadata?.originalId || (productCore as any)?.metadata?.originalId;
+    if (origId) {
+      outboundUrl = `https://pl.aliexpress.com/item/${origId}.html`;
+    }
+  }
 
   const inCart = bestDeal ? isInCart(bestDeal.id) : false;
 
