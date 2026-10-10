@@ -597,14 +597,16 @@ export async function autoPlanDailyScheduleAction(options?: {
     const plannedSlots: { niche: string; scheduledTime: string; title: string }[] = [];
 
     // Pobierz konfiguracje, oferty i ustawienia anulowanych slotów
-    const [genConfigRes, fishConfigRes, babyConfigRes, genDealsRes, fishDealsRes, babyDealsRes, calSettingsSnap] = await Promise.all([
+    const { getRecentlyPostedDealIdentifiers, isDealRecentlyPosted } = await import('@/lib/social-post-dedup');
+    const [genConfigRes, fishConfigRes, babyConfigRes, genDealsRes, fishDealsRes, babyDealsRes, calSettingsSnap, postedInfo] = await Promise.all([
       getGeneralAutopilotConfig(true),
       getFishingAutopilotConfig(true),
       getBabyAutopilotConfig(true),
-      getGeneralDeals({ limit: 25 }, true),
+      getGeneralDeals({ limit: 40 }, true),
       getFishingDeals(undefined, 25, undefined, true),
       getBabyDeals({ limit: 25 }, true),
       adminDb.collection('appSettings').doc('calendar-schedule-settings').get(),
+      getRecentlyPostedDealIdentifiers({ days: 14 }),
     ]);
 
     const canceledSlotsSet = new Set<string>(
@@ -652,6 +654,9 @@ export async function autoPlanDailyScheduleAction(options?: {
       const usedDealIds = new Set<string>(
         n.queue.map(q => q.dealId).filter(Boolean)
       );
+      if (n.key === 'general') {
+        postedInfo.postedDealIds.forEach(id => usedDealIds.add(id));
+      }
 
       for (let dayOffset = 0; dayOffset < daysAhead; dayOffset++) {
         const targetDate = new Date(now);
@@ -692,8 +697,19 @@ export async function autoPlanDailyScheduleAction(options?: {
             continue;
           }
 
-          // Wybierz najlepszą unikalną ofertę
-          const availableDeal = n.deals.find(d => !usedDealIds.has(d.id));
+          // Wybierz najlepszą unikalną ofertę (bez duplikatów z ostatnich 14 dni)
+          const availableDeal = n.deals.find(d => {
+            if (usedDealIds.has(d.id)) return false;
+            if (n.key === 'general' && isDealRecentlyPosted({
+              id: d.id,
+              title: d.title,
+              dealUrl: (d as any).dealUrl || (d as any).rawLink,
+            }, postedInfo)) {
+              return false;
+            }
+            return true;
+          });
+
           if (!availableDeal) {
             continue;
           }

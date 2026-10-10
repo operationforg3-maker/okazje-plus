@@ -85,9 +85,18 @@ async function handleCron(request: NextRequest) {
     const bots = botsSnap.empty ? [] : botsSnap.docs.map((d) => ({ id: d.id, ...d.data() } as SocialAIBot));
     const dueBots = bots.filter(isBotDue);
 
+    // Uruchamiaj maksymalnie 1 bota na jeden cykl godzinowy crona,
+    // wybierając tego, który nie był uruchamiany najdłużej (zabezpieczenie przed jednoczesnym floodem na FB)
+    const sortedDueBots = [...dueBots].sort((a, b) => {
+      const timeA = a.lastRunAt ? new Date(a.lastRunAt).getTime() : 0;
+      const timeB = b.lastRunAt ? new Date(b.lastRunAt).getTime() : 0;
+      return timeA - timeB;
+    });
+    const botsToRun = sortedDueBots.slice(0, 1);
+
     const results = [];
 
-    for (const bot of dueBots) {
+    for (const bot of botsToRun) {
       console.log(`[Cron:SocialBots] Running bot ${bot.name} (${bot.id})...`);
       const runRes = await executeBotRun(bot, bot.autoApprove, undefined, 'system-cron');
       results.push({

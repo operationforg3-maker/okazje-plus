@@ -416,14 +416,9 @@ export async function getPromotableDealsAction(
       return { success: false, deals: [], error: 'Wymagane uprawnienia administratora' };
     }
 
-    // 1. Fetch recent social posts to mark which deals were already posted in last 14 days
-    const recentCutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-    const recentPostsSnap = await adminDb
-      .collection('socialPosts')
-      .where('createdAt', '>=', recentCutoff)
-      .limit(100)
-      .get();
-    const recentDealIds = new Set(recentPostsSnap.docs.map(d => d.data().itemId).filter(Boolean));
+    // 1. Fetch recent social posts and queue to mark which deals were already posted in last 14 days
+    const { getRecentlyPostedDealIdentifiers, isDealRecentlyPosted } = await import('@/lib/social-post-dedup');
+    const postedInfo = await getRecentlyPostedDealIdentifiers({ days: 14 });
 
     // 2. Call the unified global search engine (searchDeals)
     const { searchDeals } = await import('@/lib/search-server');
@@ -480,7 +475,11 @@ export async function getPromotableDealsAction(
         imageUrl: parsed.imageUrl,
         category: parsed.category,
         mainCategorySlug: (deal as any).mainCategorySlug || parsed.category,
-        postedRecently: recentDealIds.has(parsed.id),
+        postedRecently: isDealRecentlyPosted({
+          id: parsed.id,
+          title: parsed.title,
+          link: parsed.linkUrl,
+        }, postedInfo),
       };
     });
 
@@ -694,6 +693,7 @@ ${topicHint ? `- Dodatkowa uwaga/wskazówka od użytkownika: ${topicHint}` : ''}
 ZASADY:
 - Zwięźle i konkretnie (około 90-150 słów). Nie twórz długich elaboratów ani ściany tekstu!
 - BEZWZGLĘDNY ZAKAZ UŻYWANIA GWIAZDEK I FORMATOWANIA MARKDOWN (**tekst**, *tekst*, # nagłówek)! Facebook NIE interpretuje Markdownu i wyświetla brzydkie gwiazdki '**', co drażni odbiorców.
+- BEZWZGLĘDNY ZAKAZ wypisywania nagłówków sekcji takich jak 'NAGŁÓWEK:', 'OPIS:', 'SPECYFIKACJA:', 'PARAMETRY:', 'CTA:', 'HASHTAGI:' ani numeracji 1, 2, 3! Wygeneruj TYLKO gotowy do opublikowania płynny tekst posta.
 - Jeśli chcesz coś zaakcentować, użyj WIELKICH LITER, czytelnej nowej linii lub emoji. NIGDY NIE UŻYWAJ ZNAKÓW '**' ANI '*'!
 - Pisz po polsku, żywym, naturalnym i angażującym językiem jak człowiek, a nie sztuczny bot.
 - Umieść podane hashtagi na samym końcu.`;
@@ -707,8 +707,14 @@ ZASADY:
     });
 
     if (aiResponse && aiResponse.text && aiResponse.text.trim().length > 40) {
-      postText = sanitizeSocialPostText(aiResponse.text);
-      aiGenerated = true;
+      const sanitized = sanitizeSocialPostText(aiResponse.text);
+      const { isValidSocialPost } = await import('@/lib/social-post-dedup');
+      if (isValidSocialPost(sanitized)) {
+        postText = sanitized;
+        aiGenerated = true;
+      } else {
+        console.warn('[generateEngagingSocialPost] AI text failed validation check, falling back to curated copy');
+      }
     }
   } catch (err) {
     console.warn('[generateEngagingSocialPost] AI generation error, using rich curated template:', err);
@@ -756,14 +762,9 @@ export async function executeBotRun(
     let itemTitle = '';
     let matchedHashtags: string[] = ['#okazjeplus', '#promocje'];
 
-    // 14-day recency cutoff to avoid duplicating posts
-    const recentCutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
-    const recentPostsSnap = await adminDb
-      .collection('socialPosts')
-      .where('createdAt', '>=', recentCutoff)
-      .limit(100)
-      .get();
-    const recentDealIds = new Set(recentPostsSnap.docs.map(d => d.data().itemId).filter(Boolean));
+    // 14-day recency deduplication across BOTH socialPosts and generalPostQueue
+    const { getRecentlyPostedDealIdentifiers, isDealRecentlyPosted } = await import('@/lib/social-post-dedup');
+    const postedInfo = await getRecentlyPostedDealIdentifiers({ days: 14 });
 
     let selectedDeal: any = null;
 
@@ -781,12 +782,13 @@ export async function executeBotRun(
         .collection('deals')
         .where('status', '==', 'approved')
         .orderBy('temperature', 'desc')
-        .limit(60)
+        .limit(120)
         .get();
 
       if (!dealsSnap.empty) {
         const allApproved = dealsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
+        let candidatePool = allApproved;
         if (bot.role === 'expert') {
           // For expert bot, prioritize high-value gadgets, automotive, electronics, home
           const techCategories = ['elektronika', 'motoryzacja', 'dom-ogrod', 'sport-turystyka'];
@@ -794,17 +796,25 @@ export async function executeBotRun(
             const cat = (d.mainCategorySlug || d.category || '').toLowerCase();
             return techCategories.some(tc => cat.includes(tc));
           });
-          const pool = techDeals.length > 0 ? techDeals : allApproved;
-          const unposted = pool.filter(d => !recentDealIds.has(d.id));
-          selectedDeal = unposted.length > 0
-            ? unposted[0]
-            : pool[Math.floor(Math.random() * Math.min(pool.length, 5))];
+          if (techDeals.length > 0) candidatePool = techDeals;
+        }
+
+        const unposted = candidatePool.filter(d => !isDealRecentlyPosted({
+          id: d.id,
+          title: d.title,
+          dealUrl: d.link || d.affiliateLink || d.dealUrl,
+        }, postedInfo));
+
+        if (unposted.length > 0) {
+          selectedDeal = unposted[0];
         } else {
-          // For hunter / community / responder
-          const unpostedDeals = allApproved.filter(d => !recentDealIds.has(d.id));
-          selectedDeal = unpostedDeals.length > 0
-            ? unpostedDeals[0]
-            : allApproved[Math.floor(Math.random() * Math.min(allApproved.length, 5))];
+          // If all top deals were posted within the last 14 days, pick the deal that was posted LONGEST AGO
+          const sortedByAge = [...candidatePool].sort((a, b) => {
+            const timeA = postedInfo.dealPostTimestamps.get(a.id) || 0;
+            const timeB = postedInfo.dealPostTimestamps.get(b.id) || 0;
+            return timeA - timeB;
+          });
+          selectedDeal = sortedByAge[0];
         }
       }
     }

@@ -599,7 +599,7 @@ export async function generateGeneralPostAction(
 
     try {
       const promptText = `
-Jesteś profesjonalnym twórcą treści dla społeczności łowców okazji i promocji na portalu "Okazje Plus".
+Jesteś profesjonalnym copywriterem i łowcą okazji dla społeczności "Okazje Plus" na Facebooku.
 Twoja rola: ${bot.name} (${bot.role}).
 Instrukcje bota: ${bot.customInstructions}
 Poziom humoru: ${params.humorLevel || bot.humorLevel}.
@@ -613,33 +613,23 @@ DANE PRODUKTU I OKAZJI:
 - Opis i szczegóły produktu: ${dealInfo?.description || 'Brak opisu'}
 ${dealInfo?.specs ? `- Parametry techniczne / specyfikacja:\n${dealInfo.specs}` : ''}
 - Dodatkowy kontekst/temat: ${customTopic || 'brak'}
-${customTopic ? `\nSPECJALNE INSTRUKCJE / PROMPT OD UŻYTKOWNIKA (UWZGLĘDNIJ BEZWZGLĘDNIE W TREŚCI):\n"${customTopic}"\n(Ściśle dostosuj styl, długość, ton i akcenty posta do powyższych instrukcji!)\n` : ''}
-- Sugerowane hashtagi: ${dynamicHashtags.join(' ')}
+${customTopic ? `\nSPECJALNE INSTRUKCJE / PROMPT OD UŻYTKOWNIKA (UWZGLĘDNIJ BEZWZGLĘDNIE W TREŚCI):\n"${customTopic}"\n` : ''}
 
-STRUKTURA I WYMOGI POSTA (BARDZO WAŻNE):
-Napisz zwięzły, dynamiczny i angażujący post na Facebooka (około 90-150 słów - NIE PISZ TASIEMCÓW ANI ŚCIANY TEKSTU!).
-Pisz naturalnie jak prawdziwy pasjonat i łowca okazji, a NIE jak sztuczny chatbot AI!
+ZADANIE:
+Napisz kompletny, gotowy do opublikowania post na Facebooka (około 90-140 słów).
+Układ posta:
+- Pierwsza linijka: chwytliwy nagłówek z emoji (np. 🔥 MOCNA OKAZJA: [Nazwa produktu] w [Sklep]!)
+- 2-3 zdania wyjaśniające dlaczego to świetny zakup i dla kogo
+- 2-3 kluczowe cechy lub parametry wypunktowane estetycznymi punktorami '• ' (bez markdownu)
+- Zestawienie cenowe: cena promocyjna, regularna, sklep
+- Krótka rada zakupowa lub pytanie do czytelników
+- Call to action: "👉 Bezpośredni link do okazji i kod rabatowy znajdziecie w PIERWSZYM KOMENTARZU ⬇️!"
+- Zakończ post hashtagami: ${dynamicHashtags.join(' ')}
 
-BEZWZGLĘDNY ZAKAZ UŻYWANIA FORMATOWANIA MARKDOWN (**pogrubienie**, *kursywa*, # nagłówek)!
-Facebook NIE interpretuje Markdownu i wyświetla brzydkie gwiazdki '**', co drażni odbiorców.
-Jeśli chcesz coś zaakcentować, użyj WIELKICH LITER, czytelnej nowej linii lub emoji (🔥, ⚡, 🛍️, 💡). NIGDY NIE UŻYWAJ ZNAKÓW '**' ANI '*' W TREŚCI!
-
-Elementy posta:
-1. 🎯 CHWYTLIWY NAGŁÓWEK Z TYTUŁEM OKAZJI (np. 🔥 MOCNA OKAZJA: ${dealInfo?.title || customTopic} w ${dealInfo?.merchant || 'super cenie'}!)
-2. 🚀 KRÓTKI OPIS: Dlaczego ta oferta jest warta uwagi i dla kogo.
-3. ⚙️ KLUCZOWE PARAMETRY: 2-3 najważniejsze cechy wypunktowane punktorami '• ' (bez '**').
-4. 💰 CENY:
-   • Cena promocyjna: ${dealInfo?.price || 'Okazyjna'}
-   ${dealInfo?.oldPrice ? `• Cena regularna: ${dealInfo.oldPrice}` : ''}
-   ${dealInfo?.discount ? `• Oszczędność: ${dealInfo.discount}` : ''}
-   • Sklep: ${dealInfo?.merchant || 'Sklep'}
-5. 💡 PRO-TIP BOTA: Krótka, naturalna rada zakupowa lub pytanie do czytelników.
-6. 🔗 CALL TO ACTION:
-   "👉 Bezpośredni link do okazji i kod rabatowy znajdziecie w PIERWSZYM KOMENTARZU ⬇️!"
-7. #️⃣ HASHTAGI NA KOŃCU:
-   Zakończ post hashtagami: ${dynamicHashtags.join(' ')}.
-
-Pamiętaj: zero '**', zwięźle, naturalny język!
+BEZWZGLĘDNE ZASADY JAKOŚCI:
+1. BEZWZGLĘDNY ZAKAZ wypisywania nagłówków sekcji takich jak "CHWYTLIWY NAGŁÓWEK", "KRÓTKI OPIS", "KLUCZOWE PARAMETRY", "CENY", "PRO-TIP", "CALL TO ACTION", "HASHTAGI" ani numeracji 1, 2, 3!
+2. BEZWZGLĘDNY ZAKAZ UŻYWANIA GWIAZDEK I FORMATOWANIA MARKDOWN (**tekst**, *tekst*, # nagłówek)! Facebook NIE interpretuje Markdownu i wyświetla brzydkie gwiazdki '**'.
+3. Zwróć WYŁĄCZNIE ostateczną treść posta. Post ma być dokończony, pełnymi zdaniami, bez urywania tekstu w pół słowa!
 `;
 
       const aiResponse = await ai.generate({
@@ -651,8 +641,14 @@ Pamiętaj: zero '**', zwięźle, naturalny język!
       });
 
       if (aiResponse && aiResponse.text) {
-        postText = sanitizeSocialPostText(aiResponse.text);
-        aiGenerated = true;
+        const sanitized = sanitizeSocialPostText(aiResponse.text);
+        const { isValidSocialPost } = await import('@/lib/social-post-dedup');
+        if (isValidSocialPost(sanitized)) {
+          postText = sanitized;
+          aiGenerated = true;
+        } else {
+          console.warn('[generateGeneralPost] AI text failed validation (cut-off or leaked outline headers), using curated fallback. Output was:\n', aiResponse.text);
+        }
       }
     } catch (aiErr) {
       console.warn('AI generation error for general post, fallback:', aiErr);
@@ -747,7 +743,26 @@ export async function publishGeneralPostAction(
     const configRes = await getGeneralAutopilotConfig(true);
     const config = configRes.config;
 
-    const content = editedContent || post.content;
+    let content = editedContent || post.content;
+    content = sanitizeSocialPostText(content);
+
+    // Bariera jakości: upewnij się, że tekst jest kompletny i nie jest urwany
+    const { isValidSocialPost } = await import('@/lib/social-post-dedup');
+    if (!isValidSocialPost(content)) {
+      console.warn(`[publishGeneralPostAction] Post ${postId} failed validation. Auto-repairing with curated format before FB publish.`);
+      const itemTitle = post.title || 'Super Okazja';
+      const priceStr = post.realPrice || '';
+      const discStr = post.discountStr ? ` [Rabat ${post.discountStr}]` : '';
+      const tags = Array.isArray(post.hashtags) && post.hashtags.length > 0 ? post.hashtags.join(' ') : '#OkazjePlus #Promocje';
+
+      content = `🔥 [MEGA OKAZJA] ${itemTitle}!\n\n` +
+        `Łowcy promocji, mamy dla Was solidną okazję cenową na portalu:\n\n` +
+        (priceStr ? `💰 Cena promocyjna: ${priceStr}${discStr}\n` : '') +
+        `🛒 Sprawdzona oferta o wysokiej opłacalności zakupu!\n\n` +
+        `👉 Bezpośredni link do okazji i kod rabatowy znajdziecie w PIERWSZYM KOMENTARZU ⬇️!\n\n` +
+        `${tags}`;
+    }
+
     const trackingCampaign = config.tracking?.campaign || 'Okazje_1';
     const finalTrackingLink = resolveGeneralAffiliateUrl(post.linkUrl, trackingCampaign);
 
@@ -1463,6 +1478,23 @@ export async function executeGeneralAutopilotCycle(): Promise<{
       }
     }
 
+    // Throttle check: Upewnij się, że nie spamujemy fanpage'a (jeśli post na FB poszedł w ciągu ostatnich 45 minut, pomiń publikację w tym cyklu)
+    const recentPublishCutoff = Date.now() - 45 * 60 * 1000;
+    const [recentSocialPosts, recentGeneralPosts] = await Promise.all([
+      adminDb.collection('socialPosts').orderBy('createdAt', 'desc').limit(5).get(),
+      adminDb.collection('generalPostQueue').orderBy('createdAt', 'desc').limit(5).get(),
+    ]);
+
+    const hasVeryRecentPublish = [
+      ...recentSocialPosts.docs.map(d => d.data().postedAt || d.data().publishedAt || (d.data().status === 'posted' ? d.data().createdAt : null)),
+      ...recentGeneralPosts.docs.map(d => d.data().publishedAt || (d.data().status === 'posted' ? d.data().createdAt : null)),
+    ].some(ts => ts && new Date(ts).getTime() > recentPublishCutoff);
+
+    if (hasVeryRecentPublish) {
+      console.log('[executeGeneralAutopilotCycle] Post was already published in the last 45 minutes to Facebook. Skipping immediate publish in this cycle to avoid flooding.');
+      postDocToPublish = null;
+    }
+
     if (postDocToPublish) {
       const pubRes = await publishGeneralPostAction(postDocToPublish.id, undefined, true);
       if (pubRes.success) {
@@ -1484,20 +1516,34 @@ export async function executeGeneralAutopilotCycle(): Promise<{
       }
 
       // Pobierz najlepsze ogólne okazje
-      const dealsRes = await getGeneralDeals({ limit: 20, minDiscount: config.filters?.minDiscountPercent || 15 }, true);
+      const dealsRes = await getGeneralDeals({ limit: 50, minDiscount: config.filters?.minDiscountPercent || 15 }, true);
       if (dealsRes.deals.length > 0) {
         const recentCategories = activeQueueItems.slice(0, 5).map(i =>
           detectDealCategory(i.title || '', i.content || '', 'general')
         );
-        const existingDealIds = activeQueueItems.map(q => q.dealId).filter(Boolean) as string[];
 
-        const diverseRec = pickDiverseRecommendation(dealsRes.deals, {
+        // Pełna deduplikacja: wyklucz deale z aktywnej kolejki ORAZ deale opublikowane w ostatnich 14 dniach (z obu systemów)
+        const { getRecentlyPostedDealIdentifiers, isDealRecentlyPosted } = await import('@/lib/social-post-dedup');
+        const postedInfo = await getRecentlyPostedDealIdentifiers({ days: 14 });
+
+        const excludedIds = new Set<string>(activeQueueItems.map(q => q.dealId).filter(Boolean) as string[]);
+        postedInfo.postedDealIds.forEach(id => excludedIds.add(id));
+
+        const unpostedDeals = dealsRes.deals.filter(d => !isDealRecentlyPosted({
+          id: d.id,
+          title: d.title,
+          dealUrl: d.dealUrl || d.rawLink,
+        }, postedInfo) && !excludedIds.has(d.id));
+
+        const poolToPick = unpostedDeals.length > 0 ? unpostedDeals : dealsRes.deals;
+
+        const diverseRec = pickDiverseRecommendation(poolToPick, {
           niche: 'general',
           recentCategories,
-          excludeDealIds: existingDealIds,
+          excludeDealIds: Array.from(excludedIds),
         });
 
-        const selectedDeal = diverseRec.deal || dealsRes.deals[0];
+        const selectedDeal = diverseRec.deal || poolToPick[0];
 
         const botsRes = await getGeneralBots(true);
         const activeBots = botsRes.bots.filter(b => b.enabled);
