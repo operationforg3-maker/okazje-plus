@@ -1343,6 +1343,39 @@ export async function publishFishingPost(
       ? resolveFishingAffiliateUrl(post.linkUrl, trackingCampaign)
       : undefined;
 
+    // Twarda weryfikacja deduplikacji: zakaz publikacji >2x w ciągu 24h oraz zakaz pod rząd
+    const { getRecentlyPostedDealIdentifiers, canPublishDeal } = await import('@/lib/social-post-dedup');
+    const postedInfo = await getRecentlyPostedDealIdentifiers({
+      niche: 'fishing',
+      days: 14,
+      excludePostId: postId,
+    });
+
+    const dealToCheck = {
+      id: post.dealId,
+      title: post.title,
+      dealUrl: post.linkUrl,
+      imageUrl: post.imageUrl,
+    };
+    const canPub = canPublishDeal(dealToCheck, postedInfo, {
+      maxDailyPosts: 2,
+      minConsecutiveGap: 3,
+      minHoursBetweenSameDeal: 4,
+    });
+
+    if (!canPub.allowed) {
+      console.warn(`[publishFishingPost] Blocked duplicate post ${postId}: ${canPub.reason}`);
+      await docRef.set(
+        {
+          status: 'rejected',
+          errorMessage: `Odrzucono publikację przez filtr duplikatów: ${canPub.reason}`,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+      return { success: false, error: `Odrzucono publikację: ${canPub.reason}` };
+    }
+
     // 1. Publikacja na Facebooku (Page / Group)
     if (doPublishFb && config.fb.accessToken && config.fb.pageId) {
       try {
@@ -2294,30 +2327,25 @@ export async function executeFishingAutopilotCycle(options?: {
       deals = dealsRes.deals;
     }
 
-    // 3. Pobierz ostatnio opublikowane (ostatnie 7 dni), aby nie dublować
-    const recentCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const recentPostsSnap = await adminDb
-      .collection('fishingPostsQueue')
-      .where('createdAt', '>=', recentCutoff)
-      .limit(100)
-      .get();
+    // 3. Pobierz ostatnio opublikowane i zaplanowane (ścisła deduplikacja 14 dni, max 2x/24h, zakaz pod rząd)
+    const { getRecentlyPostedDealIdentifiers, selectBestEligibleDeal } = await import('@/lib/social-post-dedup');
+    const postedInfo = await getRecentlyPostedDealIdentifiers({ niche: 'fishing', days: 14 });
 
-    const postedDealIds = new Set(recentPostsSnap.docs.map(d => d.data().dealId).filter(Boolean));
-    const unpostedDeals = deals.filter(d => !postedDealIds.has(d.id));
-
-    // Sprawdź kategorie ostatnich postów, aby wykluczyć powtórzenia (np. kołowrotek po kołowrotku)
-    const recentCategories = recentPostsSnap.docs.slice(0, 5).map(d => {
-      const data = d.data();
-      return detectDealCategory(data.title || '', data.content || '', 'fishing');
-    }).filter(Boolean);
-
-    const diverseRec = pickDiverseRecommendation(unpostedDeals.length > 0 ? unpostedDeals : deals, {
-      niche: 'fishing',
-      recentCategories,
-      excludeDealIds: Array.from(postedDealIds) as string[],
+    const eligibleSelection = selectBestEligibleDeal(deals, postedInfo, {
+      maxDailyPosts: 2,
+      minConsecutiveGap: 3,
+      minHoursBetweenSameDeal: 4,
     });
 
-    const selectedDeal = diverseRec.deal || unpostedDeals[0] || deals[0] || null;
+    if (!eligibleSelection.deal) {
+      return {
+        success: true,
+        message: `Anti-Duplication: ${eligibleSelection.reason || 'Brak unikalnych ofert spełniających limit 2x/24h i zakaz pod rząd'}. Pomijam generowanie nowego posta wędkarskiego.`,
+        published: false,
+      };
+    }
+
+    const selectedDeal = eligibleSelection.deal;
 
     // 4. Dobierz bota według pory dnia (Warszawa)
     const timezone = 'Europe/Warsaw';

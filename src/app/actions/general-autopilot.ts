@@ -772,6 +772,39 @@ export async function publishGeneralPostAction(
 
     const doPublishFb = post.targets?.facebook ?? true;
 
+    // Twarda weryfikacja deduplikacji: zakaz publikacji >2x w ciągu 24h oraz zakaz pod rząd
+    const { getRecentlyPostedDealIdentifiers, canPublishDeal } = await import('@/lib/social-post-dedup');
+    const postedInfo = await getRecentlyPostedDealIdentifiers({
+      niche: 'general',
+      days: 14,
+      excludePostId: postId,
+    });
+
+    const dealToCheck = {
+      id: post.dealId,
+      title: post.title,
+      dealUrl: post.linkUrl,
+      imageUrl: post.imageUrl,
+    };
+    const canPub = canPublishDeal(dealToCheck, postedInfo, {
+      maxDailyPosts: 2,
+      minConsecutiveGap: 3,
+      minHoursBetweenSameDeal: 4,
+    });
+
+    if (!canPub.allowed) {
+      console.warn(`[publishGeneralPostAction] Blocked duplicate post ${postId}: ${canPub.reason}`);
+      await docRef.set(
+        {
+          status: 'rejected',
+          errorMessage: `Odrzucono publikację przez filtr duplikatów: ${canPub.reason}`,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+      return { success: false, error: `Odrzucono publikację: ${canPub.reason}` };
+    }
+
     if (doPublishFb && config.fb.pageId && config.fb.accessToken) {
       try {
         const pageId = config.fb.pageId;
@@ -1522,28 +1555,25 @@ export async function executeGeneralAutopilotCycle(): Promise<{
           detectDealCategory(i.title || '', i.content || '', 'general')
         );
 
-        // Pełna deduplikacja: wyklucz deale z aktywnej kolejki ORAZ deale opublikowane w ostatnich 14 dniach (z obu systemów)
-        const { getRecentlyPostedDealIdentifiers, isDealRecentlyPosted } = await import('@/lib/social-post-dedup');
-        const postedInfo = await getRecentlyPostedDealIdentifiers({ days: 14 });
+        // Ścisła deduplikacja: max 2x/24h, zakaz pod rząd (min 3 posty), min 4h odstępu
+        const { getRecentlyPostedDealIdentifiers, selectBestEligibleDeal } = await import('@/lib/social-post-dedup');
+        const postedInfo = await getRecentlyPostedDealIdentifiers({ niche: 'general', days: 14 });
 
-        const excludedIds = new Set<string>(activeQueueItems.map(q => q.dealId).filter(Boolean) as string[]);
-        postedInfo.postedDealIds.forEach(id => excludedIds.add(id));
+        const activeQueueDealIds = activeQueueItems.map(q => q.dealId).filter(Boolean) as string[];
 
-        const unpostedDeals = dealsRes.deals.filter(d => !isDealRecentlyPosted({
-          id: d.id,
-          title: d.title,
-          dealUrl: d.dealUrl || d.rawLink,
-        }, postedInfo) && !excludedIds.has(d.id));
-
-        const poolToPick = unpostedDeals.length > 0 ? unpostedDeals : dealsRes.deals;
-
-        const diverseRec = pickDiverseRecommendation(poolToPick, {
-          niche: 'general',
-          recentCategories,
-          excludeDealIds: Array.from(excludedIds),
+        const eligibleSelection = selectBestEligibleDeal(dealsRes.deals, postedInfo, {
+          maxDailyPosts: 2,
+          minConsecutiveGap: 3,
+          minHoursBetweenSameDeal: 4,
+          excludeDealIds: activeQueueDealIds,
         });
 
-        const selectedDeal = diverseRec.deal || poolToPick[0];
+        if (!eligibleSelection.deal) {
+          result.errors.push(`Anti-Duplication: ${eligibleSelection.reason || 'Brak ofert spełniających limit 2x/24h i zakaz pod rząd'}. Pomijam generowanie.`);
+          return result;
+        }
+
+        const selectedDeal = eligibleSelection.deal;
 
         const botsRes = await getGeneralBots(true);
         const activeBots = botsRes.bots.filter(b => b.enabled);

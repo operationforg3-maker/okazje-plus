@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
 import type { SocialAIBot } from '@/lib/types';
 import { executeBotRun } from '@/app/actions/social-ai-bots';
-import { executeFishingAutopilotCycle } from '@/app/actions/fishing-autopilot';
-import { executeBabyAutopilotCycle } from '@/app/actions/baby-autopilot';
 
 export const dynamic = 'force-dynamic';
 
@@ -119,23 +117,9 @@ async function handleCron(request: NextRequest) {
       generalResult = { success: false, error: genErr?.message };
     }
 
-    // Trigger fishing autopilot cycle if enabled
-    let fishingResult = null;
-    try {
-      fishingResult = await executeFishingAutopilotCycle({ isSystemCron: true });
-    } catch (fishErr: any) {
-      console.warn('[Cron:SocialBots] Fishing autopilot cycle error:', fishErr);
-      fishingResult = { success: false, error: fishErr?.message };
-    }
-
-    // Trigger baby autopilot cycle if enabled
-    let babyResult = null;
-    try {
-      babyResult = await executeBabyAutopilotCycle();
-    } catch (babyErr: any) {
-      console.warn('[Cron:SocialBots] Baby autopilot cycle error:', babyErr);
-      babyResult = { success: false, error: babyErr?.message };
-    }
+    // Uwaga: fishingAutopilot i babyAutopilot są wywoływane przez ich dedykowane crony
+    // w Cloud Scheduler (/api/cron/fishing-autopilot i /api/cron/baby-autopilot)
+    // Usunięto podwójne wywołania, aby wyeliminować dublowanie postów co godzinę.
 
     // Auto-plan upcoming daily schedule slots ahead of time (np. rano na cały dzień)
     let autoPlanResult = null;
@@ -158,8 +142,6 @@ async function handleCron(request: NextRequest) {
       executedCount: dueBots.length,
       results,
       generalAutopilot: generalResult,
-      fishingAutopilot: fishingResult,
-      babyAutopilot: babyResult,
       autoPlan: autoPlanResult,
     });
   } catch (error) {

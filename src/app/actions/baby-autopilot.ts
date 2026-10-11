@@ -932,6 +932,39 @@ export async function publishBabyPostAction(
     const doPublishFb = post.targets?.facebook ?? true;
     const doPublishPortal = post.targets?.portal ?? false;
 
+    // Twarda weryfikacja deduplikacji: zakaz publikacji >2x w ciągu 24h oraz zakaz pod rząd
+    const { getRecentlyPostedDealIdentifiers, canPublishDeal } = await import('@/lib/social-post-dedup');
+    const postedInfo = await getRecentlyPostedDealIdentifiers({
+      niche: 'baby',
+      days: 14,
+      excludePostId: postId,
+    });
+
+    const dealToCheck = {
+      id: post.dealId,
+      title: post.title,
+      dealUrl: post.linkUrl,
+      imageUrl: post.imageUrl,
+    };
+    const canPub = canPublishDeal(dealToCheck, postedInfo, {
+      maxDailyPosts: 2,
+      minConsecutiveGap: 3,
+      minHoursBetweenSameDeal: 4,
+    });
+
+    if (!canPub.allowed) {
+      console.warn(`[publishBabyPostAction] Blocked duplicate post ${postId}: ${canPub.reason}`);
+      await docRef.set(
+        {
+          status: 'rejected',
+          errorMessage: `Odrzucono publikację przez filtr duplikatów: ${canPub.reason}`,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+      return { success: false, error: `Odrzucono publikację: ${canPub.reason}` };
+    }
+
     // 1. Publikacja na Facebooku (Strona "Perełki dla Malucha i Mamy")
     if (doPublishFb && config.fb.pageId && config.fb.accessToken) {
       try {
@@ -2022,7 +2055,10 @@ export async function executeBabyAutopilotCycle(): Promise<{
         logs.push(`Błąd pobierania z feeda: ${hErr?.message}`);
       }
 
-      const dealsRes = await getBabyDeals({ limit: 15, minDiscount: config.filters.minDiscountPercent }, true);
+      const { getRecentlyPostedDealIdentifiers, selectBestEligibleDeal } = await import('@/lib/social-post-dedup');
+      const postedInfo = await getRecentlyPostedDealIdentifiers({ niche: 'baby', days: 14 });
+
+      const dealsRes = await getBabyDeals({ limit: 40, minDiscount: config.filters.minDiscountPercent }, true);
 
       if (dealsRes.deals.length > 0) {
         // Sprawdź kategorie ostatnich 5 postów, aby wykluczyć powtórzenia (np. smoczek po smoczku)
@@ -2031,14 +2067,19 @@ export async function executeBabyAutopilotCycle(): Promise<{
         );
         const existingDealIds = queueRes.items.map(q => q.dealId).filter(Boolean) as string[];
 
-        const diverseRec = pickDiverseRecommendation(dealsRes.deals, {
-          niche: 'baby',
-          recentCategories,
+        // Sprawdź ścisłe reguły deduplikacji (max 2x/24h, zakaz pod rząd min. 3 posty, min. 4h odstępu)
+        const eligibleSelection = selectBestEligibleDeal(dealsRes.deals, postedInfo, {
+          maxDailyPosts: 2,
+          minConsecutiveGap: 3,
+          minHoursBetweenSameDeal: 4,
           excludeDealIds: existingDealIds,
         });
 
-        const freshDeal = diverseRec.deal || dealsRes.deals[0];
-        logs.push(`Anti-Clustering AI: wybrano kategorię "${diverseRec.categoryLabel}" (${diverseRec.reason})`);
+        if (!eligibleSelection.deal) {
+          logs.push(`Anti-Duplication: ${eligibleSelection.reason || 'Brak unikalnych ofert spełniających limit 2x/24h i zakaz pod rząd'}. Pomijam generowanie nowego posta w tym cyklu.`);
+        } else {
+          const freshDeal = eligibleSelection.deal;
+          logs.push(`Anti-Duplication & Selection: wybrano ofertę "${freshDeal.title}" (zgodna z limitem 2x/24h i przerwą pod rząd)`);
 
         // Wybierz losowego aktywnego bota
         const chosenBot = activeBots[Math.floor(Math.random() * activeBots.length)];
@@ -2084,6 +2125,7 @@ export async function executeBabyAutopilotCycle(): Promise<{
             }
           }
         }
+      }
       } else {
         logs.push('Brak świeżych ofert dziecięcych spełniających kryteria');
       }

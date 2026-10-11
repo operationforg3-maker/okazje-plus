@@ -763,8 +763,8 @@ export async function executeBotRun(
     let matchedHashtags: string[] = ['#okazjeplus', '#promocje'];
 
     // 14-day recency deduplication across BOTH socialPosts and generalPostQueue
-    const { getRecentlyPostedDealIdentifiers, isDealRecentlyPosted } = await import('@/lib/social-post-dedup');
-    const postedInfo = await getRecentlyPostedDealIdentifiers({ days: 14 });
+    const { getRecentlyPostedDealIdentifiers, selectBestEligibleDeal, canPublishDeal } = await import('@/lib/social-post-dedup');
+    const postedInfo = await getRecentlyPostedDealIdentifiers({ niche: 'general', days: 14 });
 
     let selectedDeal: any = null;
 
@@ -772,7 +772,19 @@ export async function executeBotRun(
     if (targetDealId) {
       const dealDoc = await adminDb.collection('deals').doc(targetDealId).get();
       if (dealDoc.exists) {
-        selectedDeal = { id: dealDoc.id, ...dealDoc.data() };
+        const d = { id: dealDoc.id, ...dealDoc.data() };
+        const check = canPublishDeal(d as any, postedInfo, {
+          maxDailyPosts: 2,
+          minConsecutiveGap: 3,
+          minHoursBetweenSameDeal: 4,
+        });
+        if (!check.allowed && immediatePublish) {
+          return {
+            success: false,
+            error: `Odrzucono publikację przez filtr duplikatów: ${check.reason}`,
+          };
+        }
+        selectedDeal = d;
       }
     }
 
@@ -799,23 +811,20 @@ export async function executeBotRun(
           if (techDeals.length > 0) candidatePool = techDeals;
         }
 
-        const unposted = candidatePool.filter(d => !isDealRecentlyPosted({
-          id: d.id,
-          title: d.title,
-          dealUrl: d.link || d.affiliateLink || d.dealUrl,
-        }, postedInfo));
+        const eligibleSelection = selectBestEligibleDeal(candidatePool, postedInfo, {
+          maxDailyPosts: 2,
+          minConsecutiveGap: 3,
+          minHoursBetweenSameDeal: 4,
+        });
 
-        if (unposted.length > 0) {
-          selectedDeal = unposted[0];
-        } else {
-          // If all top deals were posted within the last 14 days, pick the deal that was posted LONGEST AGO
-          const sortedByAge = [...candidatePool].sort((a, b) => {
-            const timeA = postedInfo.dealPostTimestamps.get(a.id) || 0;
-            const timeB = postedInfo.dealPostTimestamps.get(b.id) || 0;
-            return timeA - timeB;
-          });
-          selectedDeal = sortedByAge[0];
+        if (!eligibleSelection.deal) {
+          return {
+            success: false,
+            error: `Anti-Duplication: ${eligibleSelection.reason || 'Brak kwalifikujących się ofert spełniających limit 2x/24h i zakaz pod rząd'}. Pomijam uruchomienie bota.`,
+          };
         }
+
+        selectedDeal = eligibleSelection.deal;
       }
     }
 

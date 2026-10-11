@@ -697,13 +697,13 @@ export async function autoPlanDailyScheduleAction(options?: {
             continue;
           }
 
-          // Wybierz najlepszą unikalną ofertę (bez duplikatów z ostatnich 14 dni)
+          // Wybierz najlepszą unikalną ofertę (bez duplikatów z ostatnich 14 dni, max 2x/24h, zakaz pod rząd)
           const availableDeal = n.deals.find(d => {
             if (usedDealIds.has(d.id)) return false;
-            if (n.key === 'general' && isDealRecentlyPosted({
+            if (isDealRecentlyPosted({
               id: d.id,
               title: d.title,
-              dealUrl: (d as any).dealUrl || (d as any).rawLink,
+              dealUrl: (d as any).dealUrl || (d as any).rawLink || (d as any).link || (d as any).affiliateLink,
             }, postedInfo)) {
               return false;
             }
