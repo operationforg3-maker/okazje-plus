@@ -20,6 +20,7 @@ import Image from 'next/image';
 import { useSmartCart } from '@/lib/cart-context';
 import { useContentLanguage } from '@/hooks/use-content-language';
 import { getTotalPrice, formatPrice } from '@/lib/i18n-utils';
+import { trackGoToDeal, trackEvent } from '@/lib/analytics';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -80,10 +81,25 @@ export default function CartPage() {
         return;
       }
 
+      // Track cart finalize event
+      trackEvent('finalize_cart', {
+        items_count: validLinks.length,
+        value: totalWithShipping || totalAmount || 0,
+        currency: 'PLN',
+      });
+
       // Open links sequentially with 300ms delay between each (avoids popup blockers)
       let openedCount = 0;
       for (let i = 0; i < validLinks.length; i++) {
-        const { affiliateLink } = validLinks[i];
+        const { product, affiliateLink } = validLinks[i];
+        trackGoToDeal(product.id, affiliateLink, {
+          type: 'product',
+          title: typeof (product as any)?.title === 'object'
+            ? ((product as any)?.title?.pl || (product as any)?.title?.en || product?.name)
+            : ((product as any)?.title || product?.name),
+          price: product.price,
+        });
+
         const win = window.open(affiliateLink, '_blank', 'noopener,noreferrer');
         if (win !== null) {
           openedCount++;
@@ -420,6 +436,12 @@ export default function CartPage() {
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => {
+                  trackGoToDeal(`cart-item-${idx}`, url, {
+                    type: 'product',
+                    title: name,
+                  });
+                }}
                 className="flex items-center justify-between gap-3 rounded-lg border border-green-300 bg-white dark:bg-green-900/30 dark:border-green-700 px-4 py-3 text-sm font-medium hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors"
               >
                 <span className="truncate">{name || `Produkt ${idx + 1}`}</span>

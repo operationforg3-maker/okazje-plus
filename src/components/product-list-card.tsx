@@ -20,6 +20,7 @@ import { useCardBaseState } from '@/hooks/use-card-base-state';
 import { formatTimeAgo } from '@/lib/format-relative-time';
 import ShareButton from '@/components/share-button';
 import { withImageProxy, isAliExpressImage } from '@/lib/image-proxy';
+import { trackFirestoreClick } from '@/lib/analytics';
 
 interface ProductListCardProps {
   product: ProductCore;
@@ -392,6 +393,9 @@ export default function ProductListCard({ product }: ProductListCardProps) {
             onClick={(e) => {
               e.stopPropagation();
               if (offerUrl) {
+                void trackFirestoreClick('product', productId, undefined, offerUrl, {
+                  title: displayTitle || undefined,
+                });
                 window.open(offerUrl, '_blank', 'noopener,noreferrer');
               } else {
                 router.push(`${prefix}/products/${productId}`);

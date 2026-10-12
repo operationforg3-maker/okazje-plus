@@ -553,6 +553,8 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
       temperature: typeof temperature === 'number' ? temperature : undefined,
       merchant: deal.merchant,
       discountPct,
+      price: typeof currentPrice === 'number' ? currentPrice : undefined,
+      title: dealTitle || undefined,
     });
   };
 
@@ -850,6 +852,7 @@ function DealCard({ deal, product, priority = false, layoutMode = 'grid', index 
                   className="ux-action-btn bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/35 border border-orange-400/30 opacity-95 hover:opacity-100 hover:scale-110 animate-bounce transition-all"
                   onClick={(e) => {
                     e.stopPropagation();
+                    handleDetailClick();
                     window.open(dealExternalUrl, '_blank', 'noopener,noreferrer');
                   }}
                   title={t('actions.goTo')}

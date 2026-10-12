@@ -9,6 +9,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Deal, Product } from '@/lib/types';
 import { getExternalUrl } from '@/lib/external-url';
+import { trackFirestoreClick } from '@/lib/analytics';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -879,7 +880,19 @@ export default function DealDetailClient({ deal, product, relatedDeals }: Props)
                   />
                 ) : outboundUrl ? (
                   <Button size="lg" asChild className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold h-12 text-sm shadow-md hover:shadow-lg transition-all duration-300">
-                    <a href={outboundUrl} target="_blank" rel="noopener noreferrer">
+                    <a 
+                      href={outboundUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      onClick={() => {
+                        void trackFirestoreClick('deal', deal.id, undefined, outboundUrl, {
+                          title: dealTitle || undefined,
+                          category: deal.category,
+                          price: deal.price,
+                          temperature,
+                        });
+                      }}
+                    >
                       <ExternalLink className="mr-2 h-4 w-4" />
                       Przejdź do okazji
                     </a>

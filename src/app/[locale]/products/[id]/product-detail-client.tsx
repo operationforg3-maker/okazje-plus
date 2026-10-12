@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Product, ProductRating } from '@/lib/types';
 import { getUserProductRating, getProductRatings } from '@/lib/data';
 import { useAuth } from '@/lib/auth';
+import { trackFirestoreClick } from '@/lib/analytics';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -477,7 +478,18 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
                     className="flex-1 bg-primary hover:bg-primary/90 w-full sm:w-auto text-base md:text-lg py-6"
                     disabled={isOutOfStock}
                   >
-                    <a href={outboundUrl} target="_blank" rel="noopener noreferrer">
+                    <a 
+                      href={outboundUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      onClick={() => {
+                        void trackFirestoreClick('product', product.id, user?.uid, outboundUrl, {
+                          title: (product as any)?.title || product.name || 'Produkt',
+                          category: product.category,
+                          price: product.price,
+                        });
+                      }}
+                    >
                       <ExternalLink className="mr-2 h-5 w-5" />
                       {isOutOfStock ? 'Wyprzedane' : 'Kup teraz'}
                     </a>
@@ -1028,7 +1040,18 @@ export default function ProductDetailClient({ product, relatedProducts, recentRa
 
           {outboundUrl ? (
             <Button size="sm" asChild className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold h-9 text-xs px-3 shadow-md">
-              <a href={outboundUrl} target="_blank" rel="noopener noreferrer">
+              <a 
+                href={outboundUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                onClick={() => {
+                  void trackFirestoreClick('product', product.id, user?.uid, outboundUrl, {
+                    title: (product as any)?.title || product.name || 'Produkt',
+                    category: product.category,
+                    price: product.price,
+                  });
+                }}
+              >
                 <ExternalLink className="mr-1 h-3.5 w-3.5" />
                 Sprawdź w sklepie
               </a>

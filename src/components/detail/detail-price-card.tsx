@@ -7,6 +7,7 @@ import ShareButton from '@/components/share-button';
 import { ExpiredDealBadge } from '@/components/expired-deal-badge';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { trackFirestoreClick } from '@/lib/analytics';
 import { 
   ExternalLink, 
   Copy, 
@@ -163,7 +164,24 @@ export function DetailPriceCard({
               asChild
               className="w-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold h-12 text-base shadow-lg shadow-orange-500/30 rounded-xl gap-2 transition-all duration-300 hover:scale-[1.02]"
             >
-              <a href={outboundUrl} target="_blank" rel="noopener noreferrer">
+              <a 
+                href={outboundUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                onClick={() => {
+                  void trackFirestoreClick(
+                    itemType === 'deal' ? 'deal' : 'product',
+                    id,
+                    undefined,
+                    outboundUrl,
+                    {
+                      temperature: typeof temperature === 'number' ? temperature : undefined,
+                      discountPct: typeof discount === 'number' ? discount : undefined,
+                      title,
+                    }
+                  );
+                }}
+              >
                 <span>{itemType === 'deal' ? 'Przejdź do okazji' : 'Kup teraz w sklepie'}</span>
                 <ArrowUp className="h-4 w-4 rotate-90 stroke-[2.5] animate-bounce" />
               </a>

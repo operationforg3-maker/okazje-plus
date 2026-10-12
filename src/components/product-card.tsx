@@ -305,6 +305,8 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
       category: (product as any).mainCategorySlug || (product as any).categorySlug || (product as any).category,
       merchant: (product as any).merchant || (product as any).metadata?.merchant,
       discountPct: priceData.discount ?? undefined,
+      price: typeof priceData.rawPrice === 'number' ? priceData.rawPrice : undefined,
+      title: displayTitle || undefined,
     });
   };
 
@@ -373,7 +375,6 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
       <div className="group relative overflow-hidden rounded-2xl transition-all duration-300 flex flex-col sm:flex-row bg-background/60 backdrop-blur-md p-3 sm:p-4 md:p-5 border border-border/40 items-stretch gap-3 sm:gap-4 md:gap-6 w-full hover:shadow-xl hover:-translate-y-1">
         <Link 
           href={productUrl} 
-          onClick={handleDetailClick} 
           className="relative overflow-hidden bg-muted/40 block w-full sm:w-32 md:w-40 h-48 sm:h-24 md:h-32 flex-shrink-0 rounded-xl border border-border/40"
         >
           <ProductGallery images={galleryImages} />
@@ -397,7 +398,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
         {/* Info Column */}
         <div className="flex flex-1 flex-col justify-between gap-2 min-w-0">
           <div>
-            <Link href={productUrl} onClick={handleDetailClick}>
+            <Link href={productUrl}>
               <h3 className="text-lg font-semibold text-primary hover:text-primary transition-colors leading-tight line-clamp-2">
                 {displayTitle}
               </h3>
@@ -442,7 +443,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
             <div className="flex gap-2 mt-auto w-full">
               {productExternalUrl ? (
                 <Button asChild className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold h-9 text-xs shadow-sm flex items-center justify-center gap-1">
-                  <a href={productExternalUrl} target="_blank" rel="noopener noreferrer">
+                  <a href={productExternalUrl} target="_blank" rel="noopener noreferrer" onClick={handleDetailClick}>
                     <span>Kup teraz</span>
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
@@ -719,6 +720,7 @@ function ProductCard({ product, showFullDetails = false, viewMode = 'grid', layo
                   className="ux-action-btn bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/35 border border-orange-400/30 opacity-95 hover:opacity-100 hover:scale-110 animate-bounce transition-all"
                   onClick={(e) => {
                     e.stopPropagation();
+                    handleDetailClick();
                     window.open(productExternalUrl, '_blank', 'noopener,noreferrer');
                   }}
                   title="Kup teraz"

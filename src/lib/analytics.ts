@@ -73,6 +73,8 @@ export const trackItemView = (type: 'deal' | 'product', itemId: string, category
  * Track kliknięcie "Przejdź do okazji" / "Przejdź do produktu" — Key Events w GA4
  * - type='deal'    → event `go_to_deal`
  * - type='product' → event `go_to_product`
+ * - Zawsze wysyła także uniwersalne zdarzenie `affiliate_click` (rekomendowane jako Key Event w GA4)
+ * - Wysyła standardowe e-commerce `select_item`
  */
 export const trackGoToDeal = (
   itemId: string,
@@ -82,18 +84,50 @@ export const trackGoToDeal = (
     category?: string;
     merchant?: string;
     discountPct?: number;
+    price?: number;
+    title?: string;
     type?: 'deal' | 'product';
   }
 ) => {
   const eventName = options?.type === 'product' ? 'go_to_product' : 'go_to_deal';
-  trackEvent(eventName, {
+  const payload: Record<string, any> = {
     deal_id: itemId,
+    item_id: itemId,
+    item_name: options?.title || itemId,
     deal_url: url,
+    link_url: url,
+    outbound: true,
     deal_temperature: options?.temperature,
     deal_category: options?.category,
+    item_category: options?.category,
     deal_merchant: options?.merchant,
+    merchant: options?.merchant,
     deal_discount_pct: options?.discountPct,
     content_type: options?.type ?? 'deal',
+  };
+
+  if (typeof options?.price === 'number') {
+    payload.value = options.price;
+    payload.currency = 'PLN';
+  }
+
+  // 1. Zdarzenie specyficzne (go_to_deal / go_to_product)
+  trackEvent(eventName, payload);
+
+  // 2. Uniwersalne zdarzenie kluczowe dla wszystkich linków afiliacyjnych
+  trackEvent('affiliate_click', payload);
+
+  // 3. Rekomendowane standardowe zdarzenie GA4 dla kliknięć produktów
+  trackEvent('select_item', {
+    item_list_name: options?.category || 'deals',
+    items: [
+      {
+        item_id: itemId,
+        item_name: options?.title || itemId,
+        item_category: options?.category,
+        price: options?.price,
+      },
+    ],
   });
 };
 
@@ -318,7 +352,7 @@ export async function trackFirestoreView(
 }
 
 /**
- * Śledzi kliknięcie w link zewnętrzny (go_to_deal / go_to_product)
+ * Śledzi kliknięcie w link zewnętrzny (go_to_deal / go_to_product / affiliate_click)
  */
 export async function trackFirestoreClick(
   resourceType: ResourceType,
@@ -330,20 +364,22 @@ export async function trackFirestoreClick(
     temperature?: number;
     merchant?: string;
     discountPct?: number;
+    price?: number;
+    title?: string;
   }
 ): Promise<void> {
-  // Metadata dla Firestore
+  // NATYCHMIAST wyślij do GA4 (nie czekaj na asynchroniczny Firestore, aby kliknięcie nie uciekło!)
+  if (url) {
+    trackGoToDeal(resourceId, url, { type: resourceType, ...extras });
+  }
+
+  // Asynchroniczny zapis do bazy Firestore
   const meta = url
     ? { destination: url, ...(extras || {}) }
     : extras && Object.keys(extras).length > 0
       ? extras
       : undefined;
   await trackFirestoreEvent('click', resourceType, resourceId, userId, meta);
-
-  // Track go_to_deal w GA4 z pełnymi parametrami
-  if (url) {
-    trackGoToDeal(resourceId, url, { type: resourceType, ...extras });
-  }
 }
 
 /**

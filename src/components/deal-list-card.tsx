@@ -23,6 +23,7 @@ import { withImageProxy, isAliExpressImage } from '@/lib/image-proxy';
 import { getExternalUrl } from '@/lib/external-url';
 import { cn } from '@/lib/utils';
 import { AuthModal } from '@/components/auth/auth-modal';
+import { trackFirestoreClick } from '@/lib/analytics';
 
 interface DealListCardProps {
   deal: Deal | any;  // M6: Accept both DealLegacy and M6 Deal formats
@@ -550,6 +551,12 @@ export default function DealListCard({ deal, priority = false }: DealListCardPro
                 className="ux-action-btn bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-orange-500/35 border border-orange-400/30 opacity-95 hover:opacity-100 hover:scale-110 animate-bounce transition-all"
                 onClick={(e) => {
                   e.stopPropagation();
+                  void trackFirestoreClick('deal', deal.id, undefined, dealUrl || undefined, {
+                    category: deal.mainCategorySlug || (deal as any).categorySlug,
+                    temperature: typeof temperature === 'number' ? temperature : undefined,
+                    merchant: deal.merchant,
+                    title: dealTitle || undefined,
+                  });
                   window.open(dealUrl, '_blank', 'noopener,noreferrer');
                 }}
                 title={t('actions.goTo')}

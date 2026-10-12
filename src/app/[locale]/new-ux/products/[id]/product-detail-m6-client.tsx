@@ -40,6 +40,7 @@ import { CategoryBreadcrumb } from '@/components/category-breadcrumb';
 import { useCurrency, CurrencyManager } from '@/lib/unified-currency';
 import { AdminQuickActions } from '@/components/admin/admin-quick-actions';
 import { getExternalUrl } from '@/lib/external-url';
+import { trackFirestoreClick } from '@/lib/analytics';
 import { LogisticsBadge } from '@/components/product/LogisticsBadge';
 import { SellerInfo } from '@/components/product/SellerInfo';
 import { InfiniteSimilarFeed } from '@/components/new-ux/infinite-similar-feed';
@@ -472,7 +473,19 @@ export default function ProductDetailM6Client({
 
                 {outboundUrl && (
                   <Button asChild size="lg" className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold h-12 text-sm shadow-md hover:shadow-lg transition-all duration-300">
-                    <a href={outboundUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
+                    <a 
+                      href={outboundUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="flex items-center justify-center gap-2"
+                      onClick={() => {
+                        const targetId = (product as any)?.id || (productCore as any)?.id || 'unknown';
+                        void trackFirestoreClick('product', targetId, undefined, outboundUrl, {
+                          title: title || undefined,
+                          category: (product as any)?.category || (productCore as any)?.category,
+                        });
+                      }}
+                    >
                       <ShoppingCart className="w-4 h-4" />
                       {t('productDetail.simple.buyNow')}
                       <ExternalLink className="w-3.5 h-3.5 ml-1 opacity-80" />
