@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { PaginationControls } from '@/components/ui/pagination-controls';
-import { RefreshCcw, ShoppingBag, Coins, Wallet, Activity, Percent } from 'lucide-react';
+import { RefreshCcw, ShoppingBag, Coins, Wallet, Activity, Percent, ExternalLink } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 
@@ -24,14 +24,20 @@ type PurchaseRow = {
   id: string;
   transactionId: string;
   orderId: string | null;
+  subOrderId?: string | null;
   advertiser: string;
   status: string;
   purchaseAmount: number;
   commissionAmount: number;
+  commissionRate?: string | null;
   currency: string;
   purchaseDate: string;
   website: string | null;
   clickId: string | null;
+  productTitle?: string | null;
+  productImage?: string | null;
+  productUrl?: string | null;
+  country?: string | null;
 };
 
 type PurchasesResponse = {
@@ -483,33 +489,97 @@ export default function AliExpressPurchasesAdminPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Data</TableHead>
-                    <TableHead>Reklamodawca</TableHead>
+                    <TableHead>Produkt / Oferta</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Kwota zakupu</TableHead>
                     <TableHead>Prowizja</TableHead>
                     <TableHead>Tracking ID</TableHead>
+                    <TableHead>Kraj</TableHead>
                     <TableHead>ID zamówienia</TableHead>
-                    <TableHead>ID transakcji</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {(response?.purchases || []).map((purchase) => (
                     <TableRow key={purchase.id}>
-                      <TableCell>{formatDate(purchase.purchaseDate)}</TableCell>
+                      <TableCell className="whitespace-nowrap text-xs">{formatDate(purchase.purchaseDate)}</TableCell>
+                      <TableCell className="max-w-[320px]">
+                        <div className="flex items-center gap-2.5">
+                          {purchase.productImage && (
+                            <img
+                              src={purchase.productImage}
+                              alt={purchase.productTitle || 'Produkt'}
+                              className="h-10 w-10 object-cover rounded-md border shrink-0 bg-muted"
+                              loading="lazy"
+                            />
+                          )}
+                          <div className="min-w-0">
+                            {purchase.productUrl ? (
+                              <a
+                                href={purchase.productUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium text-xs line-clamp-2 hover:text-primary transition-colors flex items-center gap-1 group"
+                                title={purchase.productTitle || 'Zobacz w AliExpress'}
+                              >
+                                <span>{purchase.productTitle || 'Zamówienie w AliExpress'}</span>
+                                <ExternalLink className="h-3 w-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </a>
+                            ) : (
+                              <div className="font-medium text-xs line-clamp-2" title={purchase.productTitle || ''}>
+                                {purchase.productTitle || 'Zamówienie w AliExpress'}
+                              </div>
+                            )}
+                            <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                              <span>{purchase.advertiser || 'AliExpress'}</span>
+                              {purchase.subOrderId && (
+                                <>
+                                  <span>•</span>
+                                  <span className="font-mono">Sub: {purchase.subOrderId}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
                       <TableCell>
-                        <div className="font-medium">{purchase.advertiser || 'AliExpress'}</div>
-                        {purchase.website && (
-                          <div className="text-xs text-muted-foreground">{purchase.website}</div>
+                        <Badge variant={getStatusVariant(purchase.status)} className="text-xs whitespace-nowrap">
+                          {purchase.status || 'unknown'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap font-medium text-xs">
+                        {formatMoney(purchase.purchaseAmount, purchase.currency)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs">
+                        <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                          {formatMoney(purchase.commissionAmount, purchase.currency)}
+                        </div>
+                        {purchase.commissionRate && (
+                          <div className="text-[10px] text-muted-foreground">
+                            {purchase.commissionRate}
+                          </div>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusVariant(purchase.status)}>{purchase.status || 'unknown'}</Badge>
+                      <TableCell className="font-mono text-xs whitespace-nowrap">
+                        {purchase.clickId ? (
+                          <Badge variant="outline" className="font-mono text-[11px]">
+                            {purchase.clickId}
+                          </Badge>
+                        ) : (
+                          '—'
+                        )}
                       </TableCell>
-                      <TableCell>{formatMoney(purchase.purchaseAmount, purchase.currency)}</TableCell>
-                      <TableCell>{formatMoney(purchase.commissionAmount, purchase.currency)}</TableCell>
-                      <TableCell className="font-mono text-xs">{purchase.clickId || '—'}</TableCell>
-                      <TableCell className="font-mono text-xs">{purchase.orderId || '—'}</TableCell>
-                      <TableCell className="font-mono text-xs">{purchase.transactionId}</TableCell>
+                      <TableCell className="text-xs">
+                        {purchase.country ? (
+                          <Badge variant="secondary" className="text-[10px] font-mono">
+                            {purchase.country}
+                          </Badge>
+                        ) : (
+                          '—'
+                        )}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground whitespace-nowrap">
+                        {purchase.orderId || purchase.transactionId}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

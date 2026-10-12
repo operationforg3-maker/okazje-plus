@@ -14,15 +14,21 @@ type NormalizedPurchase = {
   id: string;
   transactionId: string;
   orderId: string | null;
+  subOrderId?: string | null;
   advertiser: string;
   status: string;
   purchaseAmount: number;
   commissionAmount: number;
+  commissionRate?: string | null;
   currency: string;
   purchaseDate: string;
   purchaseDateMs: number;
   website: string | null;
   clickId: string | null;
+  productTitle?: string | null;
+  productImage?: string | null;
+  productUrl?: string | null;
+  country?: string | null;
   source: 'aliexpress';
   updatedAt: string;
 };
@@ -105,48 +111,64 @@ function hasAliExpressMarker(raw: Record<string, any>): boolean {
 }
 
 function normalizePurchase(raw: Record<string, any>, index: number): NormalizedPurchase {
+  const subOrderId = raw.sub_order_id ? String(raw.sub_order_id) : null;
+  const orderId = raw.order_id ? String(raw.order_id) : firstString(raw, ['orderId', 'order_no', 'sale_id', 'external_order_id']);
   const transactionId = String(
-    raw.id ??
-      raw.uuid ??
-      raw.transaction_id ??
-      raw.transactionId ??
-      raw.order_id ??
-      raw.orderId ??
-      raw.order_no ??
-      `unknown-${Date.now()}-${index}`
+    subOrderId ||
+      orderId ||
+      (raw.id ??
+        raw.uuid ??
+        raw.transaction_id ??
+        raw.transactionId ??
+        `unknown-${Date.now()}-${index}`)
   );
 
-  const orderId = firstString(raw, ['order_id', 'orderId', 'order_no', 'sale_id', 'external_order_id']);
   const advertiser = 'AliExpress';
   const status =
     firstString(raw, ['order_status', 'status', 'transaction_status', 'state']) ||
     'unknown';
 
-  const purchaseAmount = parseNumber(
-    raw.order_amount ??
-      raw.sale_amount ??
-      raw.transaction_amount ??
-      raw.purchase_amount ??
-      raw.amount ??
-      raw.pay_amount
-  );
+  // Obsługa kwoty zamówienia: AliExpress API zwraca kwotę w centach (np. 59752 = $597.52)
+  let purchaseAmount = 0;
+  if (raw.finished_amount !== undefined || raw.paid_amount !== undefined) {
+    const rawPaid = raw.finished_amount ?? raw.paid_amount;
+    purchaseAmount = typeof rawPaid === 'number' ? rawPaid / 100 : parseNumber(rawPaid);
+  } else {
+    purchaseAmount = parseNumber(
+      raw.order_amount ??
+        raw.sale_amount ??
+        raw.transaction_amount ??
+        raw.purchase_amount ??
+        raw.amount ??
+        raw.pay_amount
+    );
+  }
 
-  const commissionAmount = parseNumber(
-    raw.commission ??
-      raw.commission_amount ??
-      raw.publisher_commission ??
-      raw.affiliate_commission ??
-      raw.estimated_commission ??
-      raw.paid_commission ??
-      0
-  );
+  // Obsługa prowizji: AliExpress API zwraca prowizję w centach (np. 597 = $5.97)
+  let commissionAmount = 0;
+  if (raw.estimated_finished_commission !== undefined || raw.estimated_paid_commission !== undefined) {
+    const rawComm = raw.estimated_finished_commission ?? raw.estimated_paid_commission;
+    commissionAmount = typeof rawComm === 'number' ? rawComm / 100 : parseNumber(rawComm);
+  } else {
+    commissionAmount = parseNumber(
+      raw.commission ??
+        raw.commission_amount ??
+        raw.publisher_commission ??
+        raw.affiliate_commission ??
+        raw.estimated_commission ??
+        raw.paid_commission ??
+        0
+    );
+  }
 
   const currency =
-    firstString(raw, ['order_currency', 'currency', 'currency_code', 'sale_currency']) ||
+    firstString(raw, ['settled_currency', 'order_currency', 'currency', 'currency_code', 'sale_currency']) ||
     'USD';
 
   const purchaseDate = toIsoDate(
-    raw.order_time ??
+    raw.paid_time ??
+      raw.finished_time ??
+      raw.order_time ??
       raw.payment_time ??
       raw.date ??
       raw.transaction_date ??
@@ -162,22 +184,48 @@ function normalizePurchase(raw: Record<string, any>, index: number): NormalizedP
     id: transactionId.replace(/[^a-zA-Z0-9_-]/g, '_'),
     transactionId,
     orderId,
+    subOrderId,
     advertiser,
     status,
     purchaseAmount,
     commissionAmount,
+    commissionRate: firstString(raw, ['commission_rate']),
     currency,
     purchaseDate,
     purchaseDateMs: Number.isFinite(purchaseDateMs) ? purchaseDateMs : 0,
     website: firstString(raw, ['website_name', 'website', 'publisher_website']),
     clickId: firstString(raw, ['tracking_id', 'click_id', 'clickId', 'subid', 'sub_id']),
+    productTitle: firstString(raw, ['product_title', 'item_title', 'title']),
+    productImage: firstString(raw, ['product_main_image_url', 'item_main_image_url', 'image_url', 'imageUrl']),
+    productUrl: firstString(raw, ['product_detail_url', 'item_url', 'url']),
+    country: firstString(raw, ['ship_to_country', 'country']),
     source: 'aliexpress',
     updatedAt: nowIso,
   };
 }
 
 function extractOrderRows(payload: any): Record<string, any>[] {
+  const resultObj =
+    payload?.aliexpress_affiliate_order_listbyindex_response?.resp_result?.result ||
+    payload?.aliexpress_affiliate_order_list_response?.resp_result?.result ||
+    payload?.resp_result?.result ||
+    payload?.result;
+
+  if (resultObj?.orders) {
+    if (Array.isArray(resultObj.orders)) {
+      return resultObj.orders;
+    }
+    if (Array.isArray(resultObj.orders.order)) {
+      return resultObj.orders.order;
+    }
+    if (resultObj.orders.order && typeof resultObj.orders.order === 'object') {
+      return [resultObj.orders.order];
+    }
+  }
+
   const knownPaths = [
+    payload?.aliexpress_affiliate_order_listbyindex_response?.resp_result?.result?.orders?.order,
+    payload?.aliexpress_affiliate_order_listbyindex_response?.resp_result?.result?.orders,
     payload?.aliexpress_affiliate_order_list_response?.resp_result?.result?.orders,
     payload?.aliexpress_affiliate_order_list_response?.resp_result?.result?.records,
     payload?.aliexpress_affiliate_order_list_response?.resp_result?.result?.order_list,
@@ -537,26 +585,28 @@ export async function GET(request: NextRequest) {
       const endDate = new Date();
       const startDate = new Date(endDate.getTime() - daysBack * 24 * 60 * 60 * 1000);
 
-      const formatTopDate = (date: Date) => date.toISOString().replace('T', ' ').substring(0, 19);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const formatTopDate = (d: Date) =>
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 
-      for (let currentPage = 1; currentPage <= scanPages; currentPage += 1) {
-        const response = await client.getAffiliateOrders({
-          pageNo: currentPage,
-          pageSize: scanPageSize,
-          startTime: formatTopDate(startDate),
-          endTime: formatTopDate(endDate),
-        });
+      const statusesToQuery = ['Payment Completed', 'Buyer Confirmed Receipt'];
+      for (const statusName of statusesToQuery) {
+        try {
+          const response = await client.getAffiliateOrders({
+            pageSize: scanPageSize,
+            startTime: formatTopDate(startDate),
+            endTime: formatTopDate(endDate),
+            status: statusName,
+            trackingId: trackingId && trackingId !== 'all' ? trackingId : undefined,
+          });
 
-        const aliError = getAliExpressApiError(response);
-        if (aliError) {
-          throw new Error(aliError);
-        }
-
-        const results = extractOrderRows(response);
-        collectedRaw.push(...results);
-
-        if (results.length < scanPageSize) {
-          break;
+          const aliError = getAliExpressApiError(response);
+          if (!aliError) {
+            const results = extractOrderRows(response);
+            collectedRaw.push(...results);
+          }
+        } catch {
+          // Pojedynczy błąd statusu nie przerywa pobierania pozostałych
         }
       }
 
@@ -570,8 +620,10 @@ export async function GET(request: NextRequest) {
       }
 
       allPurchases = Array.from(uniqueById.values());
-      await savePurchasesToFirestore(allPurchases);
-      source = 'live';
+      if (allPurchases.length > 0) {
+        await savePurchasesToFirestore(allPurchases);
+        source = 'live';
+      }
     } catch (error: any) {
       remoteError = error?.message || 'Nie udało się pobrać danych z AliExpress API';
     }

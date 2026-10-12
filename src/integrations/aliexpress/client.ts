@@ -1385,19 +1385,20 @@ export class AliExpressClient {
     endTime?: string;
     status?: string;
     trackingId?: string;
+    startQueryIndexId?: string;
   }): Promise<any> {
-    logger.info('Fetching affiliate orders', {
-      pageNo: params?.pageNo || 1,
+    logger.info('Fetching affiliate orders via listbyindex', {
       pageSize: params?.pageSize || 50,
       startTime: params?.startTime,
       endTime: params?.endTime,
       status: params?.status,
+      startQueryIndexId: params?.startQueryIndexId,
     });
 
     const queryParams: Record<string, any> = {
-      page_no: params?.pageNo || 1,
       page_size: Math.min(params?.pageSize || 50, 50),
-      status: params?.status || 'all',
+      status: params?.status || 'Payment Completed',
+      fields: 'commission_rate,created_time,order_number,order_status,payment_amount,estimated_commission,item_id,item_title,item_url,settled_time,sub_id,category_id',
     };
 
     if (params?.startTime) {
@@ -1406,6 +1407,9 @@ export class AliExpressClient {
     if (params?.endTime) {
       queryParams.end_time = params.endTime;
     }
+    if (params?.startQueryIndexId) {
+      queryParams.start_query_index_id = params.startQueryIndexId;
+    }
     const effectiveTrackingId =
       params?.trackingId || this.config.trackingId || this.config.affiliateId;
     if (effectiveTrackingId) {
@@ -1413,7 +1417,7 @@ export class AliExpressClient {
     }
 
     return this.requestWithApiLimitRetry<any>(
-      'aliexpress.affiliate.order.list',
+      'aliexpress.affiliate.order.listbyindex',
       queryParams
     );
   }

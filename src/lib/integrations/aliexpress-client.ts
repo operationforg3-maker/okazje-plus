@@ -433,6 +433,31 @@ export class AliExpressClient {
     });
   }
 
+  // Pobierz zamówienia afiliacyjne (Affiliate Orders)
+  async getAffiliateOrders(params: {
+    startTime: string;
+    endTime: string;
+    status?: string;
+    pageSize?: number;
+    startQueryIndexId?: string;
+    trackingId?: string;
+  }): Promise<any> {
+    const queryParams: Record<string, any> = {
+      start_time: params.startTime,
+      end_time: params.endTime,
+      status: params.status || 'Payment Completed',
+      page_size: Math.min(params.pageSize || 50, 50),
+      fields: 'commission_rate,created_time,order_number,order_status,payment_amount,estimated_commission,item_id,item_title,item_url,settled_time,sub_id,category_id',
+    };
+    if (params.startQueryIndexId) {
+      queryParams.start_query_index_id = params.startQueryIndexId;
+    }
+    if (params.trackingId) {
+      queryParams.tracking_id = params.trackingId;
+    }
+    return this.call("aliexpress.affiliate.order.listbyindex", queryParams);
+  }
+
   // Get Xinghe Merchant License
   async getMerchantLicense(sellerId: string): Promise<any> {
     // endpoint: aliexpress.solution.xinghe.merchant.get (docId w portalu)
